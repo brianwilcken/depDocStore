@@ -32,8 +32,8 @@ public class EventsService {
 		//svc.dumpTrainingDataToFile();
 		//svc.dumpSearchInferredEvents();
 		//svc.initiateModelTraining(100, 1);
-		//svc.dumpDataToFile("data/events.json", "categorizationState:I", null, 1000);
-		svc.updateIndexedEventsByFile("data/events.json");
+		svc.dumpDataToFile("data/events.json", "categorizationState:M", null, 1000);
+		//svc.updateIndexedEventsByFile("data/events.json");
 	}
 	
 	private Map<String, List<String>> getConceptsMap() {
