@@ -87,7 +87,7 @@ public class EventRegistryClient {
 		//Filter out events that are outside the United States or that have fewer than 10 articles or are missing a summary/title
 		engEventData = engEventData.entrySet().stream()
 			.filter(p -> p.getValue().getLocation().getCountry().getLabel().getEng().compareTo("United States") == 0)
-			.filter(p -> p.getValue().getTotalArticleCount() >= 0)
+			.filter(p -> p.getValue().getTotalArticleCount() >= 10)
 			.filter(p -> p.getValue().getTitle().getEng() != null)
 			.filter(p -> p.getValue().getSummary().getEng() != null)
 			.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
@@ -109,7 +109,6 @@ public class EventRegistryClient {
 		
 		//Perform NLP on the index-ready events.  This phase uses the NICC taxonomy to produce a PRELIMINARY category for each event.  
 		//The preliminary category may then either be updated by the user or accepted as-is within the NICC landing page UI.
-		//TODO If an event receives a preliminary category of "Irrelevant" then how do we deal with this?
 		EventCategorizer categorizer = new EventCategorizer();
 		List<IndexedEvent> categorizedEvents = categorizer.DetectEventDataCategories(indexableEvents);
 
@@ -118,25 +117,10 @@ public class EventRegistryClient {
 			//Indicate that this event was categorized by the openNLP document categorizer 
 			event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_MACHINE);
 			
-			//TODO discuss the validity of this reasoning:
-			//Verify that the machine-generated category is valid by verifying it against the event's set of concepts.  If the category
-			//is not listed under concepts then the event is likely miscategorized.  If the category is listed, but its score is below
-			//50 then again the event is probably miscategorized.  In either case, ultimately the event's state should be marked 
-			//indeterminate, so the user has a chance to manually categorize it.  As the NLP model gets smarter, this condition
-			//should become more and more infrequent.  By this logic, if the event's category is "Irrelevant" then its state will 
-			//automatically be flagged as indeterminate.
-			if (!event.GetConceptsMap().containsKey(event.getCategory()) || event.GetConceptsMap().get(event.getCategory()) < 50) {
-				event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_INDETERMINATE);
-			}
-			
 			//Get specifics about the event details.  This includes the medoid article URL.
 			EventRegistryEventDetailsResponse eventDetailsResponse = QueryEvent(event.getUri());
 			if (eventDetailsResponse != null) {
 				Info eventInfo = eventDetailsResponse.getEventDetails().get(event.getUri()).getInfo();
-				
-				//TODO Maybe: Filter out events that have only non-breaking-news style sources.  This should help to eliminate "chatter" 
-				//about events that were urgent when they occurred, but may no longer imply the need for immediate response.
-				
 				readyToIndex.add(event.updateWithEventDetails(eventInfo));
 			}
 		}

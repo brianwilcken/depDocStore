@@ -28,12 +28,12 @@ public class EventsService {
 		EventsService svc = new EventsService();
 		//svc.indexEventsByConcept(0);
 		//svc.updateSearchInferredEvents();
-		svc.refreshEventsFromEventRegistry();
+		//svc.refreshEventsFromEventRegistry();
 		//svc.dumpTrainingDataToFile();
 		//svc.dumpSearchInferredEvents();
 		//svc.initiateModelTraining(100, 1);
-		//svc.dumpDataToFile("data/events.json", "*:*", null, 1000);
-		//svc.updateIndexedEventsByFile("data/events.json");
+		//svc.dumpDataToFile("data/events.json", "categorizationState:I", null, 1000);
+		svc.updateIndexedEventsByFile("data/events.json");
 	}
 	
 	private Map<String, List<String>> getConceptsMap() {

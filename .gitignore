@@ -10,3 +10,4 @@ target/
 # Other files
 etc/
 search-inferred/
+data/*.json
