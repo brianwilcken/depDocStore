@@ -2,6 +2,7 @@ package newsapi;
 
 import newsapi.model.Article;
 import newsapi.model.NewsQuery;
+import solrapi.SolrClient;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,28 +17,22 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import common.Tools;
-import elasticsearchapi.ElasticSearchClient;
 
 public class NewsApiClient {
 	
+	private SolrClient solrClient = new SolrClient("http://localhost:8983/solr");
+	
 	public static void main(String args[]) {
 		NewsApiClient newsApiClient = new NewsApiClient();
-		ElasticSearchClient elasticSearchClient = new ElasticSearchClient();
+		newsApiClient.RefreshNewsArticles();
+	}
+	
+	public void RefreshNewsArticles() {
+		String[] queryCategories = GetQueryCategories();
 		
-//		String[] queryCategories = newsApiClient.GetQueryCategories();
-//		
-//		for (String category : queryCategories) {
-//			Collection<Article> articles = newsApiClient.Query(category);
-//			elasticSearchClient.IndexNewsArticles(articles);
-//		}
-		
-		List<String> articles = elasticSearchClient.GetUncategorizedNewsArticlesJSON(200);
-		try {
-			String jsonArr = "[" + String.join(",", articles) + "]";
-			FileUtils.writeStringToFile(new File("data/uncategorized-articles.txt"), jsonArr);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		for (String category : queryCategories) {
+			Collection<Article> articles = Query(category);
+			solrClient.IndexNewsArticles(articles);
 		}
 	}
 	
@@ -56,6 +51,10 @@ public class NewsApiClient {
 		RestTemplate restTemplate = new RestTemplate(requestFactory);
 		NewsQuery newsQuery = restTemplate.getForObject("https://newsapi.org/v2/everything?q=" + q + "&sortBy=publishedAt&apiKey=ef51a86394034696b105a37549c0eed0", NewsQuery.class);
 		Collection<Article> articles = newsQuery.getArticles();
+		articles.forEach(p -> {
+			p.setName(p.getSource().getName());
+			p.initId();
+			});
 		
 		return articles;
 	}

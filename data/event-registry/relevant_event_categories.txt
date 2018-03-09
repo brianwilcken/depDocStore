@@ -1,0 +1,53 @@
+dmoz/Business/Agriculture and Forestry/Forestry
+dmoz/Business/Chemicals/Explosives
+dmoz/Business/Electronics and Electrical/Associations
+dmoz/Business/Electronics and Electrical/Power Supplies
+dmoz/Business/Electronics and Electrical/Substation and Transmission
+dmoz/Business/Energy/Electricity
+dmoz/Business/Energy/Management
+dmoz/Business/Energy/Oil and Gas
+dmoz/Business/Energy/Utilities
+dmoz/Business/Mining and Drilling/Water Wells and Pumps
+dmoz/Games/Dice/Spill and Spell
+dmoz/Health/Child Health/Immunizations
+dmoz/Health/Conditions and Diseases/Infectious Diseases
+dmoz/Health/Occupational Health and Safety/Hazardous Substances
+dmoz/Health/Public Health and Safety/Disease Control and Prevention
+dmoz/Health/Public Health and Safety/Emergency Services
+dmoz/Health/Public Health and Safety/Epidemiology
+dmoz/Health/Public Health and Safety/Tropical Health
+dmoz/Home/Emergency Preparation
+dmoz/Home/Emergency Preparation/Safety
+dmoz/News/Weather/Hazards and Extremes
+dmoz/Recreation/Guns
+dmoz/Recreation/Guns/Competition Shooting
+dmoz/Recreation/Roads and Highways/Bridges and Tunnels
+dmoz/Science/Agriculture/Forestry
+dmoz/Science/Earth Sciences/Atmospheric Sciences
+dmoz/Science/Earth Sciences/Geology
+dmoz/Science/Earth Sciences/Geomatics
+dmoz/Science/Earth Sciences/Geophysics
+dmoz/Science/Earth Sciences/Natural Disasters and Hazards
+dmoz/Science/Environment
+dmoz/Science/Environment/Climate Change
+dmoz/Science/Environment/Forests and Rainforests
+dmoz/Science/Environment/Hazardous Materials
+dmoz/Science/Environment/Hazardous Waste
+dmoz/Science/Environment/Water Resources
+dmoz/Science/Physics/Nuclear
+dmoz/Science/Technology/Energy
+dmoz/Science/Technology/Pyrotechnics
+dmoz/Science/Technology/Safety Engineering
+dmoz/Science/Technology/Sanitary Engineering
+dmoz/Science/Technology/Structural Engineering
+dmoz/Society/Crime
+dmoz/Society/Death/Near Death Experiences
+dmoz/Society/Environment/Energy
+dmoz/Society/Issues/Gun Control
+dmoz/Society/Issues/Terrorism
+dmoz/Society/Issues/Violence and Abuse
+dmoz/Society/Issues/Warfare and Conflict
+dmoz/Society/Law/Law Enforcement
+dmoz/Society/People/Lost or Missing
+dmoz/Society/Philanthropy/Disaster Relief and Recovery
+dmoz/Society/Politics/Anarchism

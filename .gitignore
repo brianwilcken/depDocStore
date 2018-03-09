@@ -1,0 +1,12 @@
+# User-specific files (Eclipse)
+*.prefs
+
+# Build results
+target/
+
+# Model training files
+*.train
+
+# Other files
+etc/
+search-inferred/

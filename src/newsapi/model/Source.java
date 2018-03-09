@@ -1,18 +1,14 @@
 package newsapi.model;
 
+import org.apache.solr.client.solrj.beans.Field;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Source {
-	private String id;
-	private String name;
+	@Field
+	public String name;
 	
-	public String getId() {
-		return id;
-	}
-	public void setId(String id) {
-		this.id = id;
-	}
 	public String getName() {
 		return name;
 	}
