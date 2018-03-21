@@ -1,15 +1,12 @@
 package eventsregistryapi.model;
 
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +15,11 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.StringUtils;
+import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.StopFilter;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.solr.client.solrj.beans.Field;
 import org.apache.solr.common.SolrDocument;
 
@@ -26,7 +28,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-public class IndexedEvent {
+import opennlp.tools.stemmer.PorterStemmer;
+import opennlp.tools.tokenize.TokenizerME;
+import opennlp.tools.tokenize.TokenizerModel;
+
+public class IndexedEvent extends IndexedObject {
 	@Field
 	private String id;
 	@Field
@@ -71,35 +77,12 @@ public class IndexedEvent {
 	}
 	
 	public IndexedEvent(SolrDocument doc) {
-		Arrays.stream(this.getClass().getDeclaredFields()).forEach(p -> {
-			if(doc.containsKey(p.getName())) {
-				Object value = doc.get(p.getName());
-				try {
-					if (value instanceof String || value instanceof Long) {
-						p.set(this, value);
-					} else if (value instanceof List) {
-						List<String> lst = (List<String>)value;
-						String[] arr = lst.toArray(new String[lst.size()]);
-						p.set(this, arr);
-					} else {
-						String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format((Date)value);
-						p.set(this, date);
-					}
-				} catch (IllegalArgumentException | IllegalAccessException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		});
+		ConsumeSolr(doc);
 	}
 	
 	public void initId() {
 		try {
-			id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(
-				this.getUri() + 
-				this.getTitle() + 
-				this.getSummary() + 
-				this.getLocation())));
+			id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(this.getUri())));
 		} catch (JsonProcessingException | NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -124,16 +107,49 @@ public class IndexedEvent {
 		return this;
 	}
 	
-	public String GetDocCatForm() {
+	public String[] GetDocCatTokens(TokenizerModel model, PorterStemmer stemmer) {
+		String normalized = getNormalizedDocCatString(stemmer);
+		
+		//Tokenize
+		TokenizerME tokenDetector = new TokenizerME(model);
+		String[] tokens = tokenDetector.tokenize(normalized);
+
+		return tokens;
+	}
+	
+	private String getNormalizedDocCatString(PorterStemmer stemmer) {
 		HashMap<String,Long> conceptMap = new Gson().fromJson(this.getConcepts(), new TypeToken<HashMap<String, Long>>(){}.getType());
+		StringBuilder str = new StringBuilder();
 		
 		List<String> conceptsForCat = conceptMap.entrySet().stream()
 				.map(p -> p.getKey())
 				.collect(Collectors.toList());
-		
+
 		String docCatStr = title + ": " + summary + " (" + StringUtils.join(conceptsForCat, " ") + ")";
+		docCatStr = docCatStr.replace("\r", " ").replace("\n", " ");
 		
-		return docCatStr.replace("\r", " ").replace("\n", " ");
+		//Normalize, lemmatize and remove stop words
+		StandardAnalyzer analyzer = new StandardAnalyzer();
+		String normalized = analyzer.normalize("", docCatStr).utf8ToString();
+		TokenStream stream = analyzer.tokenStream("", normalized);
+		StopFilter filter = new StopFilter(stream, analyzer.getStopwordSet());
+		try {
+			stream.reset();
+			while(filter.incrementToken()) {
+				CharTermAttribute attr = filter.getAttribute(CharTermAttribute.class);
+				str.append(stemmer.stem(attr.toString()) + " ");
+			}
+			analyzer.close();
+			filter.end();
+			filter.close();
+			stream.end();
+			stream.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return str.toString();
 	}
 	
 	public void updateLastUpdatedDate() {
@@ -145,7 +161,7 @@ public class IndexedEvent {
 	}
 	
 	public String GetModelTrainingForm() {
-		return category + "\t" + GetDocCatForm();
+		return category + "\t" + getNormalizedDocCatString(new PorterStemmer());
 	}
 	
 	public String getId() {

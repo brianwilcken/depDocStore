@@ -11,7 +11,7 @@ public class SolrConstants {
 		//The system has performed a broad search of events from the Event Registry site using a search query based on a predefined category.  
 		//The events have no practical purpose in the system other than to build a set of training data.
 		//Events in this state are not included in model training.  They must first be manually reviewed by a system admin before they can be used further.
-		public static final String CATEGORIZATION_STATE_SEARCH_INFERRED = "S";
+		public static final String CATEGORIZATION_STATE_SEARCH = "S";
 		
 		public static final String EVENT_STATE_NEW = "N";
 		public static final String EVENT_STATE_REVIEWED = "R";

@@ -32,7 +32,7 @@ public class EventsRegistryEventsQuery {
 		
 		String searchStr = String.join(",", searchConcepts);
 		
-		String eventsRegistryQuery = "{\"$query\":{\"$and\":[{\"conceptUri\":{\"$and\":[" + searchStr + "]}},{\"locationUri\":{\"$and\":[\"http://en.wikipedia.org/wiki/United_States\"]}}]}}";
+		String eventsRegistryQuery = "{\"$query\":{\"$and\":[{\"conceptUri\":{\"$or\":[" + searchStr + "]}},{\"locationUri\":{\"$and\":[\"http://en.wikipedia.org/wiki/United_States\"]}}]}}";
 		
 		return eventsRegistryQuery;
 	}

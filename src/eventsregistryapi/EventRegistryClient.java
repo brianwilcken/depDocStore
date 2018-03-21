@@ -23,16 +23,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
 
 import common.Tools;
+import eventsregistryapi.model.ArticleResult;
 import eventsregistryapi.model.Category;
 import eventsregistryapi.model.Concept;
+import eventsregistryapi.model.EventArticles;
 import eventsregistryapi.model.EventData;
+import eventsregistryapi.model.EventRegistryEventArticlesResponse;
 import eventsregistryapi.model.EventRegistryEventDetailsResponse;
+import eventsregistryapi.model.EventsRegistryEventArticlesQuery;
 import eventsregistryapi.model.EventsRegistryEventDetailsQuery;
 import eventsregistryapi.model.EventsRegistryEventStreamResponse;
 import eventsregistryapi.model.EventsRegistryEventsQuery;
 import eventsregistryapi.model.EventsRegistryEventsResponse;
+import eventsregistryapi.model.IndexedArticle;
 import eventsregistryapi.model.IndexedEvent;
 import eventsregistryapi.model.Info;
+import eventsregistryapi.model.Location;
 import eventsregistryapi.model.Result;
 import nlp.EventCategorizer;
 import solrapi.SolrClient;
@@ -51,7 +57,8 @@ public class EventRegistryClient {
 
 	public static void main(String args[]) {
 		EventRegistryClient eventRegistryClient = new EventRegistryClient();
-		//eventRegistryClient.QueryEvent("eng-3800037");
+		EventRegistryEventArticlesResponse response = eventRegistryClient.QueryEventArticles("eng-3800037");
+		eventRegistryClient.PipelineProcessEventArticles(response);
 		//eventRegistryClient.QueryEventRegistryMinuteStream();
 	}
 	
@@ -71,7 +78,7 @@ public class EventRegistryClient {
 		return eventCategoriesList;
 	}
 	
-	public void PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) {
+	public List<IndexedEvent> PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) {
 		List<String> eventCategories = GetEventRegistryValidCategories();
 		List<IndexedEvent> validEvents = new ArrayList<IndexedEvent>();
 		List<IndexedEvent> readyToIndex = new ArrayList<IndexedEvent>();
@@ -125,12 +132,14 @@ public class EventRegistryClient {
 			}
 		}
 		
-		solrClient.IndexEvents(readyToIndex);
+		solrClient.IndexDocuments(readyToIndex);
+		
+		return readyToIndex;
 	}
 	
 	private List<IndexedEvent> GetIndexableEvents(List<IndexedEvent> events) {
 		List<IndexedEvent> indexableEvents = events.stream()
-				.filter(p -> !solrClient.IsEventAlreadyIndexed(p.getId()))
+				.filter(p -> !solrClient.IsDocumentAlreadyIndexed(p.getUri()))
 				.collect(Collectors.toList());
 		
 		return indexableEvents;
@@ -189,13 +198,10 @@ public class EventRegistryClient {
 		return response;
 	}
 	
-	public void PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts, int searchWeightCutoff) {
+	public List<IndexedEvent> PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts) {
 		if (response.getEvents() != null) {
-			//Filter out events that have a search weighting threshold below searchWeightCutoff or that are missing a summary/title 
-			//and convert to indexed event type.
+			//Filter out events that are missing a summary/title 
 			List<Result> weighedResults = Arrays.stream(response.getEvents().getResults())
-					.filter(p -> p.getWgt() > searchWeightCutoff)
-					.filter(p -> p.getTotalArticleCount() >= 0)
 					.filter(p -> p.getTitle().getEng() != null)
 					.filter(p -> p.getSummary().getEng() != null)
 					.collect(Collectors.toList());
@@ -214,14 +220,80 @@ public class EventRegistryClient {
 				}
 			}
 
+			//Only index events that have not yet been indexed
 			List<IndexedEvent> indexableEvents = GetIndexableEvents(conceptFilteredEvents);
 			
-			indexableEvents.stream().forEach(p -> {
-				p.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_SEARCH_INFERRED);
-				p.setCategory(conceptUri);
+			//Categorize the events
+			EventCategorizer categorizer = new EventCategorizer();
+			List<IndexedEvent> categorizedEvents = categorizer.DetectEventDataCategories(indexableEvents);
+			
+			//These events need to be manually reviewed by an admin before they can become part of a model training corpus
+			categorizedEvents.stream().forEach(p -> {
+				p.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_SEARCH);
 			});
 			
-			solrClient.IndexEvents(indexableEvents);
+			solrClient.IndexDocuments(categorizedEvents);
+			
+			return categorizedEvents;
 		}
+		return new ArrayList<IndexedEvent>();
+	}
+	
+	public EventRegistryEventArticlesResponse QueryEventArticles(String eventUri) {
+		EventsRegistryEventArticlesQuery query = new EventsRegistryEventArticlesQuery(eventUri, apiKey);
+		String url = eventDetailsUrl + Tools.GetQueryString(query);
+		String response = restTemplate.getForObject(url, String.class);
+		
+//		try {
+//		FileUtils.writeStringToFile(new File("data/EventArticlesResponse.json"), response);
+//	} catch (IOException e) {
+//		// TODO Auto-generated catch block
+//		e.printStackTrace();
+//	}
+		
+		response = "{ \"eventArticles\":" + response + "}";
+		
+		ObjectMapper mapper = new ObjectMapper();
+		EventRegistryEventArticlesResponse eventArticlesResponse = null;
+		try {
+			eventArticlesResponse = mapper.readValue(response, EventRegistryEventArticlesResponse.class);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			String details = e.toString();
+			System.out.println(details);
+		}
+		
+		return eventArticlesResponse;
+	}
+	
+	public List<IndexedArticle> PipelineProcessEventArticles(EventRegistryEventArticlesResponse response) {
+		if (response != null && !response.getEventArticles().isEmpty()) {
+			//Extract the only event articles object that exists in the response
+			EventArticles eventArticles = response.getEventArticles().entrySet().stream().findFirst().get().getValue();
+			
+			//Only consider English language articles
+			List<ArticleResult> engArticles = eventArticles.getArticles().getResults().stream()
+				.filter(p -> p.getLang().equalsIgnoreCase("eng"))
+				.collect(Collectors.toList());
+			
+			//Only consider articles that originate within the United States
+			List<ArticleResult> usArticles = engArticles.stream().filter(p -> {
+				Location loc = p.getSource().getLocation();
+				if (loc != null && loc.getCountry() != null) {
+					return loc.getCountry().getLabel().getEng().equals("United States");
+				}
+				return false;
+			}).collect(Collectors.toList());
+			
+			//Only index articles that have not yet been indexed
+			List<IndexedArticle> indexableArticles = usArticles.stream().filter(p -> !solrClient.IsDocumentAlreadyIndexed(p.getUri()))
+				.map(p -> p.GetIndexedArticle())
+				.collect(Collectors.toList());
+			
+			solrClient.IndexDocuments(indexableArticles);
+			
+			return indexableArticles;
+		}
+		return null;
 	}
 }
