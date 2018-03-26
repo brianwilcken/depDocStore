@@ -227,9 +227,8 @@ public class EventRegistryClient {
 			EventCategorizer categorizer = new EventCategorizer();
 			List<IndexedEvent> categorizedEvents = categorizer.DetectEventDataCategories(indexableEvents);
 			
-			//These events need to be manually reviewed by an admin before they can become part of a model training corpus
 			categorizedEvents.stream().forEach(p -> {
-				p.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_SEARCH);
+				p.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_MACHINE);
 			});
 			
 			solrClient.IndexDocuments(categorizedEvents);

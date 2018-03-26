@@ -120,7 +120,7 @@
 						</goals>
 						<configuration>
 							<files>
-								<file>src/main/resource/application.properties</file>
+								<file>src/main/resources/application.properties</file>
 							</files>
 						</configuration>
 					</execution>
