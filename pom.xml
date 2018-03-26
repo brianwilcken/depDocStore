@@ -48,6 +48,11 @@
 			<version>2.0.0.RELEASE</version>
 		</dependency>
 		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-freemarker</artifactId>
+		    <version>2.0.0.RELEASE</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-web</artifactId>
 			<version>5.0.3.RELEASE</version>
@@ -87,6 +92,11 @@
 		    <artifactId>lucene-core</artifactId>
 		    <version>7.2.1</version>
 		</dependency>
+		<dependency>
+		    <groupId>org.freemarker</groupId>
+		    <artifactId>freemarker</artifactId>
+		    <version>2.3.23</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -110,7 +120,7 @@
 						</goals>
 						<configuration>
 							<files>
-								<file>src/config/dev.properties</file>
+								<file>src/main/resource/application.properties</file>
 							</files>
 						</configuration>
 					</execution>

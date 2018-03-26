@@ -1,4 +1,4 @@
-package restapi;
+package webapp.restapi;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

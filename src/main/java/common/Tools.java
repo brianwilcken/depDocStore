@@ -23,7 +23,7 @@ public class Tools {
 		if (_properties == null) {
 			_properties = new Properties();
 			try {
-				_properties.load(Tools.class.getClassLoader().getResourceAsStream("config/dev.properties"));
+				_properties.load(Tools.class.getClassLoader().getResourceAsStream("application.properties"));
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

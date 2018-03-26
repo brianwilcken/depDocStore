@@ -1,4 +1,4 @@
-package restapi;
+package webapp.restapi;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -65,7 +65,7 @@ public class EventsService {
 	public Mono<ServerResponse> getIndexedEvents(ServerRequest request) {
 		IndexedEventsQueryParams params = request.bodyToMono(IndexedEventsQueryParams.class).block();
 
-		List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, params.getQuery(), params.getRows(), params.getFacetedQueries());
+		List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, params.getQuery(), params.getRows(), null, params.getFacetedQueries());
 		
 		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(BodyInserters.fromObject(events));
 	}
@@ -73,7 +73,7 @@ public class EventsService {
 	public Mono<ServerResponse> getIndexedArticles(ServerRequest request) {
 		IndexedArticlesQueryParams params = request.bodyToMono(IndexedArticlesQueryParams.class).block();
 
-		List<IndexedArticle> articles = solrClient.QueryIndexedDocuments(IndexedArticle.class, params.getQuery(), params.getRows(), params.getFacetedQueries());
+		List<IndexedArticle> articles = solrClient.QueryIndexedDocuments(IndexedArticle.class, params.getQuery(), params.getRows(), null, params.getFacetedQueries());
 		
 		return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(BodyInserters.fromObject(articles));
 	}

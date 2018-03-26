@@ -18,15 +18,18 @@ import java.util.stream.Collectors;
 //import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrQuery.SortClause;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.StreamingResponseCallback;
 import org.apache.solr.client.solrj.beans.DocumentObjectBinder;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
+import org.apache.solr.client.solrj.response.FacetField;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.common.util.SimpleOrderedMap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,7 +41,6 @@ import eventsregistryapi.model.EventData;
 import eventsregistryapi.model.IndexedArticle;
 import eventsregistryapi.model.IndexedEvent;
 import eventsregistryapi.model.IndexedObject;
-import newsapi.model.Article;
 
 public class SolrClient {
 
@@ -47,25 +49,10 @@ public class SolrClient {
 	
 	public static void main(String[] args) {
 		SolrClient solrClient = new SolrClient("http://localhost:8983/solr");
-		
-		//solrClient.UpdateNewsArticlesFromFile("data/uncategorized-articles.txt");
-		//solrClient.WriteUncategorizedNewsArticlesToFile("data/uncategorized-articles.json", 50);
-		//solrClient.WriteNewsArticlesToFile("data/categorized-training-data.train", "category:*", Integer.MAX_VALUE);
 	}
 	
 	public SolrClient(String solrHostURL) {
 		client = new HttpSolrClient.Builder(solrHostURL).build();
-	}
-	
-	public void UpdateNewsArticlesFromFile(String filePath) {
-		String file = Tools.GetFileString(filePath, "Cp1252");
-		try {
-			Article[] articles = mapper.readValue(file, Article[].class);
-			IndexNewsArticles(Arrays.asList(articles));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 	
 	public void UpdateIndexedArticlesFromFile(String filePath) {
@@ -122,14 +109,33 @@ public class SolrClient {
 			return false;
 		}
 	}
+
+	public SimpleOrderedMap<?> QueryFacets(String facetQuery) {
+		SolrQuery query = new SolrQuery();
+		query.setRows(0);
+		query.setQuery("*:*");
+		query.add("json.facet", facetQuery);
+		try {
+			QueryResponse response = client.query("events", query);
+			SimpleOrderedMap<?> facets = (SimpleOrderedMap<?>) response.getResponse().get("facets");
+			return facets;
+		} catch (SolrServerException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+	}
 	
-	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, String... filterQueries) {
+	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, SortClause sort, String... filterQueries) {
 		SolrQuery query = new SolrQuery();
 		query.setQuery(queryStr);
 		if (filterQueries != null) {
 			query.setFilterQueries(filterQueries);
 		}
 		query.setRows(rows);
+		if (sort != null) {
+			query.setSort(sort);
+		}
 		try {
 			Constructor<?> cons;
 			try {
@@ -183,75 +189,13 @@ public class SolrClient {
 	
 	public void WriteEventDataToFile(String filePath, String queryStr, int rows, String... filterQueries) {
 		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
-		List<IndexedEvent> events = QueryIndexedDocuments(IndexedEvent.class, queryStr, rows, filterQueries);
+		List<IndexedEvent> events = QueryIndexedDocuments(IndexedEvent.class, queryStr, rows, null, filterQueries);
 		try {
 			String output = writer.writeValueAsString(events);
 			File file = new File(filePath);
 			file.getParentFile().mkdirs();
 			Files.write(output, file, Charset.forName("Cp1252"));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public void IndexNewsArticles(Collection<Article> articles) {
-		try {
-			client.addBeans("news", articles);
-			UpdateResponse updateResponse = client.commit("news");
-			
-			if (updateResponse.getStatus() != 0) {
-				//TODO What should happen if the update fails?
-			}
-		} catch (SolrServerException | IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public void WriteUncategorizedNewsArticlesToFile(String filePath, int rows) {
-		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
-		SolrQuery query = new SolrQuery();
-		query.setQuery("-category:*");
-		query.setRows(rows);
-		
-		try {
-			QueryResponse response = client.query("news", query);
-			List<Article> articles = response.getBeans(Article.class);
-			String output = writer.writeValueAsString(articles);
-			Files.write(output, new File(filePath), Charset.forName("Cp1252"));
-		} catch (SolrServerException | IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public void WriteNewsArticlesToFile(String filePath, String solrQuery, int rows) {
-		DocumentObjectBinder binder = new DocumentObjectBinder();
-		
-		SolrQuery query = new SolrQuery();
-		query.setRows(rows);
-		query.setQuery(solrQuery);
-		
-		try {
-			File file = new File(filePath);
-			FileOutputStream fos = new FileOutputStream(file);
-			final BlockingQueue<SolrDocument> tmpQueue = new LinkedBlockingQueue<SolrDocument>();
-			client.queryAndStreamResponse("news", query, new CallbackHandler(tmpQueue));
-			
-			SolrDocument tmpDoc;
-	        do {
-	          tmpDoc = tmpQueue.take();
-	          if (!(tmpDoc instanceof StopDoc)) {
-	        	  Article article = binder.getBean(Article.class, tmpDoc);
-		          String entry = (article.getCategory() + "\t" + article.getTitle() + ": " + article.getDescription()).replace("\r", " ").replace("\n", " ");
-		          fos.write(entry.getBytes(Charset.forName("Cp1252")));
-		          fos.write(System.lineSeparator().getBytes());
-	          }
-	        } while (!(tmpDoc instanceof StopDoc));
-	        
-	        fos.close();
-		} catch (SolrServerException | IOException | InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

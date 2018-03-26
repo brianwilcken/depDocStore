@@ -1,14 +1,16 @@
-package restapi;
+package webapp;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.MediaType;
+import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import reactor.core.publisher.Mono;
 
 @SpringBootApplication
+@EnableWebFlux
 public class EventsApplication {
 
 	public static void main(String[] args) {
