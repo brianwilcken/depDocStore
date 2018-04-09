@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.codec.binary.Hex;
@@ -28,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import common.Tools;
 import opennlp.tools.stemmer.PorterStemmer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
@@ -82,7 +85,11 @@ public class IndexedEvent extends IndexedObject {
 	
 	public void initId() {
 		try {
-			id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(this.getUri())));
+			if (uri != null) {
+				id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(this.getUri())));
+			} else {
+				id = UUID.randomUUID().toString();
+			}
 		} catch (JsonProcessingException | NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -118,14 +125,7 @@ public class IndexedEvent extends IndexedObject {
 	}
 	
 	private String getNormalizedDocCatString(PorterStemmer stemmer) {
-		HashMap<String,Long> conceptMap = new Gson().fromJson(this.getConcepts(), new TypeToken<HashMap<String, Long>>(){}.getType());
-		StringBuilder str = new StringBuilder();
-		
-		List<String> conceptsForCat = conceptMap.entrySet().stream()
-				.map(p -> p.getKey())
-				.collect(Collectors.toList());
-
-		String docCatStr = title + ": " + summary + " (" + StringUtils.join(conceptsForCat, " ") + ")";
+		String docCatStr = title + " " + summary + getConceptsString();
 		docCatStr = docCatStr.replace("\r", " ").replace("\n", " ");
 		
 		//Normalize, lemmatize and remove stop words
@@ -133,6 +133,7 @@ public class IndexedEvent extends IndexedObject {
 		String normalized = analyzer.normalize("", docCatStr).utf8ToString();
 		TokenStream stream = analyzer.tokenStream("", normalized);
 		StopFilter filter = new StopFilter(stream, analyzer.getStopwordSet());
+		StringBuilder str = new StringBuilder();
 		try {
 			stream.reset();
 			while(filter.incrementToken()) {
@@ -152,8 +153,22 @@ public class IndexedEvent extends IndexedObject {
 		return str.toString();
 	}
 	
+	private String getConceptsString() {
+		if (this.getConcepts() != null) {
+			HashMap<String,Long> conceptMap = new Gson().fromJson(this.getConcepts(), new TypeToken<HashMap<String, Long>>(){}.getType());
+			StringBuilder str = new StringBuilder();
+			
+			List<String> conceptsForCat = conceptMap.entrySet().stream()
+					.map(p -> p.getKey())
+					.collect(Collectors.toList());
+
+			return  " " + StringUtils.join(conceptsForCat, " ");
+		}
+		return "";
+	}
+	
 	public void updateLastUpdatedDate() {
-		this.setLastUpdated(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "Z");
+		this.setLastUpdated(Tools.getFormattedDateTimeString(LocalDateTime.now()));
 	}
 	
 	public Map<String, Long> GetConceptsMap() {

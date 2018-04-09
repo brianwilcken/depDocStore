@@ -28,6 +28,8 @@ import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
+import org.apache.solr.common.params.CommonParams;
+import org.apache.solr.common.params.MoreLikeThisParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.SimpleOrderedMap;
 
@@ -47,15 +49,11 @@ public class SolrClient {
 	private HttpSolrClient client;
 	private static ObjectMapper mapper = new ObjectMapper();
 	
-	public static void main(String[] args) {
-		SolrClient solrClient = new SolrClient("http://localhost:8983/solr");
-	}
-	
 	public SolrClient(String solrHostURL) {
 		client = new HttpSolrClient.Builder(solrHostURL).build();
 	}
 	
-	public void UpdateIndexedArticlesFromFile(String filePath) {
+	public void UpdateIndexedArticlesFromFile(String filePath) throws SolrServerException {
 		String file = Tools.GetFileString(filePath, "Cp1252");
 		try {
 			IndexedArticle[] articles = mapper.readValue(file, IndexedArticle[].class);
@@ -66,7 +64,7 @@ public class SolrClient {
 		}
 	}
 	
-	public void UpdateIndexedEventsFromFile(String filePath) {
+	public void UpdateIndexedEventsFromFile(String filePath) throws SolrServerException {
 		String file = Tools.GetFileString(filePath, "Cp1252");
 		try {
 			IndexedEvent[] events = mapper.readValue(file, IndexedEvent[].class);
@@ -80,7 +78,23 @@ public class SolrClient {
 		}
 	}
 	
-	public <T> void IndexDocuments(Collection<T> docs) {
+	public <T> void IndexDocument(T doc) throws SolrServerException {
+		try {
+			if (doc != null) {
+				client.addBean(doc);
+				UpdateResponse updateResponse = client.commit("events");
+				
+				if (updateResponse.getStatus() != 0) {
+					//TODO What should happen if the update fails?
+				}
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public <T> void IndexDocuments(Collection<T> docs) throws SolrServerException {
 		try {
 			if (!docs.isEmpty()) {
 				client.addBeans("events", docs);
@@ -90,27 +104,27 @@ public class SolrClient {
 					//TODO What should happen if the update fails?
 				}
 			}
-		} catch (SolrServerException | IOException e) {
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	public Boolean IsDocumentAlreadyIndexed(String uri) {
+	public Boolean IsDocumentAlreadyIndexed(String uri) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setRows(0);
 		query.setQuery("uri:" + uri);
 		try {
 			QueryResponse response = client.query("events", query);
 			return response.getResults().getNumFound() > 0;
-		} catch (SolrServerException | IOException e) {
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return false;
 		}
 	}
 
-	public SimpleOrderedMap<?> QueryFacets(String facetQuery) {
+	public SimpleOrderedMap<?> QueryFacets(String facetQuery) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setRows(0);
 		query.setQuery("*:*");
@@ -119,14 +133,29 @@ public class SolrClient {
 			QueryResponse response = client.query("events", query);
 			SimpleOrderedMap<?> facets = (SimpleOrderedMap<?>) response.getResponse().get("facets");
 			return facets;
-		} catch (SolrServerException | IOException e) {
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return null;
 		}
 	}
 	
-	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, SortClause sort, String... filterQueries) {
+	public SolrDocumentList FindSimilarDocuments(String searchText) throws SolrServerException {
+		SolrQuery query = new SolrQuery();
+	    query.setRequestHandler("/" + MoreLikeThisParams.MLT);
+	    query.setParam(CommonParams.STREAM_BODY, searchText);
+	    query.setRows(20);
+	    try {
+			SolrDocumentList response = client.query("events", query).getResults();
+			return response;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, SortClause sort, String... filterQueries) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setQuery(queryStr);
 		if (filterQueries != null) {
@@ -153,7 +182,7 @@ public class SolrClient {
 				}
 			}).collect(Collectors.toList());
 			return events;
-		} catch (SolrServerException | IOException e) {
+		} catch (IOException e) {
 			return null;
 		}
 	}
@@ -187,7 +216,7 @@ public class SolrClient {
 		}
 	}
 	
-	public void WriteEventDataToFile(String filePath, String queryStr, int rows, String... filterQueries) {
+	public void WriteEventDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
 		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
 		List<IndexedEvent> events = QueryIndexedDocuments(IndexedEvent.class, queryStr, rows, null, filterQueries);
 		try {

@@ -10,18 +10,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class IndexedArticlesQueryParams extends IndexedDocumentsQuery {
 	private String[] eventUris;
-	private int startDateRange;
-	private int endDateRange;
-	private int rows;
+	private int[] numDaysPrevious;
+	private String[] startDate;
+	private String[] endDate;
+	private int[] rows;
 	
 	public String getQuery() {
-		String query = "articleDate:[NOW-" + Integer.toString(startDateRange) +  "DAY/DAY TO NOW";
-		if (endDateRange > 0) {
-			query += "-" + Integer.toString(endDateRange) + "DAY/DAY";
-		}
-		query += "]";
-		
-		return query;
+		return getTimeRangeQuery(startDate, endDate, numDaysPrevious);
 	}
 	
 	public String[] getFacetedQueries() {
@@ -32,24 +27,34 @@ public class IndexedArticlesQueryParams extends IndexedDocumentsQuery {
 		return fqs.toArray(new String[fqs.size()]);
 	}
 	
-	public int getStartDateRange() {
-		return startDateRange;
+	public int getQueryRows() {
+		int rows;
+		if (getRows() != null && getRows().length > 0) {
+			rows = getRows()[0];
+		} else {
+			rows = Integer.MAX_VALUE;
+		}
+		return rows;
 	}
-	public void setStartDateRange(int startDateRange) {
-		this.startDateRange = startDateRange;
+	
+	public String[] getStartDate() {
+		return startDate;
 	}
-	public int getEndDateRange() {
-		return endDateRange;
+	public void setStartDate(String[] startDate) {
+		this.startDate = startDate;
 	}
-	public void setEndDateRange(int endDateRange) {
-		this.endDateRange = endDateRange;
+	public String[] getEndDate() {
+		return endDate;
+	}
+	public void setEndDate(String[] endDate) {
+		this.endDate = endDate;
 	}
 
-	public int getRows() {
+	public int[] getRows() {
 		return rows;
 	}
 
-	public void setRows(int rows) {
+	public void setRows(int[] rows) {
 		this.rows = rows;
 	}
 
@@ -59,5 +64,11 @@ public class IndexedArticlesQueryParams extends IndexedDocumentsQuery {
 
 	public void setEventUris(String[] eventUris) {
 		this.eventUris = eventUris;
+	}
+	public int[] getNumDaysPrevious() {
+		return numDaysPrevious;
+	}
+	public void setNumDaysPrevious(int[] numDaysPrevious) {
+		this.numDaysPrevious = numDaysPrevious;
 	}
 }

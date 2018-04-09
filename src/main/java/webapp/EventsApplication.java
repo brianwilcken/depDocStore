@@ -1,27 +1,37 @@
 package webapp;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.http.MediaType;
-import org.springframework.web.reactive.config.EnableWebFlux;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.web.server.adapter.AbstractReactiveWebInitializer;
 
-import reactor.core.publisher.Mono;
+import webapp.configurations.EventsRouter;
+import webapp.configurations.WebConfig;
 
 @SpringBootApplication
-@EnableWebFlux
-public class EventsApplication {
+public class EventsApplication extends SpringBootServletInitializer {
 
+	final static Logger logger = LogManager.getLogger(EventsApplication.class);
+	
+	@Override
+    protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+        return application.sources(EventsApplication.class);
+    }
+	
 	public static void main(String[] args) {
+		logger.info("Application Startup");
 		SpringApplication.run(EventsApplication.class, args);
-		
-//		WebClient client = WebClient.create("http://localhost:8080");
-//		
-//		Mono<ClientResponse> result = client.get().uri("/aee160c33e647970ca98348ab24990136f583a57").accept(MediaType.APPLICATION_JSON).exchange();
-//		
-//		String stuff = result.flatMap(res -> res.bodyToMono(String.class)).block();
-//		
-//		System.out.println(stuff);
 	}
+
+//	@Override
+//	protected Class<?>[] getConfigClasses() {
+//		return new Class[] {
+//				EventsRouter.class,
+//				WebConfig.class,
+//				CorsConfiguration.class
+//		};
+//	}
 }

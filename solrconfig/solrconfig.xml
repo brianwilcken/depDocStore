@@ -604,12 +604,14 @@
          *** WARNING ***
          Before enabling remote streaming, you should make sure your
          system has authentication enabled.
+		 -->
 
-    <requestParsers enableRemoteStreaming="false"
-                    multipartUploadLimitInKB="-1"
-                    formdataUploadLimitInKB="-1"
+    <requestParsers enableRemoteStreaming="true"
+					enableStreamBody="true"
+                    multipartUploadLimitInKB="10000"
+                    formdataUploadLimitInKB="10000"
                     addHttpRequestToContext="false"/>
-      -->
+      
 
     <!-- HTTP Caching
 

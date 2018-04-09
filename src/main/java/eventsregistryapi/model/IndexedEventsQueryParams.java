@@ -1,33 +1,34 @@
 package eventsregistryapi.model;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TimeZone;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 	private String[] uris;
-	private int startDateRange;
-	private int endDateRange;
+	private int[] numDaysPrevious;
+	private String[] startDate;
+	private String[] endDate;
 	private String[] categories;
 	private String[] eventStates;
 	private String[] categorizationStates;
-	private int minArticleCount;
-	private int rows;
+	private int[] minArticleCount;
+	private int[] rows;
 	
 	public String getQuery() {
-		String query = "eventDate:[NOW-" + Integer.toString(startDateRange) +  "DAY/DAY TO NOW";
-		if (endDateRange > 0) {
-			query += "-" + Integer.toString(endDateRange) + "DAY/DAY";
-		}
-		query += "]";
-		
-		return query;
+		return getTimeRangeQuery(startDate, endDate, numDaysPrevious);
 	}
-	
+
 	public String[] getFacetedQueries() {
 		List<String> fqs = new ArrayList<String>();
 		
@@ -35,9 +36,21 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 		fqs.add(getFacetedQuery("category", categories));
 		fqs.add(getFacetedQuery("eventState", eventStates));
 		fqs.add(getFacetedQuery("categorizationState", categorizationStates));
-		fqs.add("totalArticleCount:[" + Integer.toString(minArticleCount) + " TO *]");
+		if (minArticleCount !=  null && minArticleCount.length > 0) {
+			fqs.add("totalArticleCount:[" + Integer.toString(minArticleCount[0]) + " TO *]");
+		}
 		
 		return fqs.toArray(new String[fqs.size()]);
+	}
+	
+	public int getQueryRows() {
+		int rows;
+		if (getRows() != null && getRows().length > 0) {
+			rows = getRows()[0];
+		} else {
+			rows = Integer.MAX_VALUE;
+		}
+		return rows;
 	}
 	
 	public String[] getUris() {
@@ -46,17 +59,23 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 	public void setUris(String[] uris) {
 		this.uris = uris;
 	}
-	public int getStartDateRange() {
-		return startDateRange;
+	public int[] getNumDaysPrevious() {
+		return numDaysPrevious;
 	}
-	public void setStartDateRange(int startDateRange) {
-		this.startDateRange = startDateRange;
+	public void setNumDaysPrevious(int[] numDaysPrevious) {
+		this.numDaysPrevious = numDaysPrevious;
 	}
-	public int getEndDateRange() {
-		return endDateRange;
+	public String[] getStartDate() {
+		return startDate;
 	}
-	public void setEndDateRange(int endDateRange) {
-		this.endDateRange = endDateRange;
+	public void setStartDate(String[] startDate) {
+		this.startDate = startDate;
+	}
+	public String[] getEndDate() {
+		return endDate;
+	}
+	public void setEndDate(String[] endDate) {
+		this.endDate = endDate;
 	}
 	public String[] getCategories() {
 		return categories;
@@ -76,18 +95,18 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 	public void setCategorizationStates(String[] categorizationStates) {
 		this.categorizationStates = categorizationStates;
 	}
-	public int getMinArticleCount() {
+	public int[] getMinArticleCount() {
 		return minArticleCount;
 	}
-	public void setMinArticleCount(int minArticleCount) {
+	public void setMinArticleCount(int[] minArticleCount) {
 		this.minArticleCount = minArticleCount;
 	}
 
-	public int getRows() {
+	public int[] getRows() {
 		return rows;
 	}
 
-	public void setRows(int rows) {
+	public void setRows(int[] rows) {
 		this.rows = rows;
 	}
 }

@@ -6,6 +6,10 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.Temporal;
 import java.util.Map;
 import java.util.Properties;
 
@@ -69,4 +73,8 @@ public class Tools {
 	
     	return queryString;
     }
+	
+	public static String getFormattedDateTimeString(LocalDateTime dateTime) {
+		return dateTime.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "Z";
+	}
 }

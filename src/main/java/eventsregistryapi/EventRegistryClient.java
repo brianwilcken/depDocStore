@@ -16,7 +16,9 @@ import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,20 +56,13 @@ public class EventRegistryClient {
 	private final String eventRegistryCategories = Tools.getProperty("eventRegistry.categories");
 	private final String proxyUrl = Tools.getProperty("proxy");
 	private final String solrUrl = Tools.getProperty("solr.url");
-
-	public static void main(String args[]) {
-		EventRegistryClient eventRegistryClient = new EventRegistryClient();
-		EventRegistryEventArticlesResponse response = eventRegistryClient.QueryEventArticles("eng-3800037");
-		eventRegistryClient.PipelineProcessEventArticles(response);
-		//eventRegistryClient.QueryEventRegistryMinuteStream();
-	}
 	
 	public EventRegistryClient() {
 		solrClient = new SolrClient(solrUrl);
 		SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
 
-	    Proxy proxy = new Proxy(Type.HTTP, new InetSocketAddress(proxyUrl, 8080));
-	    requestFactory.setProxy(proxy);
+//	    Proxy proxy = new Proxy(Type.HTTP, new InetSocketAddress(proxyUrl, 8080));
+//	    requestFactory.setProxy(proxy);
 	    
 		restTemplate = new RestTemplate(requestFactory);
 	}
@@ -78,7 +73,7 @@ public class EventRegistryClient {
 		return eventCategoriesList;
 	}
 	
-	public List<IndexedEvent> PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) {
+	public List<IndexedEvent> PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) throws SolrServerException {
 		List<String> eventCategories = GetEventRegistryValidCategories();
 		List<IndexedEvent> validEvents = new ArrayList<IndexedEvent>();
 		List<IndexedEvent> readyToIndex = new ArrayList<IndexedEvent>();
@@ -137,15 +132,27 @@ public class EventRegistryClient {
 		return readyToIndex;
 	}
 	
-	private List<IndexedEvent> GetIndexableEvents(List<IndexedEvent> events) {
+	private List<IndexedEvent> GetIndexableEvents(List<IndexedEvent> events) throws SolrServerException {
+		List<SolrServerException> exs = new ArrayList<SolrServerException>();
 		List<IndexedEvent> indexableEvents = events.stream()
-				.filter(p -> !solrClient.IsDocumentAlreadyIndexed(p.getUri()))
+				.filter(p -> {
+					try {
+						return !solrClient.IsDocumentAlreadyIndexed(p.getUri());
+					} catch (SolrServerException e) {
+						exs.add(e);
+						return false;
+					}
+				})
 				.collect(Collectors.toList());
+		
+		if (!exs.isEmpty()) {
+			throw exs.get(0);
+		}
 		
 		return indexableEvents;
 	}
 	
-	public EventsRegistryEventStreamResponse QueryEventRegistryMinuteStream() {
+	public EventsRegistryEventStreamResponse QueryEventRegistryMinuteStream() throws RestClientException {
 //		String responseStr = restTemplate.getForObject(minuteStreamEventsUrl + "?apiKey=" + apiKey, String.class);
 //		try {
 //			FileUtils.writeStringToFile(new File("data/EventsStreamResponse.json"), responseStr);
@@ -157,7 +164,7 @@ public class EventRegistryClient {
 //		return null;
 		
 		EventsRegistryEventStreamResponse response = restTemplate.getForObject(minuteStreamEventsUrl + "?apiKey=" + apiKey, EventsRegistryEventStreamResponse.class);
-		
+
 //		//Temporary Simulation Stuff
 //		EventsRegistryEventStreamResponse response = null;
 //		try {
@@ -198,7 +205,7 @@ public class EventRegistryClient {
 		return response;
 	}
 	
-	public List<IndexedEvent> PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts) {
+	public List<IndexedEvent> PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts) throws SolrServerException {
 		if (response.getEvents() != null) {
 			//Filter out events that are missing a summary/title 
 			List<Result> weighedResults = Arrays.stream(response.getEvents().getResults())
@@ -265,7 +272,7 @@ public class EventRegistryClient {
 		return eventArticlesResponse;
 	}
 	
-	public List<IndexedArticle> PipelineProcessEventArticles(EventRegistryEventArticlesResponse response) {
+	public List<IndexedArticle> PipelineProcessEventArticles(EventRegistryEventArticlesResponse response) throws SolrServerException {
 		if (response != null && !response.getEventArticles().isEmpty()) {
 			//Extract the only event articles object that exists in the response
 			EventArticles eventArticles = response.getEventArticles().entrySet().stream().findFirst().get().getValue();
@@ -285,9 +292,20 @@ public class EventRegistryClient {
 			}).collect(Collectors.toList());
 			
 			//Only index articles that have not yet been indexed
-			List<IndexedArticle> indexableArticles = usArticles.stream().filter(p -> !solrClient.IsDocumentAlreadyIndexed(p.getUri()))
-				.map(p -> p.GetIndexedArticle())
-				.collect(Collectors.toList());
+			List<SolrServerException> exs = new ArrayList<SolrServerException>();
+			List<IndexedArticle> indexableArticles = usArticles.stream().filter(p -> {
+				try {
+					return !solrClient.IsDocumentAlreadyIndexed(p.getUri());
+				} catch (SolrServerException e) {
+					exs.add(e);
+					return false;
+				}
+			}).map(p -> p.GetIndexedArticle())
+					.collect(Collectors.toList());
+			
+			if (!exs.isEmpty()) {
+				throw exs.get(0);
+			}
 			
 			solrClient.IndexDocuments(indexableArticles);
 			

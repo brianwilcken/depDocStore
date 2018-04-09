@@ -2,9 +2,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>Experiment1</groupId>
-	<artifactId>Experiment1</artifactId>
-	<version>0.0.1.SNAPSHOT</version>
+	<groupId>inl.gov</groupId>
+	<artifactId>eventNLP</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+	<packaging>war</packaging>
+
+	<properties>
+	      <start-class>webapp.EventsApplication</start-class>
+	</properties>
 
 	<dependencies>
 		<dependency>
@@ -44,8 +50,29 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webflux</artifactId>
+			<artifactId>spring-boot-starter-web</artifactId>
 			<version>2.0.0.RELEASE</version>
+			<exclusions>
+		        <exclusion>
+		            <groupId>org.springframework.boot</groupId>
+		            <artifactId>spring-boot-starter-reactor-netty</artifactId>
+		        </exclusion>
+		        <exclusion>
+		            <groupId>org.springframework.boot</groupId>
+		            <artifactId>spring-boot-starter-logging</artifactId>
+		        </exclusion>
+		    </exclusions>
+		</dependency>
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-log4j2</artifactId>
+		    <version>2.0.0.RELEASE</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-tomcat</artifactId>
+		    <version>2.0.0.RELEASE</version>
+		    <scope>provided</scope>
 		</dependency>
 		<dependency>
 		    <groupId>org.springframework.boot</groupId>
@@ -53,14 +80,29 @@
 		    <version>2.0.0.RELEASE</version>
 		</dependency>
 		<dependency>
+		    <groupId>org.springframework</groupId>
+		    <artifactId>spring-webmvc</artifactId>
+		    <version>5.0.4.RELEASE</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.springframework</groupId>
+		    <artifactId>spring-context-support</artifactId>
+		    <version>5.0.4.RELEASE</version>
+		</dependency>
+<!-- 		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-security</artifactId>
+		    <version>2.0.0.RELEASE</version>
+		</dependency> -->
+		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-web</artifactId>
-			<version>5.0.3.RELEASE</version>
+			<version>5.0.4.RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-core</artifactId>
-			<version>5.0.3.RELEASE</version>
+			<version>5.0.4.RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -72,11 +114,6 @@
 		<!-- <artifactId>transport</artifactId> -->
 		<!-- <version>5.5.1</version> -->
 		<!-- </dependency> -->
-		<dependency>
-			<groupId>org.apache.logging.log4j</groupId>
-			<artifactId>log4j-core</artifactId>
-			<version>2.8.2</version>
-		</dependency>
 		<dependency>
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-solrj</artifactId>
@@ -99,8 +136,45 @@
 		</dependency>
 	</dependencies>
 
+	<profiles>
+		<profile>
+			<id>localDev</id>
+			<activation>
+			  	<property>
+			    	<name>env</name>
+			    	<value>localDev</value>
+			  	</property>
+			</activation>
+			<properties>
+				<log.file>C:/log/nicc-lp-app.log</log.file>
+				<log.path>C:/log/time-based-logs</log.path>
+				<solr.url>http://localhost:8983/solr</solr.url>
+			</properties>
+		</profile>
+	</profiles>
+	
+
 	<build>
+		<filters>
+			<filter>src/main/resources/log4j2.xml</filter>
+			<filter>src/main/resources/application.properties</filter>
+		</filters>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
 		<plugins>
+			<plugin>
+		        <groupId>org.apache.maven.plugins</groupId>
+		        <artifactId>maven-compiler-plugin</artifactId>
+		        <version>3.7.0</version>
+		        <configuration>
+		          	<source>1.8</source>
+		          	<target>1.8</target>
+		        </configuration>
+	      	</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
@@ -111,8 +185,6 @@
 				<artifactId>properties-maven-plugin</artifactId>
 				<version>1.0.0</version>
 				<executions>
-					<!-- Associate the read-project-properties goal with the initialize 
-						phase, to read the properties file. -->
 					<execution>
 						<phase>initialize</phase>
 						<goals>
@@ -125,6 +197,31 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-war-plugin</artifactId>
+			    <version>3.2.0</version>
+			    <executions>
+			        <execution>
+			            <id>default-war</id>
+			            <phase>prepare-package</phase>
+			            <configuration>
+							<warName>eventNLP</warName>
+			                <failOnMissingWebXml>false</failOnMissingWebXml>
+			            </configuration>
+			        </execution>
+			    </executions>
+			</plugin>
+			<plugin>
+			    <groupId>org.apache.tomcat.maven</groupId>
+			    <artifactId>tomcat7-maven-plugin</artifactId>
+			    <version>2.2</version>
+			    <configuration>
+			        <url>http://localhost:8080/manager/text</url>
+			        <server>TomcatServer</server>
+			        <path>/eventNLP</path>
+			    </configuration>
 			</plugin>
 		</plugins>
 	</build>

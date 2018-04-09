@@ -6,53 +6,72 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.response.FacetField;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 import common.Tools;
 import eventsregistryapi.model.IndexedEvent;
 import nlp.EventCategorizer;
 import solrapi.SolrClient;
 import solrapi.SolrConstants;
-import webapp.restapi.EventsService;
 
+@CrossOrigin
 @Controller
 public class EventCategorizationController {
 
 	private static SolrClient client = new SolrClient(Tools.getProperty("solr.url"));
 	private static EventCategorizer categorizer = new EventCategorizer();
-	private static EventsService svc = new EventsService();
+	private static EventsController svc = new EventsController();
 	
-	@GetMapping("/")
+	@GetMapping("/classify")
 	public String getHandler(Model model) {
 		model.addAttribute("mode", "N");
-		return getNextEvent(model);
+		try {
+			return getNextEvent(model);
+		} catch (SolrServerException e) {
+			model.addAttribute("exception", e.getMessage());
+			return "error";
+		}
 	}
 	
-	@PostMapping("/ReviewEvents")
+	@PostMapping("/classify/ReviewEvents")
 	public String reviewEventsHandler(Model model) {
 		model.addAttribute("mode", "R");
-		return getNextEvent(model);
+		try {
+			return getNextEvent(model);
+		} catch (SolrServerException e) {
+			model.addAttribute("exception", e.getMessage());
+			return "error";
+		}
 	}
 	
-	@PostMapping("/Next")
+	@PostMapping("/classify/Next")
 	public String nextHandler(@RequestBody MultiValueMap<String, String> form, Model model) {
 		model.addAttribute("mode", "R");
 		lockCategory(form, model);
 		String id = form.get("id").get(0);
-		return getNextEvent(model, id);
+		try {
+			return getNextEvent(model, id);
+		} catch (SolrServerException e) {
+			model.addAttribute("exception", e.getMessage());
+			return "error";
+		}
 	}
 	
-	@PostMapping("/EndReview")
+	@PostMapping("/classify/EndReview")
 	public String endReviewHandler(Model model) {
 		model.addAttribute("mode", "N");
-		return getNextEvent(model);
+		try {
+			return getNextEvent(model);
+		} catch (SolrServerException e) {
+			model.addAttribute("exception", e.getMessage());
+			return "error";
+		}
 	}
 	
 	private void lockCategory(MultiValueMap<String, String> form, Model model) {
@@ -67,29 +86,34 @@ public class EventCategorizationController {
 		}
 	}
 	
-	@PostMapping("/")
+	@PostMapping("/classify")
 	public String postHandler(@RequestBody MultiValueMap<String, String> form, Model model) {
 		String id = form.get("id").get(0);
 		model.addAttribute("mode", form.get("mode").get(0));
 		lockCategory(form, model);
-		List<IndexedEvent> indexedEvents = client.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
-		if (!indexedEvents.isEmpty()) {
-			IndexedEvent indexedEvent = indexedEvents.get(0);
-			if (!form.get("newCategory").get(0).isEmpty()) {
-				indexedEvent.setCategory(form.get("newCategory").get(0));
+		try {
+			List<IndexedEvent> indexedEvents = client.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			if (!indexedEvents.isEmpty()) {
+				IndexedEvent indexedEvent = indexedEvents.get(0);
+				if (!form.get("newCategory").get(0).isEmpty()) {
+					indexedEvent.setCategory(form.get("newCategory").get(0));
+				} else {
+					indexedEvent.setCategory(form.get("category").get(0));
+				}
+				indexedEvent.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
+				indexedEvent.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
+				client.IndexDocuments(indexedEvents);
+				return getNextEvent(model, indexedEvent.getId());
 			} else {
-				indexedEvent.setCategory(form.get("category").get(0));
+				return "error";
 			}
-			indexedEvent.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
-			indexedEvent.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
-			client.IndexDocuments(indexedEvents);
-			return getNextEvent(model, indexedEvent.getId());
-		} else {
+		} catch (SolrServerException e) {
+			model.addAttribute("exception", e.getMessage());
 			return "error";
 		}
 	}
 	
-	@PostMapping("/TrainModel")
+	@PostMapping("/classify/TrainModel")
 	public String trainModelPostHandler(Model model) {
 		client.WriteEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
 		double accuracy = categorizer.TrainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
@@ -98,21 +122,31 @@ public class EventCategorizationController {
 		return "noMoreEvents";
 	}
 	
-	@PostMapping("/RefreshEvents")
+	@PostMapping("/classify/RefreshEvents")
 	public String refreshEventsPostHandler(Model model) {
 		model.addAttribute("mode", "N");
-		svc.refreshEventsFromEventRegistry(null);
-		return getNextEvent(model);
+		svc.refreshEventsFromEventRegistry();
+		try {
+			return getNextEvent(model);
+		} catch (SolrServerException e) {
+			model.addAttribute("exception", e.getMessage());
+			return "error";
+		}
 	}
 	
-	@PostMapping("/SearchEvents")
+	@PostMapping("/classify/SearchEvents")
 	public String searchEventsPostHandler(Model model) {
 		model.addAttribute("mode", "N");
-		svc.getModelTrainingDataFromEventRegistry(null);
-		return getNextEvent(model);
+		svc.getModelTrainingDataFromEventRegistry();
+		try {
+			return getNextEvent(model);
+		} catch (SolrServerException e) {
+			model.addAttribute("exception", e.getMessage());
+			return "error";
+		}
 	}
 	
-	private String getNextEvent(Model model, String... id) {
+	private String getNextEvent(Model model, String... id) throws SolrServerException {
 		Random rand = new Random();
 		SortClause sort = new SortClause("random_" + Integer.toString(rand.nextInt()), "asc");
 		String eventState = model.asMap().get("mode").toString();
@@ -134,7 +168,7 @@ public class EventCategorizationController {
 		}
 	}
 	
-	private String prepViewModel(Model model, IndexedEvent indexedEvent) {
+	private String prepViewModel(Model model, IndexedEvent indexedEvent) throws SolrServerException {
 		model.addAttribute("id", indexedEvent.getId());
 		model.addAttribute("title", indexedEvent.getTitle());
 		model.addAttribute("summary", indexedEvent.getSummary());
@@ -143,7 +177,7 @@ public class EventCategorizationController {
 		return "eventCategorization";
 	}
 	
-	private String[] getAvailableCategories() {
+	private String[] getAvailableCategories() throws SolrServerException {
 		List<String> availableCategories = new ArrayList<String>();
 		SimpleOrderedMap<?> facets = client.QueryFacets("{categories:{type:terms,field:category}}");
 		SimpleOrderedMap<?> categories = (SimpleOrderedMap<?>) facets.get("categories");
