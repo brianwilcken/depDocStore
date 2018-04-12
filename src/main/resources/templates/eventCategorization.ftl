@@ -13,7 +13,7 @@
 
 </head>
 
-
+<body>
 <div class="main-content">
 
     <form class="form-labels-on-top" method="post">
@@ -22,7 +22,7 @@
             <h1>Classify Event</h1>
         </div>
 
-        <input type="hidden" name="id" value="inl.gov:eventNLP:war:0.0.1-SNAPSHOT">
+        <input type="hidden" name="eventId" value="${eventId}">
         <input type="hidden" name="mode" value="${mode}">
 
         <div class="form-row">

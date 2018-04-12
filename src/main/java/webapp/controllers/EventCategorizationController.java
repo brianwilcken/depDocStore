@@ -54,7 +54,7 @@ public class EventCategorizationController {
 	public String nextHandler(@RequestBody MultiValueMap<String, String> form, Model model) {
 		model.addAttribute("mode", "R");
 		lockCategory(form, model);
-		String id = form.get("id").get(0);
+		String id = form.get("eventId").get(0);
 		try {
 			return getNextEvent(model, id);
 		} catch (SolrServerException e) {
@@ -88,7 +88,7 @@ public class EventCategorizationController {
 	
 	@PostMapping("/classify")
 	public String postHandler(@RequestBody MultiValueMap<String, String> form, Model model) {
-		String id = form.get("id").get(0);
+		String id = form.get("eventId").get(0);
 		model.addAttribute("mode", form.get("mode").get(0));
 		lockCategory(form, model);
 		try {
@@ -169,7 +169,7 @@ public class EventCategorizationController {
 	}
 	
 	private String prepViewModel(Model model, IndexedEvent indexedEvent) throws SolrServerException {
-		model.addAttribute("id", indexedEvent.getId());
+		model.addAttribute("eventId", indexedEvent.getId());
 		model.addAttribute("title", indexedEvent.getTitle());
 		model.addAttribute("summary", indexedEvent.getSummary());
 		model.addAttribute("eventCategory", indexedEvent.getCategory());

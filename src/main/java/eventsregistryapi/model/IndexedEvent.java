@@ -45,6 +45,8 @@ public class IndexedEvent extends IndexedObject {
 	@Field
 	private String eventState;
 	@Field
+	private String feedType;
+	@Field
 	private String uri;
 	@Field
 	private String concepts;
@@ -70,7 +72,13 @@ public class IndexedEvent extends IndexedObject {
 	private String[] images;
 	@Field
 	private long totalArticleCount;
-	
+	@Field
+	private Boolean userCreated;
+	@Field
+	private String dashboard;
+	@Field
+	private String[] featureIds;
+
 	private Map<String, Long> conceptsMap;
 	
 	private static ObjectMapper mapper = new ObjectMapper();
@@ -291,5 +299,37 @@ public class IndexedEvent extends IndexedObject {
 
 	public void setLastUpdated(String lastUpdated) {
 		this.lastUpdated = lastUpdated;
+	}
+
+	public Boolean getUserCreated() {
+		return userCreated;
+	}
+
+	public void setUserCreated(Boolean userCreated) {
+		this.userCreated = userCreated;
+	}
+
+	public String getFeedType() {
+		return feedType;
+	}
+
+	public void setFeedType(String sourceType) {
+		this.feedType = sourceType;
+	}
+
+	public String getDashboard() {
+		return dashboard;
+	}
+
+	public void setDashboard(String dashboard) {
+		this.dashboard = dashboard;
+	}
+
+	public String[] getFeatureIds() {
+		return featureIds;
+	}
+
+	public void setFeatureIds(String[] featureIds) {
+		this.featureIds = featureIds;
 	}
 }

@@ -1,12 +1,6 @@
 package eventsregistryapi.model;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import solrapi.SolrConstants;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ArticleResult {
@@ -42,8 +36,8 @@ public class ArticleResult {
 
     private int wgt;
 
-    public IndexedArticle GetIndexedArticle() {
-    	IndexedArticle article = new IndexedArticle();
+    public IndexedEventSource GetIndexedArticle() {
+    	IndexedEventSource article = new IndexedEventSource();
     	
     	article.setUri(uri);
     	article.setEventUri(eventUri);

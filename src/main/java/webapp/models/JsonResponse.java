@@ -10,6 +10,7 @@ public class JsonResponse {
 	private Object data;
 	private final String timeStamp;
 	private List<String> exceptions = new ArrayList<String>();
+	private List<String> deletedEvents = new ArrayList<String>();
 	
 	public JsonResponse() {
 		timeStamp = Tools.getFormattedDateTimeString(LocalDateTime.now());
@@ -39,5 +40,13 @@ public class JsonResponse {
 		for (Exception exception : exceptions) {
 			this.exceptions.add(exception.getMessage());
 		}
+	}
+
+	public List<String> getDeletedEvents() {
+		return deletedEvents;
+	}
+
+	public void setDeletedEvents(List<String> deletedEvents) {
+		this.deletedEvents = deletedEvents;
 	}
 }

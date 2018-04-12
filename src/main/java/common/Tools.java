@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -18,10 +20,12 @@ import org.apache.commons.io.FileUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
+import webapp.models.JsonResponse;
 
 public class Tools {
 
 	private static Properties _properties;
+	private static List<Exception> _exceptions;
 	
 	public static Properties getProperties() {
 		if (_properties == null) {
@@ -34,6 +38,13 @@ public class Tools {
 			}
 		}
 		return _properties;
+	}
+
+	public static List<Exception> getExceptions() {
+		if (_exceptions == null) {
+			_exceptions = new ArrayList<>();
+		}
+		return _exceptions;
 	}
 	
 	public static String getProperty(String property) {
@@ -76,5 +87,24 @@ public class Tools {
 	
 	public static String getFormattedDateTimeString(LocalDateTime dateTime) {
 		return dateTime.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "Z";
+	}
+
+	//Private "Helper" Methods
+	public static JsonResponse formJsonResponse(Object data) {
+		JsonResponse response = new JsonResponse();
+		response.setData(data);
+		response.setExceptions(getExceptions());
+		getExceptions().clear();
+
+		return response;
+	}
+
+	public static JsonResponse formJsonResponse(Object data, String timeStamp) {
+		JsonResponse response = new JsonResponse(timeStamp);
+		response.setData(data);
+		response.setExceptions(getExceptions());
+		getExceptions().clear();
+
+		return response;
 	}
 }

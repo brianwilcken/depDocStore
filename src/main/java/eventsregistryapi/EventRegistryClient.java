@@ -1,28 +1,19 @@
 package eventsregistryapi;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.Proxy.Type;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Files;
 
 import common.Tools;
 import eventsregistryapi.model.ArticleResult;
@@ -37,7 +28,7 @@ import eventsregistryapi.model.EventsRegistryEventDetailsQuery;
 import eventsregistryapi.model.EventsRegistryEventStreamResponse;
 import eventsregistryapi.model.EventsRegistryEventsQuery;
 import eventsregistryapi.model.EventsRegistryEventsResponse;
-import eventsregistryapi.model.IndexedArticle;
+import eventsregistryapi.model.IndexedEventSource;
 import eventsregistryapi.model.IndexedEvent;
 import eventsregistryapi.model.Info;
 import eventsregistryapi.model.Location;
@@ -245,7 +236,7 @@ public class EventRegistryClient {
 		return new ArrayList<IndexedEvent>();
 	}
 	
-	public EventRegistryEventArticlesResponse QueryEventArticles(String eventUri) {
+	public EventRegistryEventArticlesResponse QueryEventSources(String eventUri) {
 		EventsRegistryEventArticlesQuery query = new EventsRegistryEventArticlesQuery(eventUri, apiKey);
 		String url = eventDetailsUrl + Tools.GetQueryString(query);
 		String response = restTemplate.getForObject(url, String.class);
@@ -272,7 +263,7 @@ public class EventRegistryClient {
 		return eventArticlesResponse;
 	}
 	
-	public List<IndexedArticle> PipelineProcessEventArticles(EventRegistryEventArticlesResponse response) throws SolrServerException {
+	public List<IndexedEventSource> PipelineProcessEventSources(EventRegistryEventArticlesResponse response) throws SolrServerException {
 		if (response != null && !response.getEventArticles().isEmpty()) {
 			//Extract the only event articles object that exists in the response
 			EventArticles eventArticles = response.getEventArticles().entrySet().stream().findFirst().get().getValue();
@@ -293,7 +284,7 @@ public class EventRegistryClient {
 			
 			//Only index articles that have not yet been indexed
 			List<SolrServerException> exs = new ArrayList<SolrServerException>();
-			List<IndexedArticle> indexableArticles = usArticles.stream().filter(p -> {
+			List<IndexedEventSource> indexableArticles = usArticles.stream().filter(p -> {
 				try {
 					return !solrClient.IsDocumentAlreadyIndexed(p.getUri());
 				} catch (SolrServerException e) {

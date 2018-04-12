@@ -1,12 +1,7 @@
 package eventsregistryapi.model;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -61,6 +56,7 @@ public class Result {
     	event.setTotalArticleCount(totalArticleCount);
     	event.setImages(images);
     	event.setEventState(SolrConstants.Events.EVENT_STATE_NEW);
+    	event.setFeedType(SolrConstants.Events.FEED_TYPE_MEDIA);
     	event.initId();
     	
     	return event;

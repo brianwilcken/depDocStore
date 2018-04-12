@@ -6,43 +6,34 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 //import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.io.FileUtils;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.StreamingResponseCallback;
-import org.apache.solr.client.solrj.beans.DocumentObjectBinder;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
-import org.apache.solr.client.solrj.response.FacetField;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.MoreLikeThisParams;
-import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.SimpleOrderedMap;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.io.Files;
 
 import common.Tools;
-import eventsregistryapi.model.EventData;
-import eventsregistryapi.model.IndexedArticle;
+import eventsregistryapi.model.IndexedEventSource;
 import eventsregistryapi.model.IndexedEvent;
-import eventsregistryapi.model.IndexedObject;
 
 public class SolrClient {
 
@@ -53,10 +44,20 @@ public class SolrClient {
 		client = new HttpSolrClient.Builder(solrHostURL).build();
 	}
 	
+	public static void main(String[] args) {
+		SolrClient solrClient = new SolrClient("http://localhost:8983/solr");
+		try {
+			solrClient.UpdateIndexedEventsFromFile("data/solrData.json");
+		} catch (SolrServerException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public void UpdateIndexedArticlesFromFile(String filePath) throws SolrServerException {
 		String file = Tools.GetFileString(filePath, "Cp1252");
 		try {
-			IndexedArticle[] articles = mapper.readValue(file, IndexedArticle[].class);
+			IndexedEventSource[] articles = mapper.readValue(file, IndexedEventSource[].class);
 			IndexDocuments(Arrays.asList(articles));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -140,15 +141,23 @@ public class SolrClient {
 		}
 	}
 	
-	public SolrDocumentList FindSimilarDocuments(String searchText) throws SolrServerException {
+	public List<IndexedEvent> FindSimilarEvents(String searchText) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 	    query.setRequestHandler("/" + MoreLikeThisParams.MLT);
 	    query.setParam(CommonParams.STREAM_BODY, searchText);
 	    query.setRows(20);
 	    try {
 			SolrDocumentList response = client.query("events", query).getResults();
-			return response;
-		} catch (IOException e) {
+			//remove any potential documents that are not IndexedEvents
+			for (int i = 0; i < response.size(); i++) {
+				SolrDocument doc = response.get(i);
+				if (doc.containsKey("eventUri")) { //only source documents contain this field
+					response.remove(i--);
+				}
+			}
+			List<IndexedEvent> events = convertSolrDocsToTypedDocs(IndexedEvent.class.getConstructor(SolrDocument.class), response);
+			return events;
+		} catch (IOException | NoSuchMethodException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return null;
@@ -173,25 +182,32 @@ public class SolrClient {
 				return null;
 			}
 			SolrDocumentList response = client.query("events", query).getResults();
-			List<T> events = (List<T>) response.stream().map(p -> {
-				try {
-					return cons.newInstance(p);
-				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-						| InvocationTargetException e) {
-					return null;
-				}
-			}).collect(Collectors.toList());
-			return events;
+			List<T> typedDocs = convertSolrDocsToTypedDocs(cons, response);
+			return typedDocs;
 		} catch (IOException e) {
 			return null;
 		}
+	}
+
+	private <T> List<T> convertSolrDocsToTypedDocs(Constructor<?> cons, SolrDocumentList docs) {
+		List<T> typedDocs = (List<T>) docs.stream().map(p -> {
+			try {
+				return cons.newInstance(p);
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException e) {
+				return null;
+			}
+		}).collect(Collectors.toList());
+
+		return typedDocs;
 	}
 	
 	public void WriteEventCategorizationTrainingDataToFile(String trainingFilePath) {
 		SolrQuery query = new SolrQuery();
 		query.setRows(1000000);
 		query.setQuery("-eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
-		
+		query.addFilterQuery("-category:" + SolrConstants.Events.CATEGORY_UNKNOWN);
+		query.addFilterQuery("-userCreated:true");
 		try {
 			File file = new File(trainingFilePath);
 			file.getParentFile().mkdirs();

@@ -1,10 +1,5 @@
 package eventsregistryapi.model;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,6 +40,7 @@ public class EventData {
     	event.setLocation(location.getLabel().getEng());
     	event.setTotalArticleCount(totalArticleCount);
     	event.setEventState(SolrConstants.Events.EVENT_STATE_NEW);
+    	event.setFeedType(SolrConstants.Events.FEED_TYPE_MEDIA);
     	event.initId();
     	
     	return event;

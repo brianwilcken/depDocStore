@@ -8,7 +8,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class IndexedArticlesQueryParams extends IndexedDocumentsQuery {
+public class IndexedEventSourcesQueryParams extends IndexedDocumentsQuery {
 	private String[] eventUris;
 	private int[] numDaysPrevious;
 	private String[] startDate;
@@ -19,7 +19,7 @@ public class IndexedArticlesQueryParams extends IndexedDocumentsQuery {
 		return getTimeRangeQuery(startDate, endDate, numDaysPrevious);
 	}
 	
-	public String[] getFacetedQueries() {
+	public String[] getFilterQueries() {
 		List<String> fqs = new ArrayList<String>();
 		
 		fqs.add(getFacetedQuery("eventUri", eventUris));

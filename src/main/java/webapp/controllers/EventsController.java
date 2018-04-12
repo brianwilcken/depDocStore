@@ -4,45 +4,34 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import javax.annotation.PostConstruct;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 
+import eventsregistryapi.model.*;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.common.SolrDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ReactiveHttpOutputMessage;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestClientException;
 
 import common.Tools;
 import eventsregistryapi.EventRegistryClient;
-import eventsregistryapi.model.EventRegistryEventArticlesResponse;
-import eventsregistryapi.model.EventsRegistryEventStreamResponse;
-import eventsregistryapi.model.EventsRegistryEventsResponse;
-import eventsregistryapi.model.IndexedArticle;
-import eventsregistryapi.model.IndexedArticlesQueryParams;
-import eventsregistryapi.model.IndexedEvent;
-import eventsregistryapi.model.IndexedEventsQueryParams;
 import nlp.EventCategorizer;
 import solrapi.SolrClient;
 import solrapi.SolrConstants;
 import webapp.models.JsonResponse;
 import webapp.services.RefreshEventsService;
 
+import javax.servlet.http.HttpServletRequest;
+
 @CrossOrigin
 @RestController
+@RequestMapping("/api/events")
 public class EventsController {
 	private EventRegistryClient eventRegistryClient;
 	private SolrClient solrClient;
@@ -54,13 +43,16 @@ public class EventsController {
 	
 	@Autowired
 	private RefreshEventsService refreshEventsService;
+
+	@Autowired
+	private HttpServletRequest context;
 	
 	public EventsController() {
 		eventRegistryClient = new EventRegistryClient();
 		solrClient = new SolrClient(Tools.getProperty("solr.url"));
 		categorizer = new EventCategorizer();
 		gson = new Gson();
-		exceptions = new ArrayList<Exception>();
+		exceptions = new ArrayList<>();
 	}
 	
 	public EventRegistryClient getEventRegistryClient() {
@@ -75,146 +67,200 @@ public class EventsController {
 	}
 	
 	public void refreshEventsProcessExceptionHandler(Exception e) {
-		exceptions.add(e);
+		Tools.getExceptions().add(e);
 		try {
 			refreshEventsService.process(this);
 		} catch (Exception e1) {}
 	}
 	
 	//Public REST API
-	@RequestMapping(value="/api/events/refresh", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JsonResponse> refreshEventsFromEventRegistry() {
-		try {
-			EventsRegistryEventStreamResponse response = eventRegistryClient.QueryEventRegistryMinuteStream();
-			List<IndexedEvent> events = eventRegistryClient.PipelineProcessEventStreamResponse(response);
-			return ResponseEntity.ok().body(formJsonResponse(events));
-		} catch (Exception e) {
-			logger.error(e);
-			exceptions.add(e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(formJsonResponse(null));
-		}
-	}
-	
-	@RequestMapping(value="/api/modelTraining/train", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JsonResponse> initiateModelTraining() {
-		dumpTrainingDataToFile();
-		double accuracy = processTrainingData();
-		
-		return ResponseEntity.ok().body(formJsonResponse(accuracy));
-	}
-	
-	@RequestMapping(value="/api/events/findSimilar", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+
+	//Get events containing similar text in the title/description
+	@RequestMapping(value="/equivalents", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JsonResponse> findSimilarDocuments(@RequestParam String searchText) {
 		try {
-			List<SolrDocument> docs = solrClient.FindSimilarDocuments(searchText);
-			return ResponseEntity.ok().body(formJsonResponse(docs));
+			logger.info(context.getRemoteAddr() + " -> " + "Finding similar events");
+			List<IndexedEvent> docs = solrClient.FindSimilarEvents(searchText);
+			return ResponseEntity.ok().body(Tools.formJsonResponse(docs));
 		} catch (Exception e) {
-			logger.error(e);
-			exceptions.add(e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(formJsonResponse(null));
+			logger.error(context.getRemoteAddr() + " -> " + e);
+			Tools.getExceptions().add(e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
 		}
 	}
-	
-	@RequestMapping(value="/api/events", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+
+	//Get events using query parameters
+	@RequestMapping(method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JsonResponse> getEvents(IndexedEventsQueryParams params) {
+		logger.info(context.getRemoteAddr() + " -> " + "In getEvents method");
 		try {
-			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, params.getQuery(), params.getQueryRows(), null, params.getFacetedQueries());
-			return ResponseEntity.ok().body(formJsonResponse(events, params.getQueryTimeStamp()));
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, params.getQuery(), params.getQueryRows(), null, params.getFilterQueries());
+			JsonResponse response;
+			if (params.getIncludeDeletedIds() != null && params.getIncludeDeletedIds()) {
+				logger.info(context.getRemoteAddr() + " -> " + "Including deleted ids");
+				//Obtain set of deleted event Ids
+				List<String> deletedEventIds = events.stream()
+						.filter(p -> p.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_DELETED) == 0)
+						.map(p -> p.getId())
+						.collect(Collectors.toList());
+				logger.info(context.getRemoteAddr() + " -> " + "Total number of deleted events: " + deletedEventIds.size());
+
+				//Filter to produce list of non-deleted events
+				List<IndexedEvent> nonDeletedEvents = events.stream().filter(p -> p.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_DELETED) != 0).collect(Collectors.toList());
+
+				logger.info(context.getRemoteAddr() + " -> " + "Total number of non-deleted events: " + nonDeletedEvents.size());
+				//form response with deleted event ids
+				response = Tools.formJsonResponse(nonDeletedEvents, params.getQueryTimeStamp());
+				response.setDeletedEvents(deletedEventIds);
+			} else {
+				response = Tools.formJsonResponse(events, params.getQueryTimeStamp());
+			}
+
+			logger.info(context.getRemoteAddr() + " -> " + "Returning events");
+			return ResponseEntity.ok().body(response);
 		} catch (Exception e) {
-			logger.error(e);
-			exceptions.add(e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(formJsonResponse(null, params.getQueryTimeStamp()));
+			logger.error(context.getRemoteAddr() + " -> " + e);
+			Tools.getExceptions().add(e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null, params.getQueryTimeStamp()));
 		}
 	}
-	
-	@RequestMapping(value="/api/event/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)
+
+	//Delete specific event
+	@RequestMapping(value="/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<JsonResponse> deleteEventById(@PathVariable(name="id") String id) {
 		try {
-			logger.info("Trying to delete event with id: " + id);
+			logger.info(context.getRemoteAddr() + " -> " + "Trying to delete event with id: " + id);
 			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
 			if (!events.isEmpty()) {
 				IndexedEvent event = events.get(0);
 				event.setEventState(SolrConstants.Events.EVENT_STATE_DELETED);
+				event.updateLastUpdatedDate();
 				solrClient.IndexDocuments(events);
-				logger.info("Deleted event with id: " + id);
-				return ResponseEntity.ok().body(formJsonResponse(event));
+				logger.info(context.getRemoteAddr() + " -> " + "Deleted event with id: " + id);
+				return ResponseEntity.ok().body(Tools.formJsonResponse(event));
 			} else {
-				logger.info("Failed to deleted event with id: " + id);
+				logger.info(context.getRemoteAddr() + " -> " + "Failed to deleted event with id: " + id);
 				return ResponseEntity.notFound().build();
 			}
 		} catch (Exception e) {
-			logger.error(e);
-			exceptions.add(e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(formJsonResponse(null));
-		}
-	}
-	
-	@RequestMapping(value="/api/event/{id}", method=RequestMethod.POST, consumes=MediaType.APPLICATION_JSON_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JsonResponse> updateEvent(@RequestBody IndexedEvent event) {
-		try {
-			solrClient.IndexDocument(event);
-			return ResponseEntity.ok().body(formJsonResponse(event));
-		} catch (Exception e) {
-			logger.error(e);
-			exceptions.add(e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(formJsonResponse(null));
-		}
-	}
-	
-	@RequestMapping(value="/api/articles", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JsonResponse> getArticles(IndexedArticlesQueryParams params) {
-		try {
-			List<IndexedArticle> articles = solrClient.QueryIndexedDocuments(IndexedArticle.class, params.getQuery(), params.getQueryRows(), null, params.getFacetedQueries());
-			return ResponseEntity.ok().body(formJsonResponse(articles, params.getQueryTimeStamp()));
-		} catch (Exception e) {
-			logger.error(e);
-			exceptions.add(e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(formJsonResponse(null, params.getQueryTimeStamp()));
+			logger.error(context.getRemoteAddr() + " -> " + e);
+			Tools.getExceptions().add(e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
 		}
 	}
 
-	@RequestMapping(value="/api/articles/refresh", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JsonResponse> refreshArticlesFromEventRegistry(@PathVariable(name="eventUri") String eventUri) {
-		EventRegistryEventArticlesResponse response = eventRegistryClient.QueryEventArticles(eventUri);
-		
+	//Create new event
+	@RequestMapping(method=RequestMethod.POST, consumes=MediaType.APPLICATION_JSON_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JsonResponse> createEvent(@RequestBody IndexedEvent event) {
 		try {
-			List<IndexedArticle> articles = eventRegistryClient.PipelineProcessEventArticles(response);
-			return ResponseEntity.ok().body(formJsonResponse(articles));
+			logger.info(context.getRemoteAddr() + " -> " + "Creating new event");
+			event.initId();
+			event.setUri("N/A");
+			event.setUserCreated(true);
+			event.setFeedType(SolrConstants.Events.FEED_TYPE_AUTHORITATIVE);
+			event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
+			event.setEventState(SolrConstants.Events.EVENT_STATE_NEW);
+			event.updateLastUpdatedDate();
+			List<IndexedEvent> coll = new ArrayList<>();
+			coll.add(event);
+			solrClient.IndexDocuments(coll);
+			logger.info(context.getRemoteAddr() + " -> " + "New event has been indexed with id: " + event.getId());
+			return ResponseEntity.ok().body(Tools.formJsonResponse(event));
 		} catch (Exception e) {
-			logger.error(e);
-			exceptions.add(e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(formJsonResponse(null));
+			logger.error(context.getRemoteAddr() + " -> " + e);
+			Tools.getExceptions().add(e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
 		}
 	}
-	
-	@RequestMapping(value="/api/modelTraining/refreshData", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JsonResponse> getModelTrainingDataFromEventRegistry() {
-		List<IndexedEvent> events = indexEventsByConcept();
 
-		return ResponseEntity.ok().body(formJsonResponse(events));
+	//update specific event with user input
+	@RequestMapping(value="{id}", method=RequestMethod.PUT, consumes=MediaType.APPLICATION_JSON_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JsonResponse> updateEvent(@PathVariable(name="id") String id, @RequestBody IndexedEvent updEvent) {
+		try {
+			logger.info(context.getRemoteAddr() + " -> " + "Updating event with id: " + id);
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			if (!events.isEmpty()) {
+				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding with update");
+				IndexedEvent event = events.get(0);
+				event.setLatitude(updEvent.getLatitude());
+				event.setLongitude(updEvent.getLongitude());
+				event.setLocation(updEvent.getLocation());
+				if (event.getEventState() == SolrConstants.Events.EVENT_STATE_NEW) {
+					event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
+				} else {
+					event.setEventState(updEvent.getEventState());
+				}
+				event.setCategory(updEvent.getCategory());
+				event.setTitle(updEvent.getTitle());
+				event.setSummary(updEvent.getSummary());
+				event.setDashboard(updEvent.getDashboard());
+				event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
+				event.setFeatureIds(updEvent.getFeatureIds());
+				event.updateLastUpdatedDate();
+
+				solrClient.IndexDocument(event);
+				logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed... proceeding with model training");
+				double accuracy = initiateModelTraining();
+				logger.info(context.getRemoteAddr() + " -> " + "Model training complete.  Model accuracy: " + accuracy);
+				return ResponseEntity.ok().body(Tools.formJsonResponse(event));
+			} else {
+				return ResponseEntity.notFound().build();
+			}
+		} catch (Exception e) {
+			logger.error(context.getRemoteAddr() + " -> " + e);
+			Tools.getExceptions().add(e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+		}
 	}
 
+	//Get sources for specific event
+	@RequestMapping(value="/{id}/sources", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JsonResponse> getEventSources(@PathVariable(name="id") String id) {
+		logger.info(context.getRemoteAddr() + " -> " + "Getting indexed sources for event with id: " + id);
+		try {
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			if (!events.isEmpty()) {
+				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding to lookup sources");
+				IndexedEvent event = events.get(0);
+				List<IndexedEventSource> sources = solrClient.QueryIndexedDocuments(IndexedEventSource.class, "eventUri:" + event.getUri(), 10000, null);
+				logger.info(context.getRemoteAddr() + " -> " + "Number of sources found: " + sources.size());
+				return ResponseEntity.ok().body(Tools.formJsonResponse(sources));
+			} else {
+				logger.info(context.getRemoteAddr() + " -> " + "The specified event does not exist. id: " + id);
+				return ResponseEntity.notFound().build();
+			}
+		} catch (Exception e) {
+			logger.error(context.getRemoteAddr() + " -> " + e);
+			Tools.getExceptions().add(e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+		}
+	}
+
+	//refresh sources from Event Registry for specific event
+	@RequestMapping(value="/{id}/sources", method=RequestMethod.POST, produces=MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<JsonResponse> refreshEventSources(@PathVariable(name="id") String id) {
+		logger.info(context.getRemoteAddr() + " -> " + "Attempting to refresh sources for event with id: " + id);
+		try {
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			if (!events.isEmpty()) {
+				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding to query Event Registry for updated sources");
+				IndexedEvent event = events.get(0);
+				EventRegistryEventArticlesResponse response = eventRegistryClient.QueryEventSources(event.getUri());
+				List<IndexedEventSource> sources = eventRegistryClient.PipelineProcessEventSources(response);
+				logger.info(context.getRemoteAddr() + " -> " + "Total number of sources returned by Event Registry: " + sources.size());
+				return ResponseEntity.ok().body(Tools.formJsonResponse(sources));
+			} else {
+				return ResponseEntity.notFound().build();
+			}
+		} catch (Exception e) {
+			logger.error(context.getRemoteAddr() + " -> " + e);
+			Tools.getExceptions().add(e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+		}
+	}
 	//******************************************************************************
 	
 	//Private "Helper" Methods
-	private JsonResponse formJsonResponse(Object data) {
-		JsonResponse response = new JsonResponse();
-		response.setData(data);
-		response.setExceptions(exceptions);
-		exceptions.clear();
-		
-		return response;
-	}
-	
-	private JsonResponse formJsonResponse(Object data, String timeStamp) {
-		JsonResponse response = new JsonResponse(timeStamp);
-		response.setData(data);
-		response.setExceptions(exceptions);
-		exceptions.clear();
-		
-		return response;
-	}
-	
 	private Map<String, List<String>> getConceptsMap() {
 		String conceptsJson = Tools.GetFileString(Tools.getProperty("eventRegistry.searchConcepts"));
 		ObjectMapper mapper = new ObjectMapper();
@@ -236,6 +282,12 @@ public class EventsController {
 	private void updateIndexedEventsByFile(String filePath) throws SolrServerException {
 		solrClient.UpdateIndexedEventsFromFile(filePath);
 	}
+
+	public List<IndexedEvent> getModelTrainingDataFromEventRegistry() {
+		List<IndexedEvent> events = indexEventsByConcept();
+
+		return events;
+	}
 	
 	private List<IndexedEvent> indexEventsByConcept() {
 		Map<String, List<String>> concepts = getConceptsMap();
@@ -245,7 +297,7 @@ public class EventsController {
 			try {
 				events.addAll(queryEvents(p.getKey(), p.getValue()));
 			} catch (Exception e) {
-				exceptions.add(e);
+				Tools.getExceptions().add(e);
 			}
 		});
 		
@@ -267,6 +319,24 @@ public class EventsController {
 	
 	private double processTrainingData() {
 		double accuracy = categorizer.TrainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
+		return accuracy;
+	}
+
+	public List<IndexedEvent> refreshEventsFromEventRegistry() {
+		try {
+			EventsRegistryEventStreamResponse response = eventRegistryClient.QueryEventRegistryMinuteStream();
+			List<IndexedEvent> events = eventRegistryClient.PipelineProcessEventStreamResponse(response);
+			return events;
+		} catch (Exception e) {
+			logger.error(e);
+			return null;
+		}
+	}
+
+	private double initiateModelTraining() {
+		dumpTrainingDataToFile();
+		double accuracy = processTrainingData();
+
 		return accuracy;
 	}
 }

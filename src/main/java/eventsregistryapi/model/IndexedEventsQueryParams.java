@@ -1,15 +1,7 @@
 package eventsregistryapi.model;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
-import java.util.TimeZone;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -22,6 +14,9 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 	private String[] categories;
 	private String[] eventStates;
 	private String[] categorizationStates;
+	private String[] sources;
+	private Boolean includeDeletedIds;
+	private String[] similarText;
 	private int[] minArticleCount;
 	private int[] rows;
 	
@@ -29,7 +24,7 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 		return getTimeRangeQuery(startDate, endDate, numDaysPrevious);
 	}
 
-	public String[] getFacetedQueries() {
+	public String[] getFilterQueries() {
 		List<String> fqs = new ArrayList<String>();
 		
 		fqs.add(getFacetedQuery("uri", uris));
@@ -108,5 +103,29 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 
 	public void setRows(int[] rows) {
 		this.rows = rows;
+	}
+	
+	public String[] getSources() {
+		return sources;
+	}
+
+	public void setSources(String[] sources) {
+		this.sources = sources;
+	}
+
+	public Boolean getIncludeDeletedIds() {
+		return includeDeletedIds;
+	}
+
+	public void setIncludeDeletedIds(Boolean includeDeletedIds) {
+		this.includeDeletedIds = includeDeletedIds;
+	}
+
+	public String[] getSimilarText() {
+		return similarText;
+	}
+
+	public void setSimilarText(String[] similarText) {
+		this.similarText = similarText;
 	}
 }

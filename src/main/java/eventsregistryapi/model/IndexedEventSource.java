@@ -10,7 +10,7 @@ import org.apache.solr.common.SolrDocument;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class IndexedArticle extends IndexedObject {
+public class IndexedEventSource extends IndexedObject {
 	@Field
 	private String id;
 	@Field
@@ -34,10 +34,10 @@ public class IndexedArticle extends IndexedObject {
 	
 	private static ObjectMapper mapper = new ObjectMapper();
 	
-	public IndexedArticle() {
+	public IndexedEventSource() {
 	}
 	
-	public IndexedArticle(SolrDocument doc) {
+	public IndexedEventSource(SolrDocument doc) {
 		ConsumeSolr(doc);
 	}
 	
