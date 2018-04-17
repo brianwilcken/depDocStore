@@ -59,7 +59,7 @@ public class EventRegistryClient {
 	}
 	
 	private List<String> GetEventRegistryValidCategories() {
-		String eventCategories = Tools.GetFileString(eventRegistryCategories).toLowerCase();
+		String eventCategories = Tools.getResource(eventRegistryCategories).toLowerCase();
 		List<String> eventCategoriesList = Arrays.stream(eventCategories.split(System.lineSeparator())).collect(Collectors.toList());
 		return eventCategoriesList;
 	}
@@ -103,7 +103,7 @@ public class EventRegistryClient {
 		//Perform NLP on the index-ready events.  This phase uses the NICC taxonomy to produce a PRELIMINARY category for each event.  
 		//The preliminary category may then either be updated by the user or accepted as-is within the NICC landing page UI.
 		EventCategorizer categorizer = new EventCategorizer();
-		List<IndexedEvent> categorizedEvents = categorizer.DetectEventDataCategories(indexableEvents);
+		List<IndexedEvent> categorizedEvents = categorizer.detectEventDataCategories(indexableEvents);
 
 		//Iterate through the categorized events to query Event Registry for event details
 		for (IndexedEvent event : categorizedEvents) {
@@ -118,7 +118,7 @@ public class EventRegistryClient {
 			}
 		}
 		
-		solrClient.IndexDocuments(readyToIndex);
+		solrClient.indexDocuments(readyToIndex);
 		
 		return readyToIndex;
 	}
@@ -223,13 +223,13 @@ public class EventRegistryClient {
 			
 			//Categorize the events
 			EventCategorizer categorizer = new EventCategorizer();
-			List<IndexedEvent> categorizedEvents = categorizer.DetectEventDataCategories(indexableEvents);
+			List<IndexedEvent> categorizedEvents = categorizer.detectEventDataCategories(indexableEvents);
 			
 			categorizedEvents.stream().forEach(p -> {
 				p.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_MACHINE);
 			});
 			
-			solrClient.IndexDocuments(categorizedEvents);
+			solrClient.indexDocuments(categorizedEvents);
 			
 			return categorizedEvents;
 		}
@@ -298,7 +298,7 @@ public class EventRegistryClient {
 				throw exs.get(0);
 			}
 			
-			solrClient.IndexDocuments(indexableArticles);
+			solrClient.indexDocuments(indexableArticles);
 			
 			return indexableArticles;
 		}

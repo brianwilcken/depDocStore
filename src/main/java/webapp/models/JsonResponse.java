@@ -1,5 +1,6 @@
 package webapp.models;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +14,7 @@ public class JsonResponse {
 	private List<String> deletedEvents = new ArrayList<String>();
 	
 	public JsonResponse() {
-		timeStamp = Tools.getFormattedDateTimeString(LocalDateTime.now());
+		timeStamp = Tools.getFormattedDateTimeString(Instant.now());
 	}
 	
 	public JsonResponse(String timeStamp) {

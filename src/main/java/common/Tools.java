@@ -2,14 +2,9 @@ package common;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +15,7 @@ import org.apache.commons.io.FileUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
+import org.springframework.core.io.ClassPathResource;
 import webapp.models.JsonResponse;
 
 public class Tools {
@@ -50,7 +46,18 @@ public class Tools {
 	public static String getProperty(String property) {
 		return getProperties().getProperty(property);
 	}
-	
+
+	public static String getResource(String name) {
+		ClassPathResource resource = new ClassPathResource(name);
+		String fileString = null;
+		try {
+			fileString = Files.toString(resource.getFile(), Charsets.UTF_8);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return fileString;
+	}
+
 	public static String GetFileString(String filePath) {
 		String fileString = null;
 		try {
@@ -85,7 +92,7 @@ public class Tools {
     	return queryString;
     }
 	
-	public static String getFormattedDateTimeString(LocalDateTime dateTime) {
+	public static String getFormattedDateTimeString(Instant dateTime) {
 		return dateTime.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "Z";
 	}
 

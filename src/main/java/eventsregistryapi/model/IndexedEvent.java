@@ -1,12 +1,10 @@
 package eventsregistryapi.model;
 
-import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -15,13 +13,10 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import nlp.NLPTools;
+import opennlp.tools.stemmer.Stemmer;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.StringUtils;
-import org.apache.lucene.analysis.CharArraySet;
-import org.apache.lucene.analysis.StopFilter;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.solr.client.solrj.beans.Field;
 import org.apache.solr.common.SolrDocument;
 
@@ -32,7 +27,6 @@ import com.google.gson.reflect.TypeToken;
 
 import common.Tools;
 import opennlp.tools.stemmer.PorterStemmer;
-import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
 
 public class IndexedEvent extends IndexedObject {
@@ -84,7 +78,7 @@ public class IndexedEvent extends IndexedObject {
 	private static ObjectMapper mapper = new ObjectMapper();
 	
 	public IndexedEvent() {
-		conceptsMap = new HashMap<String, Long>();
+		conceptsMap = new HashMap<>();
 	}
 	
 	public IndexedEvent(SolrDocument doc) {
@@ -122,47 +116,22 @@ public class IndexedEvent extends IndexedObject {
 		return this;
 	}
 	
-	public String[] GetDocCatTokens(TokenizerModel model, PorterStemmer stemmer) {
+	public String[] GetDocCatTokens(TokenizerModel model, Stemmer stemmer) {
 		String normalized = getNormalizedDocCatString(stemmer);
-		
-		//Tokenize
-		TokenizerME tokenDetector = new TokenizerME(model);
-		String[] tokens = tokenDetector.tokenize(normalized);
+		String[] tokens = NLPTools.detectTokens(model, normalized);
 
 		return tokens;
 	}
 	
-	private String getNormalizedDocCatString(PorterStemmer stemmer) {
+	private String getNormalizedDocCatString(Stemmer stemmer) {
 		String docCatStr = title + " " + summary + getConceptsString();
 		docCatStr = docCatStr.replace("\r", " ").replace("\n", " ");
-		
-		//Normalize, lemmatize and remove stop words
-		StandardAnalyzer analyzer = new StandardAnalyzer();
-		String normalized = analyzer.normalize("", docCatStr).utf8ToString();
-		TokenStream stream = analyzer.tokenStream("", normalized);
-		StopFilter filter = new StopFilter(stream, analyzer.getStopwordSet());
-		StringBuilder str = new StringBuilder();
-		try {
-			stream.reset();
-			while(filter.incrementToken()) {
-				CharTermAttribute attr = filter.getAttribute(CharTermAttribute.class);
-				str.append(stemmer.stem(attr.toString()) + " ");
-			}
-			analyzer.close();
-			filter.end();
-			filter.close();
-			stream.end();
-			stream.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return str.toString();
+
+		return NLPTools.normalizeText(stemmer, docCatStr);
 	}
 	
 	private String getConceptsString() {
-		if (this.getConcepts() != null) {
+		if (this.getConcepts() != null && !this.getConcepts().isEmpty()) {
 			HashMap<String,Long> conceptMap = new Gson().fromJson(this.getConcepts(), new TypeToken<HashMap<String, Long>>(){}.getType());
 			StringBuilder str = new StringBuilder();
 			
@@ -176,7 +145,7 @@ public class IndexedEvent extends IndexedObject {
 	}
 	
 	public void updateLastUpdatedDate() {
-		this.setLastUpdated(Tools.getFormattedDateTimeString(LocalDateTime.now()));
+		this.setLastUpdated(Tools.getFormattedDateTimeString(Instant.now()));
 	}
 	
 	public Map<String, Long> GetConceptsMap() {

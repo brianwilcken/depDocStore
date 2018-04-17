@@ -58,7 +58,7 @@ public class SolrClient {
 		String file = Tools.GetFileString(filePath, "Cp1252");
 		try {
 			IndexedEventSource[] articles = mapper.readValue(file, IndexedEventSource[].class);
-			IndexDocuments(Arrays.asList(articles));
+			indexDocuments(Arrays.asList(articles));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -72,30 +72,14 @@ public class SolrClient {
 			for (IndexedEvent event : events) {
 				event.updateLastUpdatedDate();
 			}
-			IndexDocuments(Arrays.asList(events));
+			indexDocuments(Arrays.asList(events));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	public <T> void IndexDocument(T doc) throws SolrServerException {
-		try {
-			if (doc != null) {
-				client.addBean(doc);
-				UpdateResponse updateResponse = client.commit("events");
-				
-				if (updateResponse.getStatus() != 0) {
-					//TODO What should happen if the update fails?
-				}
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public <T> void IndexDocuments(Collection<T> docs) throws SolrServerException {
+	public <T> void indexDocuments(Collection<T> docs) throws SolrServerException {
 		try {
 			if (!docs.isEmpty()) {
 				client.addBeans("events", docs);
@@ -202,11 +186,11 @@ public class SolrClient {
 		return typedDocs;
 	}
 	
-	public void WriteEventCategorizationTrainingDataToFile(String trainingFilePath) {
+	public void writeEventCategorizationTrainingDataToFile(String trainingFilePath) {
 		SolrQuery query = new SolrQuery();
 		query.setRows(1000000);
-		query.setQuery("-eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
-		query.addFilterQuery("-category:" + SolrConstants.Events.CATEGORY_UNKNOWN);
+		query.setQuery("eventState:* AND -eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
+		query.addFilterQuery("category:* AND -category:" + SolrConstants.Events.CATEGORY_UNKNOWN);
 		query.addFilterQuery("-userCreated:true");
 		try {
 			File file = new File(trainingFilePath);

@@ -46,7 +46,17 @@ public class EventsController {
 
 	@Autowired
 	private HttpServletRequest context;
-	
+
+//	public static void main(String[] args) {
+//		EventsController ctrl = new EventsController();
+//		try {
+//			//ctrl.dumpDataToFile("data/dump.json", "userCreated:true", null, 100);
+//			ctrl.updateIndexedEventsByFile("data/dump.json");
+//		} catch (SolrServerException e) {
+//			e.printStackTrace();
+//		}
+//	}
+
 	public EventsController() {
 		eventRegistryClient = new EventRegistryClient();
 		solrClient = new SolrClient(Tools.getProperty("solr.url"));
@@ -100,13 +110,14 @@ public class EventsController {
 				logger.info(context.getRemoteAddr() + " -> " + "Including deleted ids");
 				//Obtain set of deleted event Ids
 				List<String> deletedEventIds = events.stream()
-						.filter(p -> p.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_DELETED) == 0)
+						.filter(p -> p.getEventState() != null && p.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_DELETED) == 0)
 						.map(p -> p.getId())
 						.collect(Collectors.toList());
 				logger.info(context.getRemoteAddr() + " -> " + "Total number of deleted events: " + deletedEventIds.size());
 
 				//Filter to produce list of non-deleted events
-				List<IndexedEvent> nonDeletedEvents = events.stream().filter(p -> p.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_DELETED) != 0).collect(Collectors.toList());
+				List<IndexedEvent> nonDeletedEvents = events.stream().filter(p -> p.getEventState() != null &&
+						p.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_DELETED) != 0).collect(Collectors.toList());
 
 				logger.info(context.getRemoteAddr() + " -> " + "Total number of non-deleted events: " + nonDeletedEvents.size());
 				//form response with deleted event ids
@@ -135,7 +146,7 @@ public class EventsController {
 				IndexedEvent event = events.get(0);
 				event.setEventState(SolrConstants.Events.EVENT_STATE_DELETED);
 				event.updateLastUpdatedDate();
-				solrClient.IndexDocuments(events);
+				solrClient.indexDocuments(events);
 				logger.info(context.getRemoteAddr() + " -> " + "Deleted event with id: " + id);
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event));
 			} else {
@@ -163,9 +174,9 @@ public class EventsController {
 			event.updateLastUpdatedDate();
 			List<IndexedEvent> coll = new ArrayList<>();
 			coll.add(event);
-			solrClient.IndexDocuments(coll);
+			solrClient.indexDocuments(coll);
 			logger.info(context.getRemoteAddr() + " -> " + "New event has been indexed with id: " + event.getId());
-			return ResponseEntity.ok().body(Tools.formJsonResponse(event));
+			return ResponseEntity.ok().body(Tools.formJsonResponse(event, event.getLastUpdated()));
 		} catch (Exception e) {
 			logger.error(context.getRemoteAddr() + " -> " + e);
 			Tools.getExceptions().add(e);
@@ -187,8 +198,6 @@ public class EventsController {
 				event.setLocation(updEvent.getLocation());
 				if (event.getEventState() == SolrConstants.Events.EVENT_STATE_NEW) {
 					event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
-				} else {
-					event.setEventState(updEvent.getEventState());
 				}
 				event.setCategory(updEvent.getCategory());
 				event.setTitle(updEvent.getTitle());
@@ -197,12 +206,13 @@ public class EventsController {
 				event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
 				event.setFeatureIds(updEvent.getFeatureIds());
 				event.updateLastUpdatedDate();
-
-				solrClient.IndexDocument(event);
+				List<IndexedEvent> coll = new ArrayList<>();
+				coll.add(event);
+				solrClient.indexDocuments(coll);
 				logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed... proceeding with model training");
 				double accuracy = initiateModelTraining();
 				logger.info(context.getRemoteAddr() + " -> " + "Model training complete.  Model accuracy: " + accuracy);
-				return ResponseEntity.ok().body(Tools.formJsonResponse(event));
+				return ResponseEntity.ok().body(Tools.formJsonResponse(event, event.getLastUpdated()));
 			} else {
 				return ResponseEntity.notFound().build();
 			}
@@ -262,7 +272,7 @@ public class EventsController {
 	
 	//Private "Helper" Methods
 	private Map<String, List<String>> getConceptsMap() {
-		String conceptsJson = Tools.GetFileString(Tools.getProperty("eventRegistry.searchConcepts"));
+		String conceptsJson = Tools.getResource(Tools.getProperty("eventRegistry.searchConcepts"));
 		ObjectMapper mapper = new ObjectMapper();
 		Map<String, List<String>> concepts = null;
 		try {
@@ -310,7 +320,7 @@ public class EventsController {
 	}
 	
 	private void dumpTrainingDataToFile() {
-		solrClient.WriteEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
+		solrClient.writeEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
 	}
 	
 	private void dumpDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
@@ -318,7 +328,7 @@ public class EventsController {
 	}
 	
 	private double processTrainingData() {
-		double accuracy = categorizer.TrainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
+		double accuracy = categorizer.trainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
 		return accuracy;
 	}
 

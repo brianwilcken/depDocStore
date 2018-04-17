@@ -1,13 +1,16 @@
 package eventsregistryapi.model;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.time.ZoneOffset;
+import java.time.temporal.TemporalAmount;
 import java.util.Arrays;
 
 import common.Tools;
 
 public abstract class IndexedDocumentsQuery {
-	protected final String queryTimeStamp = Tools.getFormattedDateTimeString(LocalDateTime.now());
+	protected final String queryTimeStamp = Tools.getFormattedDateTimeString(Instant.now());
 	
 	protected String getFacetedQuery(String type, String[] params) {
 		if (params != null) {
@@ -30,7 +33,7 @@ public abstract class IndexedDocumentsQuery {
 		if (startDate != null && startDate.length > 0) {
 			query = "lastUpdated:[" + startDate[0] +  " TO ";
 		} else {
-			String unixEpoch = Tools.getFormattedDateTimeString(LocalDateTime.ofEpochSecond(0, 0, ZoneOffset.UTC));
+			String unixEpoch = Tools.getFormattedDateTimeString(Instant.ofEpochSecond(0, 0));
 			query = "lastUpdated:[" + unixEpoch +  " TO " + queryTimeStamp + "]";
 			return query;
 		}
@@ -47,7 +50,7 @@ public abstract class IndexedDocumentsQuery {
 	}
 	
 	private String getPreviousDate(int[] numDaysPrevious) {
-		return Tools.getFormattedDateTimeString(LocalDateTime.now().minusDays(numDaysPrevious[0]));
+		return Tools.getFormattedDateTimeString(Instant.now().minus(Period.ofDays(numDaysPrevious[0])));
 	}
 	
 	public String getQueryTimeStamp() {

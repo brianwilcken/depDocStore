@@ -32,6 +32,7 @@
 
         <div class="form-row">
             <button type="submit" formaction="/eventNLP/classify/ReviewEvents">Review Events</button>
+            <button type="submit" formaction="/eventNLP/classify/CreateEvent">Create Mock Event</button>
         </div>
             
             <#if accuracy??>

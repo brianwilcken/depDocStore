@@ -18,6 +18,8 @@ import java.util.regex.Pattern;
 
 import common.Tools;
 
+import opennlp.tools.cmdline.namefind.NameEvaluationErrorListener;
+import opennlp.tools.namefind.*;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.sentdetect.SentenceSample;
@@ -43,11 +45,6 @@ import opennlp.tools.doccat.DocumentCategorizerME;
 import opennlp.tools.doccat.DocumentSample;
 import opennlp.tools.doccat.DocumentSampleStream;
 import opennlp.tools.ml.EventTrainer;
-import opennlp.tools.namefind.NameFinderME;
-import opennlp.tools.namefind.NameSample;
-import opennlp.tools.namefind.NameSampleDataStream;
-import opennlp.tools.namefind.TokenNameFinderFactory;
-import opennlp.tools.namefind.TokenNameFinderModel;
 import opennlp.tools.sentdetect.SentenceDetectorEvaluationMonitor;
 import opennlp.tools.util.InputStreamFactory;
 import opennlp.tools.util.ObjectStream;
@@ -320,14 +317,24 @@ public class NLPExperiments {
 		return namedEntities;
 	}
 	
-	private void TrainNamedEntitiesModel(String trainingFilePath, String modelFilePath) {
+	private void trainNERModel(String trainingFilePath, String modelFilePath) {
 		try {
 			ObjectStream<String> lineStream = GetLineStreamFromFile(trainingFilePath);
 			
 			TokenNameFinderModel model;
 			
 			try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
-				model = NameFinderME.train("en", "hazard", sampleStream, TrainingParameters.defaultParams(), new TokenNameFinderFactory());
+				//Optimize iterations/cutoff using 5-fold cross validation
+				NLPTools.TrainingParameterTracker tracker = new NLPTools.TrainingParameterTracker();
+				while (tracker.hasNext()) {
+					NLPTools.TrainingParameterTracker.Tuple tuple = tracker.getNext();
+					tuple.P = CrossValidateNERModel(sampleStream, NLPTools.getTrainingParameters(tuple.i, tuple.c));
+				}
+
+				//Use optimized iterations/cutoff to train model on full dataset
+				NLPTools.TrainingParameterTracker.Tuple best = tracker.getBest();
+				sampleStream.reset();
+				model = NameFinderME.train("en", "hazard", sampleStream, NLPTools.getTrainingParameters(best.i, best.c), new TokenNameFinderFactory());
 			}
 			
 			try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(modelFilePath))) {
@@ -337,6 +344,20 @@ public class NLPExperiments {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+	}
+
+	private double CrossValidateNERModel(ObjectStream<NameSample> samples, TrainingParameters params) {
+		TokenNameFinderEvaluationMonitor[] listeners = { new NameEvaluationErrorListener() };
+
+		TokenNameFinderCrossValidator validator = new TokenNameFinderCrossValidator("en", "hazard", TrainingParameters.defaultParams(), new TokenNameFinderFactory(), listeners);
+		try {
+			validator.evaluate(samples, 5);
+			return validator.getFMeasure().getFMeasure();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return -1;
 		}
 	}
 	

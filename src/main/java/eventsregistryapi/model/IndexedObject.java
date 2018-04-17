@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import common.Tools;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.solr.common.SolrDocument;
 
@@ -24,7 +25,7 @@ public abstract class IndexedObject {
 						String[] arr = lst.toArray(new String[lst.size()]);
 						BeanUtils.setProperty(this, fieldName, arr);
 					} else {
-						String date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format((Date)value);
+						String date = Tools.getFormattedDateTimeString(((Date) value).toInstant());
 						BeanUtils.setProperty(this, fieldName, date);
 					}
 				} catch (IllegalArgumentException | IllegalAccessException | InvocationTargetException e) {
