@@ -25,6 +25,7 @@ import nlp.EventCategorizer;
 import solrapi.SolrClient;
 import solrapi.SolrConstants;
 import webapp.models.JsonResponse;
+import webapp.services.ModelTrainingService;
 import webapp.services.RefreshEventsService;
 
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +44,9 @@ public class EventsController {
 	
 	@Autowired
 	private RefreshEventsService refreshEventsService;
+
+	@Autowired
+	private ModelTrainingService modelTrainingService;
 
 	@Autowired
 	private HttpServletRequest context;
@@ -210,8 +214,7 @@ public class EventsController {
 				coll.add(event);
 				solrClient.indexDocuments(coll);
 				logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed... proceeding with model training");
-				double accuracy = initiateModelTraining();
-				logger.info(context.getRemoteAddr() + " -> " + "Model training complete.  Model accuracy: " + accuracy);
+				modelTrainingService.process(this);
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event, event.getLastUpdated()));
 			} else {
 				return ResponseEntity.notFound().build();
@@ -318,7 +321,7 @@ public class EventsController {
 		EventsRegistryEventsResponse response = eventRegistryClient.QueryEvents(conceptUri, subConcepts);
 		return eventRegistryClient.PipelineProcessEvents(response, conceptUri, subConcepts);
 	}
-	
+
 	private void dumpTrainingDataToFile() {
 		solrClient.writeEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
 	}
@@ -326,7 +329,7 @@ public class EventsController {
 	private void dumpDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
 		solrClient.WriteEventDataToFile(filename, query, numRows, filterQueries);
 	}
-	
+
 	private double processTrainingData() {
 		double accuracy = categorizer.trainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
 		return accuracy;
@@ -343,7 +346,7 @@ public class EventsController {
 		}
 	}
 
-	private double initiateModelTraining() {
+	public double initiateModelTraining() {
 		dumpTrainingDataToFile();
 		double accuracy = processTrainingData();
 
