@@ -19,6 +19,7 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 	private String[] similarText;
 	private int[] minArticleCount;
 	private int[] rows;
+	private int[] pageNum;
 	
 	public String getQuery() {
 		return getTimeRangeQuery(startDate, endDate, numDaysPrevious);
@@ -37,15 +38,21 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 		
 		return fqs.toArray(new String[fqs.size()]);
 	}
-	
+
 	public int getQueryRows() {
-		int rows;
 		if (getRows() != null && getRows().length > 0) {
-			rows = getRows()[0];
+			return getRows()[0];
 		} else {
-			rows = Integer.MAX_VALUE;
+			return Integer.MAX_VALUE;
 		}
-		return rows;
+	}
+
+	public int getQueryStart() {
+		if (getPageNum() != null && getPageNum().length > 0) {
+			return (getPageNum()[0] - 1) * getQueryRows();
+		} else {
+			return 0;
+		}
 	}
 	
 	public String[] getUris() {
@@ -127,5 +134,13 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 
 	public void setSimilarText(String[] similarText) {
 		this.similarText = similarText;
+	}
+
+	public int[] getPageNum() {
+		return pageNum;
+	}
+
+	public void setPageNum(int[] pageNum) {
+		this.pageNum = pageNum;
 	}
 }

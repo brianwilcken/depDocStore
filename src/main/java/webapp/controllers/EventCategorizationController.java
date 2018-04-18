@@ -118,7 +118,7 @@ public class EventCategorizationController {
 			}
 			String id = form.get("eventId").get(0);
 			lockCategory(form, model);
-			List<IndexedEvent> indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			List<IndexedEvent> indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, 0, null);
 			if (!indexedEvents.isEmpty()) {
 				IndexedEvent indexedEvent = indexedEvents.get(0);
 				if (!form.get("newCategory").get(0).isEmpty()) {
@@ -208,9 +208,9 @@ public class EventCategorizationController {
 		String eventState = model.asMap().get("mode").toString();
 		List<IndexedEvent> indexedEvents = null;
 		if (model.asMap().containsKey("category")) {
-			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, sort, "category:\"" + model.asMap().get("category") + "\"");
+			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:\"" + model.asMap().get("category") + "\"");
 		} else {
-			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, sort, "category:*");
+			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:*");
 		}
 		if (!indexedEvents.isEmpty()) {
 			IndexedEvent indexedEvent = indexedEvents.get(0);

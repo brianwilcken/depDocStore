@@ -39,7 +39,7 @@ public class SourcesController {
     public ResponseEntity<JsonResponse> getSources(IndexedEventSourcesQueryParams params) {
         logger.info(context.getRemoteAddr() + " -> " + "Querying Solr for event sources based on query parameters");
         try {
-            List<IndexedEventSource> articles = solrClient.QueryIndexedDocuments(IndexedEventSource.class, params.getQuery(), params.getQueryRows(), null, params.getFilterQueries());
+            List<IndexedEventSource> articles = solrClient.QueryIndexedDocuments(IndexedEventSource.class, params.getQuery(), params.getQueryRows(), 0, null, params.getFilterQueries());
             logger.info(context.getRemoteAddr() + " -> " + "Total number of sources found: " + articles.size());
             return ResponseEntity.ok().body(Tools.formJsonResponse(articles, params.getQueryTimeStamp()));
         } catch (Exception e) {

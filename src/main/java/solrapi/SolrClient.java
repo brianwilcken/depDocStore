@@ -14,6 +14,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 //import org.apache.commons.codec.binary.Hex;
+import eventsregistryapi.model.IndexedEventsQueryParams;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -148,16 +149,19 @@ public class SolrClient {
 		}
 	}
 	
-	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, SortClause sort, String... filterQueries) throws SolrServerException {
+	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, int start, SortClause sort, String... filterQueries) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setQuery(queryStr);
 		if (filterQueries != null) {
 			query.setFilterQueries(filterQueries);
 		}
 		query.setRows(rows);
+		query.setStart(start);
 		if (sort != null) {
 			query.setSort(sort);
-		}
+		} else {
+
+        }
 		try {
 			Constructor<?> cons;
 			try {
@@ -218,7 +222,7 @@ public class SolrClient {
 	
 	public void WriteEventDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
 		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
-		List<IndexedEvent> events = QueryIndexedDocuments(IndexedEvent.class, queryStr, rows, null, filterQueries);
+		List<IndexedEvent> events = QueryIndexedDocuments(IndexedEvent.class, queryStr, rows, 0, null, filterQueries);
 		try {
 			String output = writer.writeValueAsString(events);
 			File file = new File(filePath);

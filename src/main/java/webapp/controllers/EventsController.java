@@ -12,6 +12,7 @@ import com.google.gson.Gson;
 import eventsregistryapi.model.*;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.solr.client.solrj.SolrQuery.SortClause;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -108,7 +109,8 @@ public class EventsController {
 	public ResponseEntity<JsonResponse> getEvents(IndexedEventsQueryParams params) {
 		logger.info(context.getRemoteAddr() + " -> " + "In getEvents method");
 		try {
-			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, params.getQuery(), params.getQueryRows(), null, params.getFilterQueries());
+			SortClause sort = new SortClause("lastUpdated", "desc");
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, params.getQuery(), params.getQueryRows(), params.getQueryStart(), sort, params.getFilterQueries());
 			JsonResponse response;
 			if (params.getIncludeDeletedIds() != null && params.getIncludeDeletedIds()) {
 				logger.info(context.getRemoteAddr() + " -> " + "Including deleted ids");
@@ -145,7 +147,7 @@ public class EventsController {
 	public ResponseEntity<JsonResponse> deleteEventById(@PathVariable(name="id") String id) {
 		try {
 			logger.info(context.getRemoteAddr() + " -> " + "Trying to delete event with id: " + id);
-			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, 0, null);
 			if (!events.isEmpty()) {
 				IndexedEvent event = events.get(0);
 				event.setEventState(SolrConstants.Events.EVENT_STATE_DELETED);
@@ -193,7 +195,7 @@ public class EventsController {
 	public ResponseEntity<JsonResponse> updateEvent(@PathVariable(name="id") String id, @RequestBody IndexedEvent updEvent) {
 		try {
 			logger.info(context.getRemoteAddr() + " -> " + "Updating event with id: " + id);
-			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, 0, null);
 			if (!events.isEmpty()) {
 				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding with update");
 				IndexedEvent event = events.get(0);
@@ -231,11 +233,11 @@ public class EventsController {
 	public ResponseEntity<JsonResponse> getEventSources(@PathVariable(name="id") String id) {
 		logger.info(context.getRemoteAddr() + " -> " + "Getting indexed sources for event with id: " + id);
 		try {
-			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, 0, null);
 			if (!events.isEmpty()) {
 				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding to lookup sources");
 				IndexedEvent event = events.get(0);
-				List<IndexedEventSource> sources = solrClient.QueryIndexedDocuments(IndexedEventSource.class, "eventUri:" + event.getUri(), 10000, null);
+				List<IndexedEventSource> sources = solrClient.QueryIndexedDocuments(IndexedEventSource.class, "eventUri:" + event.getUri(), 10000, 0, null);
 				logger.info(context.getRemoteAddr() + " -> " + "Number of sources found: " + sources.size());
 				return ResponseEntity.ok().body(Tools.formJsonResponse(sources));
 			} else {
@@ -254,7 +256,7 @@ public class EventsController {
 	public ResponseEntity<JsonResponse> refreshEventSources(@PathVariable(name="id") String id) {
 		logger.info(context.getRemoteAddr() + " -> " + "Attempting to refresh sources for event with id: " + id);
 		try {
-			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, null);
+			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, 0, null);
 			if (!events.isEmpty()) {
 				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding to query Event Registry for updated sources");
 				IndexedEvent event = events.get(0);
