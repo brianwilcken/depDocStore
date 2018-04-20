@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 
 import eventsregistryapi.model.*;
+import jdk.internal.joptsimple.internal.Strings;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
@@ -202,8 +203,13 @@ public class EventsController {
 				event.setLatitude(updEvent.getLatitude());
 				event.setLongitude(updEvent.getLongitude());
 				event.setLocation(updEvent.getLocation());
-				if (event.getEventState() == SolrConstants.Events.EVENT_STATE_NEW) {
-					event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
+				if (!Strings.isNullOrEmpty(updEvent.getEventState())) {
+					//The only valid state transition communicated directly from the client is "Watched"
+					event.setEventState(SolrConstants.Events.EVENT_STATE_WATCHED);
+				} else {
+					if (event.getEventState() == SolrConstants.Events.EVENT_STATE_NEW) {
+						event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
+					}
 				}
 				event.setCategory(updEvent.getCategory());
 				event.setTitle(updEvent.getTitle());

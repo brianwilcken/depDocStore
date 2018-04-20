@@ -89,11 +89,6 @@
 		    <artifactId>spring-context-support</artifactId>
 		    <version>5.0.4.RELEASE</version>
 		</dependency>
-<!-- 		<dependency>
-		    <groupId>org.springframework.boot</groupId>
-		    <artifactId>spring-boot-starter-security</artifactId>
-		    <version>2.0.0.RELEASE</version>
-		</dependency> -->
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-web</artifactId>
@@ -109,11 +104,6 @@
 			<artifactId>jackson-databind</artifactId>
 			<version>2.9.3</version>
 		</dependency>
-		<!-- <dependency> -->
-		<!-- <groupId>org.elasticsearch.client</groupId> -->
-		<!-- <artifactId>transport</artifactId> -->
-		<!-- <version>5.5.1</version> -->
-		<!-- </dependency> -->
 		<dependency>
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-solrj</artifactId>
@@ -148,7 +138,7 @@
 			<properties>
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
-				<solr.url>http://localhost:8983/solr</solr.url>
+				<index.url>http://localhost:8983/solr</index.url>
 			</properties>
 		</profile>
 	</profiles>
