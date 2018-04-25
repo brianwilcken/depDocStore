@@ -148,7 +148,28 @@ public class SolrClient {
 			return null;
 		}
 	}
-	
+
+	public SolrDocumentList QuerySolrDocuments(String queryStr, int rows, int start, SortClause sort, String... filterQueries) throws SolrServerException {
+		SolrQuery query = new SolrQuery();
+		query.setQuery(queryStr);
+		if (filterQueries != null) {
+			query.setFilterQueries(filterQueries);
+		}
+		query.setRows(rows);
+		query.setStart(start);
+		if (sort != null) {
+			query.setSort(sort);
+		} else {
+
+		}
+		try {
+			SolrDocumentList response = client.query("events", query).getResults();
+			return response;
+		} catch (IOException e) {
+			return null;
+		}
+	}
+
 	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, int start, SortClause sort, String... filterQueries) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setQuery(queryStr);
@@ -219,12 +240,40 @@ public class SolrClient {
 			e.printStackTrace();
 		}
 	}
-	
+
+	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
+		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
+		SolrDocumentList events = QuerySolrDocuments(queryStr, rows, 0, null, filterQueries);
+		try {
+			String output = writer.writeValueAsString(events);
+			File file = new File(filePath);
+			file.getParentFile().mkdirs();
+			Files.write(output, file, Charset.forName("Cp1252"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 	public void WriteEventDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
 		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
 		List<IndexedEvent> events = QueryIndexedDocuments(IndexedEvent.class, queryStr, rows, 0, null, filterQueries);
 		try {
 			String output = writer.writeValueAsString(events);
+			File file = new File(filePath);
+			file.getParentFile().mkdirs();
+			Files.write(output, file, Charset.forName("Cp1252"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public void WriteSourceDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
+		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
+		List<IndexedEventSource> sources = QueryIndexedDocuments(IndexedEventSource.class, queryStr, rows, 0, null, filterQueries);
+		try {
+			String output = writer.writeValueAsString(sources);
 			File file = new File(filePath);
 			file.getParentFile().mkdirs();
 			Files.write(output, file, Charset.forName("Cp1252"));

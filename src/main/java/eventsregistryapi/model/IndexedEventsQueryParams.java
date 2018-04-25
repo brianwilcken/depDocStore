@@ -17,21 +17,24 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 	private String[] sources;
 	private Boolean includeDeletedIds;
 	private String[] similarText;
+	private String[] feedType;
 	private int[] minArticleCount;
 	private int[] rows;
 	private int[] pageNum;
 	
 	public String getQuery() {
-		return getTimeRangeQuery(startDate, endDate, numDaysPrevious);
+		return getTimeRangeQuery("lastUpdated", startDate, endDate, numDaysPrevious);
 	}
 
 	public String[] getFilterQueries() {
 		List<String> fqs = new ArrayList<String>();
-		
-		fqs.add(getFacetedQuery("uri", uris));
-		fqs.add(getFacetedQuery("category", categories));
-		fqs.add(getFacetedQuery("eventState", eventStates));
-		fqs.add(getFacetedQuery("categorizationState", categorizationStates));
+
+		fqs.add("-eventUri:*");//ensure that only events are returned
+		fqs.add(getFilterQuery("uri", uris));
+		fqs.add(getFilterQuery("category", categories));
+		fqs.add(getFilterQuery("eventState", eventStates));
+		fqs.add(getFilterQuery("categorizationState", categorizationStates));
+		fqs.add(getFilterQuery("feedType", feedType));
 		if (minArticleCount !=  null && minArticleCount.length > 0) {
 			fqs.add("totalArticleCount:[" + Integer.toString(minArticleCount[0]) + " TO *]");
 		}
@@ -142,5 +145,12 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 
 	public void setPageNum(int[] pageNum) {
 		this.pageNum = pageNum;
+	}
+	public String[] getFeedType() {
+		return feedType;
+	}
+
+	public void setFeedType(String[] feedType) {
+		this.feedType = feedType;
 	}
 }

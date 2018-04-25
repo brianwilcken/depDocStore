@@ -141,6 +141,20 @@
 				<index.url>http://localhost:8983/solr</index.url>
 			</properties>
 		</profile>
+		<profile>
+			<id>localDevWithRemoteSolr</id>
+			<activation>
+				<property>
+					<name>env</name>
+					<value>localDev</value>
+				</property>
+			</activation>
+			<properties>
+				<log.file>C:/log/nicc-lp-app.log</log.file>
+				<log.path>C:/log/time-based-logs</log.path>
+				<index.url>http://ipgdevgis:8983/solr</index.url>
+			</properties>
+		</profile>
 	</profiles>
 	
 

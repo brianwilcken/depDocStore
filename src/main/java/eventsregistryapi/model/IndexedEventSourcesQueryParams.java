@@ -1,8 +1,6 @@
 package eventsregistryapi.model;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -16,13 +14,14 @@ public class IndexedEventSourcesQueryParams extends IndexedDocumentsQuery {
 	private int[] rows;
 	
 	public String getQuery() {
-		return getTimeRangeQuery(startDate, endDate, numDaysPrevious);
+		return getTimeRangeQuery("articleDate", startDate, endDate, numDaysPrevious);
 	}
 	
 	public String[] getFilterQueries() {
 		List<String> fqs = new ArrayList<String>();
-		
-		fqs.add(getFacetedQuery("eventUri", eventUris));
+
+		fqs.add("-eventState:*"); //ensure that only event sources are returned, as these objects will not have the eventState parameter
+		fqs.add(getFilterQuery("eventUri", eventUris));
 		
 		return fqs.toArray(new String[fqs.size()]);
 	}

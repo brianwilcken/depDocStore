@@ -7,10 +7,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.google.gson.Gson;
 
 import eventsregistryapi.model.*;
-import jdk.internal.joptsimple.internal.Strings;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
@@ -56,8 +56,10 @@ public class EventsController {
 //	public static void main(String[] args) {
 //		EventsController ctrl = new EventsController();
 //		try {
-//			//ctrl.dumpDataToFile("data/dump.json", "userCreated:true", null, 100);
-//			ctrl.updateIndexedEventsByFile("data/dump.json");
+//			//ctrl.dumpEventDataToFile("data/events.json", "eventState:*", null, 100);
+//			//ctrl.dumpSourceDataToFile("data/sources.json", "eventUri:*", null, 100);
+//			ctrl.updateIndexedEventsByFile("data/events.json");
+//			ctrl.updateIndexedEventSourcesByFile("data/sources.json");
 //		} catch (SolrServerException e) {
 //			e.printStackTrace();
 //		}
@@ -207,7 +209,7 @@ public class EventsController {
 					//The only valid state transition communicated directly from the client is "Watched"
 					event.setEventState(SolrConstants.Events.EVENT_STATE_WATCHED);
 				} else {
-					if (event.getEventState() == SolrConstants.Events.EVENT_STATE_NEW) {
+					if (event.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_NEW) == 0) {
 						event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
 					}
 				}
@@ -296,7 +298,7 @@ public class EventsController {
 		return concepts;
 	}
 	
-	private void updateIndexedArticlesByFile(String filePath) throws SolrServerException {
+	private void updateIndexedEventSourcesByFile(String filePath) throws SolrServerException {
 		solrClient.UpdateIndexedArticlesFromFile(filePath);
 	}
 	
@@ -334,8 +336,12 @@ public class EventsController {
 		solrClient.writeEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
 	}
 	
-	private void dumpDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
+	private void dumpEventDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
 		solrClient.WriteEventDataToFile(filename, query, numRows, filterQueries);
+	}
+
+	private void dumpSourceDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
+		solrClient.WriteSourceDataToFile(filename, query, numRows, filterQueries);
 	}
 
 	private double processTrainingData() {
