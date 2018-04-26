@@ -36,23 +36,23 @@ public class ArticleResult {
 
     private int wgt;
 
-    public IndexedEventSource GetIndexedArticle() {
-    	IndexedEventSource article = new IndexedEventSource();
+    public IndexedEventSource getIndexedEventSource(String eventId) {
+    	IndexedEventSource source = new IndexedEventSource();
     	
-    	article.setUri(uri);
-    	article.setEventUri(eventUri);
-    	article.setArticleDate(dateTime);
-    	article.setUrl(url);
-    	article.setTitle(title);
-    	article.setSummary(body);
-    	if (source != null) {
-    		article.setSourceUri(source.getUri());
-    		article.setSourceName(source.getTitle());
-    		article.setSourceLocation(source.getLocation().getLabel().getEng());
+    	source.setUri(uri);
+    	source.setEventId(eventId);
+    	source.setArticleDate(dateTime);
+    	source.setUrl(url);
+    	source.setTitle(title);
+    	source.setSummary(body);
+    	if (this.source != null) {
+    		source.setSourceUri(this.source.getUri());
+    		source.setSourceName(this.source.getTitle());
+    		source.setSourceLocation(this.source.getLocation().getLabel().getEng());
     	}
-    	article.initId();
+    	source.initId();
     	
-    	return article;
+    	return source;
     }
     
     public void setId(String id){

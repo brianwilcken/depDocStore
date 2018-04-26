@@ -2,7 +2,9 @@ package eventsregistryapi.model;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
 
+import com.google.common.base.Strings;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.solr.client.solrj.beans.Field;
 import org.apache.solr.common.SolrDocument;
@@ -16,7 +18,7 @@ public class IndexedEventSource extends IndexedObject {
 	@Field
 	private String uri;
 	@Field
-	private String eventUri;
+	private String eventId;
 	@Field
 	private String articleDate;
 	@Field
@@ -43,11 +45,19 @@ public class IndexedEventSource extends IndexedObject {
 	
 	public void initId() {
 		try {
-			id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(
-				this.getEventUri() + 
-				this.getTitle() + 
-				this.getSummary() + 
-				this.getUri())));
+			if (!Strings.isNullOrEmpty(this.getUri())) {
+				id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(
+						this.getEventId() +
+								this.getTitle() +
+								this.getSummary() +
+								this.getUri())));
+			} else {
+				id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(
+						this.getEventId() +
+								this.getSourceName() +
+								this.getUrl() +
+								this.getArticleDate())));
+			}
 		} catch (JsonProcessingException | NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -68,11 +78,11 @@ public class IndexedEventSource extends IndexedObject {
 		this.uri = uri;
 	}
 
-	public String getEventUri() {
-		return eventUri;
+	public String getEventId() {
+		return eventId;
 	}
-	public void setEventUri(String eventUri) {
-		this.eventUri = eventUri;
+	public void setEventId(String eventId) {
+		this.eventId = eventId;
 	}
 	public String getArticleDate() {
 		return articleDate;

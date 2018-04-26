@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class IndexedEventSourcesQueryParams extends IndexedDocumentsQuery {
-	private String[] eventUris;
+	private String[] eventIds;
 	private int[] numDaysPrevious;
 	private String[] startDate;
 	private String[] endDate;
@@ -21,7 +21,7 @@ public class IndexedEventSourcesQueryParams extends IndexedDocumentsQuery {
 		List<String> fqs = new ArrayList<String>();
 
 		fqs.add("-eventState:*"); //ensure that only event sources are returned, as these objects will not have the eventState parameter
-		fqs.add(getFilterQuery("eventUri", eventUris));
+		fqs.add(getFilterQuery("eventId", eventIds));
 		
 		return fqs.toArray(new String[fqs.size()]);
 	}
@@ -57,12 +57,12 @@ public class IndexedEventSourcesQueryParams extends IndexedDocumentsQuery {
 		this.rows = rows;
 	}
 
-	public String[] getEventUris() {
-		return eventUris;
+	public String[] getEventIds() {
+		return eventIds;
 	}
 
-	public void setEventUris(String[] eventUris) {
-		this.eventUris = eventUris;
+	public void setEventIds(String[] eventIds) {
+		this.eventIds = eventIds;
 	}
 	public int[] getNumDaysPrevious() {
 		return numDaysPrevious;

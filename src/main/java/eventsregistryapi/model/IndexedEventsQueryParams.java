@@ -29,7 +29,7 @@ public class IndexedEventsQueryParams extends IndexedDocumentsQuery {
 	public String[] getFilterQueries() {
 		List<String> fqs = new ArrayList<String>();
 
-		fqs.add("-eventUri:*");//ensure that only events are returned
+		fqs.add("-eventId:*");//ensure that only events are returned
 		fqs.add(getFilterQuery("uri", uris));
 		fqs.add(getFilterQuery("category", categories));
 		fqs.add(getFilterQuery("eventState", eventStates));

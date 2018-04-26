@@ -73,6 +73,8 @@ public class IndexedEvent extends IndexedObject {
 	@Field
 	private String[] featureIds;
 
+	private List<IndexedEventSource> sources;
+
 	private Map<String, Long> conceptsMap;
 	
 	private static ObjectMapper mapper = new ObjectMapper();
@@ -300,5 +302,13 @@ public class IndexedEvent extends IndexedObject {
 
 	public void setFeatureIds(String[] featureIds) {
 		this.featureIds = featureIds;
+	}
+
+	public List<IndexedEventSource> getSources() {
+		return sources;
+	}
+
+	public void setSources(List<IndexedEventSource> sources) {
+		this.sources = sources;
 	}
 }

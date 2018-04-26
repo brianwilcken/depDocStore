@@ -95,6 +95,20 @@ public class SolrClient {
 			e.printStackTrace();
 		}
 	}
+
+	public void deleteDocuments(String query) throws SolrServerException {
+	    try {
+			client.deleteByQuery("events", query);
+			UpdateResponse updateResponse = client.commit("events");
+
+            if (updateResponse.getStatus() != 0) {
+                //TODO What should happen if the update fails?
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
 	
 	public Boolean IsDocumentAlreadyIndexed(String uri) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
@@ -136,7 +150,7 @@ public class SolrClient {
 			//remove any potential documents that are not IndexedEvents
 			for (int i = 0; i < response.size(); i++) {
 				SolrDocument doc = response.get(i);
-				if (doc.containsKey("eventUri")) { //only source documents contain this field
+				if (doc.containsKey("eventId")) { //only source documents contain this field
 					response.remove(i--);
 				}
 			}

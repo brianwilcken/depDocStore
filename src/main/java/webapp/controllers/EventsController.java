@@ -53,17 +53,17 @@ public class EventsController {
 	@Autowired
 	private HttpServletRequest context;
 
-//	public static void main(String[] args) {
-//		EventsController ctrl = new EventsController();
-//		try {
-//			//ctrl.dumpEventDataToFile("data/events.json", "eventState:*", null, 100);
-//			//ctrl.dumpSourceDataToFile("data/sources.json", "eventUri:*", null, 100);
-//			ctrl.updateIndexedEventsByFile("data/events.json");
-//			ctrl.updateIndexedEventSourcesByFile("data/sources.json");
-//		} catch (SolrServerException e) {
-//			e.printStackTrace();
-//		}
-//	}
+	public static void main(String[] args) {
+		EventsController ctrl = new EventsController();
+		try {
+			//ctrl.dumpEventDataToFile("data/events.json", "eventState:*", null, 100);
+			//ctrl.dumpSourceDataToFile("data/sources.json", "eventId:*", null, 100);
+			ctrl.updateIndexedEventsByFile("data/events.json");
+			//ctrl.updateIndexedEventSourcesByFile("data/sources.json");
+		} catch (SolrServerException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public EventsController() {
 		eventRegistryClient = new EventRegistryClient();
@@ -185,11 +185,51 @@ public class EventsController {
 			coll.add(event);
 			solrClient.indexDocuments(coll);
 			logger.info(context.getRemoteAddr() + " -> " + "New event has been indexed with id: " + event.getId());
+			indexEventSources(event);
 			return ResponseEntity.ok().body(Tools.formJsonResponse(event, event.getLastUpdated()));
 		} catch (Exception e) {
 			logger.error(context.getRemoteAddr() + " -> " + e);
 			Tools.getExceptions().add(e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+		}
+	}
+
+	private void indexEventSources(IndexedEvent event) throws SolrServerException {
+		if (event.getSources().size() > 0) {
+			logger.info(context.getRemoteAddr() + " -> " + "Indexing sources for event with id: " + event.getId());
+//			//obtain the set of sources that need to be updated
+//			List<IndexedEventSource> updSources = event.getSources().stream()
+//					.filter(p -> p.getId() != null)
+//					.collect(Collectors.toList());
+//			//obtain the set of new sources
+//			List<IndexedEventSource> newSources = event.getSources().stream()
+//					.filter(p -> p.getId() == null)
+//					.collect(Collectors.toList());
+//
+//			//obtain the set of previously indexed sources that will be updated using the contents of updSources
+//			List<IndexedEventSource> indexedSources = solrClient.QueryIndexedDocuments(IndexedEventSource.class, "eventId:" + event.getId(), 10000, 0, null);
+//
+//			//update the existing sources
+//			for (IndexedEventSource indexedEventSource : indexedSources) {
+//				IndexedEventSource updSource = updSources.stream().filter(p -> p.getId().compareTo(indexedEventSource.getId()) == 0).findFirst().get();
+//				if (updSource != null) {
+//					indexedEventSource.setSourceName(updSource.getSourceName());
+//					indexedEventSource.setUrl(updSource.getUrl());
+//					indexedEventSource.setArticleDate(updSource.getArticleDate());
+//				}
+//			}
+
+			//delete previous sources
+			solrClient.deleteDocuments("eventId:" + event.getId());
+
+			//index new sources
+			for (IndexedEventSource source : event.getSources()) {
+				source.setEventId(event.getId());
+				source.initId();
+				source.setUri("N/A");
+			}
+			solrClient.indexDocuments(event.getSources());
+			logger.info(context.getRemoteAddr() + " -> " + event.getSources().size() + " sources indexed for event with id: " + event.getId());
 		}
 	}
 
@@ -223,6 +263,8 @@ public class EventsController {
 				List<IndexedEvent> coll = new ArrayList<>();
 				coll.add(event);
 				solrClient.indexDocuments(coll);
+				event.setSources(updEvent.getSources());
+				indexEventSources(event);
 				logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed... proceeding with model training");
 				modelTrainingService.process(this);
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event, event.getLastUpdated()));
@@ -244,8 +286,7 @@ public class EventsController {
 			List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + id, 1, 0, null);
 			if (!events.isEmpty()) {
 				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding to lookup sources");
-				IndexedEvent event = events.get(0);
-				List<IndexedEventSource> sources = solrClient.QueryIndexedDocuments(IndexedEventSource.class, "eventUri:" + event.getUri(), 10000, 0, null);
+				List<IndexedEventSource> sources = solrClient.QueryIndexedDocuments(IndexedEventSource.class, "eventId:" + id, 10000, 0, null);
 				logger.info(context.getRemoteAddr() + " -> " + "Number of sources found: " + sources.size());
 				return ResponseEntity.ok().body(Tools.formJsonResponse(sources));
 			} else {
@@ -269,7 +310,7 @@ public class EventsController {
 				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding to query Event Registry for updated sources");
 				IndexedEvent event = events.get(0);
 				EventRegistryEventArticlesResponse response = eventRegistryClient.QueryEventSources(event.getUri());
-				List<IndexedEventSource> sources = eventRegistryClient.PipelineProcessEventSources(response);
+				List<IndexedEventSource> sources = eventRegistryClient.PipelineProcessEventSources(id, response);
 				logger.info(context.getRemoteAddr() + " -> " + "Total number of sources returned by Event Registry: " + sources.size());
 				return ResponseEntity.ok().body(Tools.formJsonResponse(sources));
 			} else {

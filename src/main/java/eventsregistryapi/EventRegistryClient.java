@@ -263,7 +263,7 @@ public class EventRegistryClient {
 		return eventArticlesResponse;
 	}
 	
-	public List<IndexedEventSource> PipelineProcessEventSources(EventRegistryEventArticlesResponse response) throws SolrServerException {
+	public List<IndexedEventSource> PipelineProcessEventSources(String eventId, EventRegistryEventArticlesResponse response) throws SolrServerException {
 		if (response != null && !response.getEventArticles().isEmpty()) {
 			//Extract the only event articles object that exists in the response
 			EventArticles eventArticles = response.getEventArticles().entrySet().stream().findFirst().get().getValue();
@@ -291,7 +291,7 @@ public class EventRegistryClient {
 					exs.add(e);
 					return false;
 				}
-			}).map(p -> p.GetIndexedArticle())
+			}).map(p -> p.getIndexedEventSource(eventId))
 					.collect(Collectors.toList());
 			
 			if (!exs.isEmpty()) {
