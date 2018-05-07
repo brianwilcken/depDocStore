@@ -159,7 +159,7 @@ public class EventsController {
 				logger.info(context.getRemoteAddr() + " -> " + "Deleted event with id: " + id);
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event));
 			} else {
-				logger.info(context.getRemoteAddr() + " -> " + "Failed to deleted event with id: " + id);
+				logger.info(context.getRemoteAddr() + " -> " + "Failed to delete event with id: " + id);
 				return ResponseEntity.notFound().build();
 			}
 		} catch (Exception e) {
@@ -175,8 +175,11 @@ public class EventsController {
 		try {
 			logger.info(context.getRemoteAddr() + " -> " + "Creating new event");
 			event.initId();
-			event.setUri("N/A");
-			event.setUserCreated(true);
+			if (event.getUri().isEmpty()) {
+				event.setUri("N/A");
+			} else if (solrClient.IsDocumentAlreadyIndexed(event.getUri())){
+				return updateEvent(event.getId(), event);
+			}
 			event.setFeedType(SolrConstants.Events.FEED_TYPE_AUTHORITATIVE);
 			event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
 			event.setEventState(SolrConstants.Events.EVENT_STATE_NEW);
@@ -197,28 +200,6 @@ public class EventsController {
 	private void indexEventSources(IndexedEvent event) throws SolrServerException {
 		if (event.getSources().size() > 0) {
 			logger.info(context.getRemoteAddr() + " -> " + "Indexing sources for event with id: " + event.getId());
-//			//obtain the set of sources that need to be updated
-//			List<IndexedEventSource> updSources = event.getSources().stream()
-//					.filter(p -> p.getId() != null)
-//					.collect(Collectors.toList());
-//			//obtain the set of new sources
-//			List<IndexedEventSource> newSources = event.getSources().stream()
-//					.filter(p -> p.getId() == null)
-//					.collect(Collectors.toList());
-//
-//			//obtain the set of previously indexed sources that will be updated using the contents of updSources
-//			List<IndexedEventSource> indexedSources = solrClient.QueryIndexedDocuments(IndexedEventSource.class, "eventId:" + event.getId(), 10000, 0, null);
-//
-//			//update the existing sources
-//			for (IndexedEventSource indexedEventSource : indexedSources) {
-//				IndexedEventSource updSource = updSources.stream().filter(p -> p.getId().compareTo(indexedEventSource.getId()) == 0).findFirst().get();
-//				if (updSource != null) {
-//					indexedEventSource.setSourceName(updSource.getSourceName());
-//					indexedEventSource.setUrl(updSource.getUrl());
-//					indexedEventSource.setArticleDate(updSource.getArticleDate());
-//				}
-//			}
-
 			//delete previous sources
 			solrClient.deleteDocuments("eventId:" + event.getId());
 
@@ -242,6 +223,11 @@ public class EventsController {
 			if (!events.isEmpty()) {
 				logger.info(context.getRemoteAddr() + " -> " + "Event exists... proceeding with update");
 				IndexedEvent event = events.get(0);
+				//A conditional update occurs when an automated job posts events to the service.
+				//Whether or not to update the last updated date on the indexed event is determined through logic.
+				if (!updEvent.getConditionalUpdate() || updEvent.compareTo(event) != 0) {
+					event.updateLastUpdatedDate();
+				}
 				event.setLatitude(updEvent.getLatitude());
 				event.setLongitude(updEvent.getLongitude());
 				event.setLocation(updEvent.getLocation());
@@ -249,7 +235,7 @@ public class EventsController {
 					//The only valid state transition communicated directly from the client is "Watched"
 					event.setEventState(SolrConstants.Events.EVENT_STATE_WATCHED);
 				} else {
-					if (event.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_NEW) == 0) {
+					if (event.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_NEW) == 0 && !updEvent.getConditionalUpdate()) {
 						event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
 					}
 				}
@@ -259,7 +245,6 @@ public class EventsController {
 				event.setDashboard(updEvent.getDashboard());
 				event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
 				event.setFeatureIds(updEvent.getFeatureIds());
-				event.updateLastUpdatedDate();
 				List<IndexedEvent> coll = new ArrayList<>();
 				coll.add(event);
 				solrClient.indexDocuments(coll);

@@ -29,13 +29,13 @@ import common.Tools;
 import opennlp.tools.stemmer.PorterStemmer;
 import opennlp.tools.tokenize.TokenizerModel;
 
-public class IndexedEvent extends IndexedObject {
+public class IndexedEvent extends IndexedObject implements Comparable<IndexedEvent> {
 	@Field
 	private String id;
 	@Field
 	private String parentId;
 	@Field
-	private String categorizationState; 
+	private String categorizationState;
 	@Field
 	private String eventState;
 	@Field
@@ -46,7 +46,7 @@ public class IndexedEvent extends IndexedObject {
 	private String concepts;
 	@Field
 	private String eventDate;
-	@Field 
+	@Field
 	private String lastUpdated;
 	@Field
 	private String title;
@@ -73,20 +73,22 @@ public class IndexedEvent extends IndexedObject {
 	@Field
 	private String[] featureIds;
 
+	private Boolean conditionalUpdate;
+
 	private List<IndexedEventSource> sources;
 
 	private Map<String, Long> conceptsMap;
-	
+
 	private static ObjectMapper mapper = new ObjectMapper();
-	
+
 	public IndexedEvent() {
 		conceptsMap = new HashMap<>();
 	}
-	
+
 	public IndexedEvent(SolrDocument doc) {
 		ConsumeSolr(doc);
 	}
-	
+
 	public void initId() {
 		try {
 			if (uri != null) {
@@ -99,13 +101,13 @@ public class IndexedEvent extends IndexedObject {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public IndexedEvent updateWithEventDetails(Info eventInfo) {
 		try {
 			Story story = Arrays.stream(eventInfo.getStories())
-				.filter(p -> p.getMedoidArticle().getLang().compareTo("eng") == 0)
-				.findFirst()
-				.get();
+					.filter(p -> p.getMedoidArticle().getLang().compareTo("eng") == 0)
+					.findFirst()
+					.get();
 			this.setUrl(story.getMedoidArticle().getUrl());
 			this.setImages(eventInfo.getImages());
 			this.setLatitude(Double.toString(eventInfo.getLocation().getLat()));
@@ -117,26 +119,26 @@ public class IndexedEvent extends IndexedObject {
 
 		return this;
 	}
-	
+
 	public String[] GetDocCatTokens(TokenizerModel model, Stemmer stemmer) {
 		String normalized = getNormalizedDocCatString(stemmer);
 		String[] tokens = NLPTools.detectTokens(model, normalized);
 
 		return tokens;
 	}
-	
+
 	private String getNormalizedDocCatString(Stemmer stemmer) {
 		String docCatStr = title + " " + summary + getConceptsString();
 		docCatStr = docCatStr.replace("\r", " ").replace("\n", " ");
 
 		return NLPTools.normalizeText(stemmer, docCatStr);
 	}
-	
+
 	private String getConceptsString() {
 		if (this.getConcepts() != null && !this.getConcepts().isEmpty()) {
 			HashMap<String,Long> conceptMap = new Gson().fromJson(this.getConcepts(), new TypeToken<HashMap<String, Long>>(){}.getType());
 			StringBuilder str = new StringBuilder();
-			
+
 			List<String> conceptsForCat = conceptMap.entrySet().stream()
 					.map(p -> p.getKey())
 					.collect(Collectors.toList());
@@ -145,19 +147,19 @@ public class IndexedEvent extends IndexedObject {
 		}
 		return "";
 	}
-	
+
 	public void updateLastUpdatedDate() {
 		this.setLastUpdated(Tools.getFormattedDateTimeString(Instant.now()));
 	}
-	
+
 	public Map<String, Long> GetConceptsMap() {
 		return conceptsMap;
 	}
-	
+
 	public String GetModelTrainingForm() {
 		return category + "\t" + getNormalizedDocCatString(new PorterStemmer());
 	}
-	
+
 	public String getId() {
 		return id;
 	}
@@ -310,5 +312,24 @@ public class IndexedEvent extends IndexedObject {
 
 	public void setSources(List<IndexedEventSource> sources) {
 		this.sources = sources;
+	}
+
+	public Boolean getConditionalUpdate() {
+		return conditionalUpdate;
+	}
+
+	public void setConditionalUpdate(Boolean conditionalUpdate) {
+		this.conditionalUpdate = conditionalUpdate;
+	}
+
+	@Override
+	public int compareTo(IndexedEvent o) {
+		if (o.getSummary() == null && this.getSummary() == null) {
+			return 0;
+		} else if ((o.getSummary() != null && this.getSummary() == null) || (o.getSummary() == null && this.getSummary() != null)) {
+			return -1;
+		} else {
+			return o.getSummary().compareTo(this.getSummary());
+		}
 	}
 }

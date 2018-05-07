@@ -158,7 +158,7 @@ public class EventCategorizationController {
 		event.setSummary(summary);
 		event.setCategory(category);
 		event.setUserCreated(false);
-		event.setFeedType(SolrConstants.Events.FEED_TYPE_AUTHORITATIVE);
+		event.setFeedType(SolrConstants.Events.FEED_TYPE_MEDIA);
 		event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
 		event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
 		event.updateLastUpdatedDate();
