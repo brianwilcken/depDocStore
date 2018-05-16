@@ -63,10 +63,11 @@ class PortalInterface:
             portalBoundariesFs = arcpy.FeatureSet()
             portalBoundariesFs.load(self.portalBoundariesUrl + eventQuery)
             portalBoundariesJson = json.loads(portalBoundariesFs.JSON)
-            appid = objectId = portalBoundariesJson['features'][0]['attributes']['appid']
+            appid = None
             
             if len(portalBoundariesJson['features']) > 0:
                 objectId = portalBoundariesJson['features'][0]['attributes']['objectid']
+                appid = portalBoundariesJson['features'][0]['attributes']['appid']
                 deleteResponse = requests.post(self.portalBoundariesUrl + self.deleteFeatures, data='objectIds=' + str(objectId) + '&where=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
                 if not deleteResponse.ok:
                     self.logger.warn('Unable to delete old boundary data for event: ' + eventId)

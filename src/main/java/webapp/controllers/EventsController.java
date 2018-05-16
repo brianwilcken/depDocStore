@@ -239,19 +239,23 @@ public class EventsController {
 						event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
 					}
 				}
-				event.setCategory(updEvent.getCategory());
-				event.setTitle(updEvent.getTitle());
 				event.setSummary(updEvent.getSummary());
-				event.setDashboard(updEvent.getDashboard());
-				event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
-				event.setFeatureIds(updEvent.getFeatureIds());
+                if (!updEvent.getConditionalUpdate()) {
+                    event.setCategory(updEvent.getCategory());
+                    event.setTitle(updEvent.getTitle());
+                    event.setDashboard(updEvent.getDashboard());
+                    event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
+                    event.setFeatureIds(updEvent.getFeatureIds());
+                }
 				List<IndexedEvent> coll = new ArrayList<>();
 				coll.add(event);
 				solrClient.indexDocuments(coll);
-				event.setSources(updEvent.getSources());
-				indexEventSources(event);
-				logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed... proceeding with model training");
-				modelTrainingService.process(this);
+                if (!updEvent.getConditionalUpdate()) {
+                    event.setSources(updEvent.getSources());
+                    indexEventSources(event);
+                    logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed... proceeding with model training");
+                    modelTrainingService.process(this);
+                }
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event, event.getLastUpdated()));
 			} else {
 				return ResponseEntity.notFound().build();
