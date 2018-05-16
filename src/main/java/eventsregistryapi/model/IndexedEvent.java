@@ -73,7 +73,7 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 	@Field
 	private String[] featureIds;
 
-	private Boolean conditionalUpdate;
+	private boolean conditionalUpdate;
 
 	private List<IndexedEventSource> sources;
 
@@ -314,11 +314,11 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 		this.sources = sources;
 	}
 
-	public Boolean getConditionalUpdate() {
+	public boolean getConditionalUpdate() {
 		return conditionalUpdate;
 	}
 
-	public void setConditionalUpdate(Boolean conditionalUpdate) {
+	public void setConditionalUpdate(boolean conditionalUpdate) {
 		this.conditionalUpdate = conditionalUpdate;
 	}
 
