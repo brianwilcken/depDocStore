@@ -15,7 +15,7 @@ import logging
 class PortalInterface:
     
     tokenHeaders = {'Content-type': 'application/x-www-form-urlencoded'}
-    tokenCred = 'username=brian.wilcken%40inl.gov&password=r4MQ9i6$e&ip=&referer=&client=requestip&expiration=60&f=pjson'
+    tokenCred = 'username=NiccAppSys&password=TrnWK9*!CbR&ip=&referer=&client=requestip&expiration=60&f=pjson'
     generateTokenUrl = 'https://cloudgis.k2geomatics.io/portal/sharing/rest/generateToken'
     serverTokenUrl = 'https://cloudgis.k2geomatics.io/portal/sharing/generateToken?request=getToken&serverUrl=https%3A%2F%2Fcloudgis.k2geomatics.io%2Fserver%2Flogin%2F..%2Frest%2Fservices&referer=cloudgis.k2geomatics.io&f=json&token='
     portalLocationsUrl = 'https://cloudgis.k2geomatics.io/server/rest/services/Hosted/Event_Locations/FeatureServer/0'
@@ -87,7 +87,7 @@ class PortalInterface:
             locationFeature = LocationFeature.LocationFeature()
             locationFeature.consume(indexedEventJson, report['geometry'])
             boundaryFeature = BoundaryFeature.BoundaryFeature()
-            boundaryFeature.consume(indexedEventJson, perimeter['geometry'])
+            boundaryFeature.consume(indexedEventJson, perimeter['geometry'], None)
             
             #POST data to portal
             portalResponse = requests.post(self.portalLocationsUrl + self.addFeatures, data=locationFeature.urlEncode(), headers=self.tokenHeaders)
