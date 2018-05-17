@@ -175,7 +175,7 @@ public class EventsController {
 		try {
 			logger.info(context.getRemoteAddr() + " -> " + "Creating new event");
 			event.initId();
-			if (event.getUri().isEmpty()) {
+			if (event.getUri() == null || event.getUri().isEmpty()) {
 				event.setUri("N/A");
 			} else if (solrClient.IsDocumentAlreadyIndexed(event.getUri())){
 				return updateEvent(event.getId(), event);
