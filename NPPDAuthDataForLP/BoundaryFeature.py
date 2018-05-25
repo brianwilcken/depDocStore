@@ -13,7 +13,7 @@ class BoundaryFeature:
     def consume(self, eventJson, geometry, appid):
         featureData = { 'attributes' : {
                 'eventid' : eventJson['data']['id'].encode('utf-8'),
-                'appid' : appid
+                'appid' : appid.encode('utf-8')
                 }, 'geometry' : {
                         'rings' : geometry['rings']
                         } }

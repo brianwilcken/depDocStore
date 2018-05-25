@@ -23,17 +23,17 @@ class WildFireEvent:
     sources = []
     conditionalUpdate = True
     
-    def consume(self, reportAttr):
-        self.uri = reportAttr['INTERNALID']
-        self.eventDate = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(reportAttr['START_DATE'])/1000))
-        self.title = 'Active fire report: ' + reportAttr['FIRE_NAME']
-        self.summary = 'As of ' + time.strftime("%c", time.gmtime(int(reportAttr['REPORT_DATE'])/1000)) + ', the ' + reportAttr['FIRE_NAME'] + ' fire is estimated to be ' + str(reportAttr['AREA_']) + ' ' + reportAttr['AREA_MEAS'] + ' and ' + str(reportAttr['PER_CONT']) + '% contained.'
+    def consume(self, rprt, perim):
+        self.uri = rprt['INTERNALID']
+        self.eventDate = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(rprt['START_DATE'])/1000))
+        self.title = 'Active fire report: ' + rprt['FIRE_NAME']
+        self.summary = 'As of ' + time.strftime("%c", time.gmtime(int(rprt['REPORT_DATE'])/1000)) + ', the ' + rprt['FIRE_NAME'] + ' fire is estimated to be ' + str(round(perim['ACRES'], 2)) + ' ' + rprt['AREA_MEAS'] + ' and ' + str(rprt['PER_CONT']) + '% contained.'
         self.category = 'Wildfire'
-        self.latitude = str(reportAttr['LATITUDE'])
-        self.longitude = str(reportAttr['LONGITUDE'])
-        self.location = reportAttr['STATE']
-        self.url = reportAttr['HOTLINK']
-#        self.featureIds = [reportAttr['OBJECTID']]
+        self.latitude = str(rprt['LATITUDE'])
+        self.longitude = str(rprt['LONGITUDE'])
+        self.location = rprt['STATE']
+        self.url = rprt['HOTLINK']
+#        self.featureIds = [rprt['OBJECTID']]
 #        if perimeterAttr is not None:
 #            self.featureIds.append(perimeterAttr['OBJECTID'])
         self.userCreated = False

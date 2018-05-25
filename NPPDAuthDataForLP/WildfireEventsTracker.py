@@ -52,12 +52,12 @@ class WildFireEventsTracker:
             
             #initialize event object to be POSTed to the event service
             event = WildFireEvent.WildFireEvent()
-            event.consume(reportAttr)
+            event.consume(reportAttr, perimeterAttr)
             
             self.logger.info('POST wildfire event to backend: ' + event.title)
             response = requests.post(self.eventsServiceUrl, data=event.toJSON(), headers=self.requestHeaders)
             if response.ok:
                 self.logger.info('POST successful for event: ' + event.title)
-                self.portal.upsertEventFeatures(response.content, report, perimeter)
+                self.portal.upsertWildfireEventFeatures(response.content, report, perimeter)
             else:
                 self.logger.warn('POST failed for event: ' + event.title)

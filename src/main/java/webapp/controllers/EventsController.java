@@ -235,8 +235,12 @@ public class EventsController {
 					//The only valid state transition communicated directly from the client is "Watched"
 					event.setEventState(SolrConstants.Events.EVENT_STATE_WATCHED);
 				} else {
-					if (event.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_NEW) == 0 && !updEvent.getConditionalUpdate()) {
-						event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
+					if (!updEvent.getConditionalUpdate()) {
+						//If the client has not provided state information on an event then the event transitions to the reviewed state
+						if (event.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_NEW) == 0 ||
+								event.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_WATCHED) == 0) {
+							event.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
+						}
 					}
 				}
 				event.setSummary(updEvent.getSummary());
