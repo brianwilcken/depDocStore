@@ -113,7 +113,7 @@ public class SolrClient {
 	public Boolean IsDocumentAlreadyIndexed(String uri) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setRows(0);
-		query.setQuery("uri:" + uri);
+		query.setQuery("uri:\"" + uri + "\"");
 		try {
 			QueryResponse response = client.query("events", query);
 			return response.getResults().getNumFound() > 0;
@@ -231,6 +231,7 @@ public class SolrClient {
 		query.setQuery("eventState:* AND -eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
 		query.addFilterQuery("category:* AND -category:" + SolrConstants.Events.CATEGORY_UNKNOWN);
 		query.addFilterQuery("-userCreated:true");
+		query.addFilterQuery("-feedType:" + SolrConstants.Events.FEED_TYPE_AUTHORITATIVE);
 		try {
 			File file = new File(trainingFilePath);
 			file.getParentFile().mkdirs();
