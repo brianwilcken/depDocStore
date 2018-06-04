@@ -6,6 +6,7 @@ Created on Fri May 04 09:22:38 2018
 """
 import time
 import json
+import WildFireEventSource
 
 class WildFireEvent:
     uri = ''
@@ -37,7 +38,9 @@ class WildFireEvent:
 #        if perimeterAttr is not None:
 #            self.featureIds.append(perimeterAttr['OBJECTID'])
         self.userCreated = False
-        self.sources = []
+        eventSource = WildFireEventSource.WildFireEventSource()
+        eventSource.consume(rprt)
+        self.sources = [eventSource]
         self.conditionalUpdate = True
         
     def toJSON(self):
