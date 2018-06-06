@@ -233,7 +233,7 @@ public class EventsController {
 				event.setLocation(updEvent.getLocation());
 				if (!Strings.isNullOrEmpty(updEvent.getEventState())) {
 					//The only valid state transition communicated directly from the client is "Watched"
-					event.setEventState(SolrConstants.Events.EVENT_STATE_WATCHED);
+					event.setEventState(updEvent.getEventState());
 				} else {
 					if (!updEvent.getConditionalUpdate()) {
 						//If the client has not provided state information on an event then the event transitions to the reviewed state
