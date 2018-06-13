@@ -150,7 +150,7 @@ public class SolrClient {
 			//remove any potential documents that are not IndexedEvents
 			for (int i = 0; i < response.size(); i++) {
 				SolrDocument doc = response.get(i);
-				if (doc.containsKey("eventId")) { //only source documents contain this field
+				if (doc.containsKey("eventId") || doc.containsKey("sourceId")) { //only source documents contain these fields
 					response.remove(i--);
 				}
 			}

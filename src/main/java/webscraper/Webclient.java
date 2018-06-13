@@ -1,5 +1,8 @@
 package webscraper;
 
+import com.bericotech.clavin.gazetteer.GeoName;
+import com.bericotech.clavin.resolver.ResolvedLocation;
+import eventsregistryapi.model.IndexedEventSource;
 import geoparsing.LocationResolver;
 
 import common.DetectHtml;
@@ -10,12 +13,27 @@ import nlp.NLPTools;
 import nlp.NamedEntityRecognizer;
 import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.stemmer.PorterStemmer;
+import org.apache.solr.client.solrj.SolrServerException;
+//import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
+//import org.deeplearning4j.models.paragraphvectors.ParagraphVectors;
+//import org.deeplearning4j.models.word2vec.VocabWord;
+//import org.deeplearning4j.models.word2vec.wordstore.inmemory.AbstractCache;
+//import org.deeplearning4j.text.documentiterator.LabelsSource;
+//import org.deeplearning4j.text.sentenceiterator.BasicLineIterator;
+//import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
+//import org.deeplearning4j.text.tokenization.tokenizer.preprocessor.CommonPreprocessor;
+//import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
+//import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.core.io.ClassPathResource;
+import solrapi.SolrClient;
+import webscraper.model.IndexedEventSourceLocation;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -24,6 +42,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -42,13 +61,15 @@ public class Webclient {
     private PorterStemmer stemmer;
     private SentenceModel sentModel;
     private LocationResolver locationResolver;
+    private SolrClient solrClient;
 
     public static void main(String[] args) {
         Webclient client = new Webclient();
         //past hour
-        client.queryGoogle("qdr:h", client::processSearchResults);
+        //client.queryGoogle("qdr:h", client::processSearchResults);
         //archives
         //client.queryGoogle("ar:1", client::gatherData);
+        client.queryGoogle("qdr:h", client::gatherData);
     }
 
     public Webclient() {
@@ -57,6 +78,7 @@ public class Webclient {
         stemmer = new PorterStemmer();
         sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
         locationResolver = new LocationResolver();
+        solrClient = new SolrClient(Tools.getProperty("solr.url"));
     }
 
     private void queryGoogle(String timeFrameSelector, BiConsumer<Document, Element> action) {
@@ -69,8 +91,11 @@ public class Webclient {
                 while (results.eachText().size() > 0) {
                     for (Element result : results){
                         String href = result.attr("href");
-                        Document article = Jsoup.connect(href).userAgent(USER_AGENT).get();
-                        action.accept(article, result);
+                        try {
+                            Document article = Jsoup.connect(href).userAgent(USER_AGENT).get();
+                            action.accept(article, result);
+                        }
+                        catch (HttpStatusException e) {}
                     }
                     start += 10;
                     results = getGoogleSearchResults(category, timeFrameSelector, start);
@@ -82,7 +107,7 @@ public class Webclient {
         }
     }
 
-    private void gatherData(Document article, Element result) {
+    private File gatherData(Document article, Element result) {
         String body = getArticleBody(article);
         String[] sentences = NLPTools.detectSentences(sentModel, body);
 
@@ -91,29 +116,106 @@ public class Webclient {
                 .filter(p -> p.endsWith("."))
                 .collect(Collectors.toList());
 
-        String data = String.join(System.lineSeparator(), lsSentences);
-        try {
-            Files.write(Paths.get("data/ner-training-data.txt"), data.getBytes(), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (lsSentences.size() > 0) {
+            String data = String.join(" ", lsSentences) + System.lineSeparator();
+            try {
+                File file = Files.write(Paths.get("data/p2v-training-data.txt"), data.getBytes(), StandardOpenOption.APPEND, StandardOpenOption.CREATE).toFile();
+                return file;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+        return null;
     }
+
+//    private void generateParagraphVectors() {
+//        File file = new File("data/p2v-training-data.txt");
+//        SentenceIterator iter = new BasicLineIterator(file);
+//        AbstractCache<VocabWord> cache = new AbstractCache<>();
+//
+//        TokenizerFactory t = new DefaultTokenizerFactory();
+//        t.setTokenPreProcessor(new CommonPreprocessor());
+//
+//        LabelsSource source = new LabelsSource("DOC_");
+//
+//        ParagraphVectors vec = new ParagraphVectors.Builder()
+//                .minWordFrequency(1)
+//                .iterations(5)
+//                .epochs(1)
+//                .layerSize(100)
+//                .learningRate(0.025)
+//                .labelsSource(source)
+//                .windowSize(5)
+//                .iterate(iter)
+//                .trainWordVectors(false)
+//                .vocabCache(cache)
+//                .tokenizerFactory(t)
+//                .sampling(0)
+//                .build();
+//
+//        vec.fit();
+//
+//        WordVectorSerializer.writeParagraphVectors(vec, "paragraphVectorsModel.zip");
+//    }
 
     private void processSearchResults(Document article, Element result) {
         String body = getArticleBody(article);
 
-        extractArticleMetadata(article, result);
-        //List<String> locations = ner.detectNamedEntities(body, new ClassPathResource(Tools.getProperty("nlp.locationNerModel")));
-        locationResolver.resolveLocations(body);
+        IndexedEventSource source = extractArticleMetadata(article, result);
+        if (source != null) {
+            source.setSummary(body);
+            List<IndexedEventSourceLocation> indexedLocations = new ArrayList<>();
+            List<ResolvedLocation> locations = locationResolver.resolveLocations(body);
+            for (ResolvedLocation location : locations) {
+                GeoName geoname = location.getGeoname();
+                if (geoname.getPrimaryCountryCode().name().compareTo("US") == 0 &&
+                        !geoname.isTopLevelAdminDivision() &&
+                        geoname.getFeatureCode().name().compareTo("ADM1") != 0) {
+                    IndexedEventSourceLocation loc = new IndexedEventSourceLocation();
+                    loc.setSourceId(source.getId());
+                    loc.setLocation(geoname.getName() + ", " + geoname.getAdmin1Code());
+                    loc.setLatitude(Double.toString(geoname.getLatitude()));
+                    loc.setLongitude(Double.toString(geoname.getLongitude()));
+                    loc.initId();
+                    if (!indexedLocations.stream().anyMatch(p -> p.getId().compareTo(loc.getId()) == 0)) {
+                        indexedLocations.add(loc);
+                    }
+                }
+            }
+            //index the source data to solr
+            try {
+                if (indexedLocations.size() > 0) {
+                    List<IndexedEventSource> coll = new ArrayList<>();
+                    coll.add(source);
+                    solrClient.indexDocuments(coll);
+                    solrClient.indexDocuments(indexedLocations);
+                }
+            } catch (SolrServerException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
-    private void extractArticleMetadata(Document article, Element result) {
+    private IndexedEventSource extractArticleMetadata(Document article, Element result) {
         String title = article.title();
 
         List<String> sourceTimeStamp = result.parent().parent().select(".slp").select("span").eachText();
-        String source = sourceTimeStamp.get(0);
-        String timestamp = sourceTimeStamp.get(2);
-        String sourceDate = getFormattedDateTimeString(timestamp);
+        if (sourceTimeStamp.size() > 0) {
+            String sourceName = sourceTimeStamp.get(0);
+            String timestamp = sourceTimeStamp.get(2);
+            String articleDate = getFormattedDateTimeString(timestamp);
+
+            IndexedEventSource source = new IndexedEventSource();
+            source.setTitle(title);
+            source.setSourceName(sourceName);
+            source.setArticleDate(articleDate);
+            source.setUrl(article.location());
+            source.setUri("N/A");
+            source.initId();
+
+            return source;
+        }
+        return null;
     }
 
     private String getArticleBody(Document article) {
