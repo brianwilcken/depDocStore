@@ -45,18 +45,26 @@ public class IndexedEventSource extends IndexedObject {
 	
 	public void initId() {
 		try {
-			if (!Strings.isNullOrEmpty(this.getUri())) {
+			if (Strings.isNullOrEmpty(this.getEventId())) {
 				id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(
-						this.getEventId() +
+						this.getSourceName() +
 								this.getTitle() +
 								this.getSummary() +
-								this.getUri())));
+								this.getUrl())));
 			} else {
-				id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(
-						this.getEventId() +
-								this.getSourceName() +
-								this.getUrl() +
-								this.getArticleDate())));
+				if (!Strings.isNullOrEmpty(this.getUri())) {
+					id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(
+							this.getEventId() +
+									this.getTitle() +
+									this.getSummary() +
+									this.getUri())));
+				} else {
+					id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(
+							this.getEventId() +
+									this.getSourceName() +
+									this.getUrl() +
+									this.getArticleDate())));
+				}
 			}
 		} catch (JsonProcessingException | NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block

@@ -15,16 +15,25 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class NamedEntityRecognizer {
 
-    public List<String> detectNamedEntities(String testFilePath) {
-        TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, Tools.getProperty("nlp.nerModel"));
+    public List<String> detectNamedEntities(String content, ClassPathResource nerModel) {
+        try {
+            return detectNamedEntities(content, nerModel.getFile().getPath());
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    public List<String> detectNamedEntities(String content, String nerModelPath) {
+        TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, nerModelPath);
         NameFinderME nameFinder = new NameFinderME(model);
 
         SentenceModel sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
-        String[] sentences = NLPTools.detectSentences(sentModel, Tools.GetFileString(testFilePath));
+        String[] sentences = NLPTools.detectSentences(sentModel, content);
 
         TokenizerModel tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
 
@@ -36,16 +45,16 @@ public class NamedEntityRecognizer {
             for (Span span : nameSpans) {
                 int start = span.getStart();
                 int end = span.getEnd();
-                for (int i = start; i < end; i++) {
-                    namedEntities.add(tokens[i]);
-                }
+                String[] entityParts = Arrays.copyOfRange(tokens, start, end);
+                String entity = String.join(" ", entityParts);
+                namedEntities.add(entity);
             }
         }
 
         return namedEntities;
     }
 
-    public void trainNERModel(String trainingFilePath, String type) {
+    public void trainNERModel(String trainingFilePath, String type, String modelPath) {
         try {
             ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(trainingFilePath);
 
@@ -65,7 +74,7 @@ public class NamedEntityRecognizer {
                 model = NameFinderME.train("en", type, sampleStream, NLPTools.getTrainingParameters(best.i, best.c), new TokenNameFinderFactory());
             }
 
-            try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(Tools.getProperty("nlp.nerModel")))) {
+            try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(modelPath))) {
                 model.serialize(modelOut);
             }
 

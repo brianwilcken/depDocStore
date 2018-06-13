@@ -423,11 +423,12 @@
   <field name="longitude" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
   <field name="categorizationState" type="string" multiValued="false" indexed="false" required="false" stored="true"/>
   <field name="eventState" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
-  <field name="summary" type="text_en_splitting" multiValued="false" indexed="true" required="true" stored="true" termVectors="true"/>
-  <field name="title" type="text_en_splitting" multiValued="false" indexed="true" required="true" stored="true" termVectors="true"/>
+  <field name="summary" type="text_en_splitting" multiValued="false" indexed="true" required="false" stored="true" termVectors="true"/>
+  <field name="title" type="text_en_splitting" multiValued="false" indexed="true" required="false" stored="true" termVectors="true"/>
   <field name="totalArticleCount" type="plong" indexed="false" required="false" stored="true"/>
-  <field name="uri" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
+  <field name="uri" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
   <field name="eventId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
+  <field name="sourceId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
   <field name="url" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
   <field name="sourceUri" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
   <field name="sourceName" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
