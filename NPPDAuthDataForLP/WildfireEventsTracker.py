@@ -2,7 +2,7 @@
 import arcpy
 import requests
 import json
-import WildFireEvent
+import LandingPageEvent
 import PortalInterface
 import logging
 
@@ -52,8 +52,8 @@ class WildFireEventsTracker:
             
             if perimeterAttr is not None:
                 #initialize event object to be POSTed to the event service
-                event = WildFireEvent.WildFireEvent()
-                event.consume(reportAttr, perimeterAttr)
+                event = LandingPageEvent.LandingPageEvent()
+                event.consumeWildfireReport(reportAttr, perimeterAttr)
                 
                 self.logger.info('POST wildfire event to backend: ' + event.title)
                 response = requests.post(self.eventsServiceUrl, data=event.toJSON(), headers=self.requestHeaders)
