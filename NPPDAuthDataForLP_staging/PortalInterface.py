@@ -60,14 +60,12 @@ class PortalInterface:
         wildfireQuery = self.getPortalQuery(eventId)
         wildfireBoundariesFs = arcpy.FeatureSet()
         wildfireBoundariesFs.load(self.wildfireBoundariesUrl + wildfireQuery)
-        
         if wildfireBoundariesFs.JSON is not None:
             self.logger.info('Successfully loaded boundary data from portal for wildfire event: ' + eventId)
             wildfireBoundariesJson = json.loads(wildfireBoundariesFs.JSON)
         else:
             self.logger.error('Unable to load boundary data from portal!')
             return False
-        
         if len(wildfireBoundariesJson['features']) > 0:
             #delete any old boundary data before adding the updated boundary data
             boundaries = wildfireBoundariesJson['features']
