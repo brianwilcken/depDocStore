@@ -11,6 +11,7 @@ import string
 import LocationFeature
 import BoundaryFeature
 import WildfireBoundary
+import HurricaneBoundary
 import logging
 
 class PortalInterface:
@@ -23,6 +24,7 @@ class PortalInterface:
     eventLocationsUrl = 'https://cloudgis.k2geomatics.io/server/rest/services/Hosted/Event_Locations/FeatureServer/0'
     eventBoundariesUrl = 'https://cloudgis.k2geomatics.io/server/rest/services/Hosted/Event_Boundaries/FeatureServer/0'
     wildfireBoundariesUrl = 'http://cloudgis.k2geomatics.io/server/rest/services/Hosted/Wildfire_Boundaries/FeatureServer/0'
+    hurricaneBoundariesUrl = 'http://cloudgis.k2geomatics.io/server/rest/services/Hosted/Hurricane_Boundaries/FeatureServer/0'
     
     def __init__(self):
         self.logger = logging.getLogger('authDataLogger')
@@ -95,7 +97,49 @@ class PortalInterface:
             
         return True
             
+    def upsertHurricaneEventFeatures(self, event, position, forecast, pathBuffer):
+        eventId = self.getEventId(event)
+        appid = None
+        hurricaneQuery = self.getPortalQuery(eventId)
+        hurricaneBoundariesFs = arcpy.FeatureSet()
+        hurricaneBoundariesFs.load(self.hurricaneBoundariesUrl + hurricaneQuery)
         
+        if hurricaneBoundariesFs.JSON is not None:
+            self.logger.info('Successfully loaded boundary data from portal for hurricane event: ' + eventId)
+            hurricaneBoundariesJson = json.loads(hurricaneBoundariesFs.JSON)
+        else:
+            self.logger.error('Unable to load boundary data from portal!')
+            return False
+        
+        if len(hurricaneBoundariesJson['features']) > 0:
+            #delete any old boundary data before adding the updated boundary data
+            boundaries = hurricaneBoundariesJson['features']
+            for boundary in boundaries:
+                appid_temp = boundary['attributes']['appid']
+                if appid_temp is not None:
+                    appid = appid_temp
+                fid = boundary['attributes']['fid']
+                deleteResponse = requests.post(self.hurricaneBoundariesUrl + self.deleteFeatures, data='where=fid=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
+                if not deleteResponse.ok:
+                    self.logger.warn('Unable to delete old boundary data for hurricane event: ' + eventId)
+                    
+        #insert new hurricane boundaries data
+        hurricaneBoundary = HurricaneBoundary.HurricaneBoundary()
+        hurricaneBoundary.consume(self.indexedEventJson, appid, position, forecast, pathBuffer)
+        
+        #POST data to portal
+        portalResponse = requests.post(self.hurricaneBoundariesUrl + self.addFeatures, data=hurricaneBoundary.urlEncode(), headers=self.tokenHeaders)
+        if portalResponse.ok:
+            responseJSON = json.loads(portalResponse.content)
+            success = responseJSON['addResults'][0]['success']
+            if success == True:
+                self.logger.info('Hurricane boundary data added for event: ' + eventId)
+            else:
+                self.logger.warn('Unable to add Hurricane boundary data for event: ' + eventId)
+        else:
+            self.logger.error('Server error (' + portalResponse.status_code + ') occurred while adding Hurricane boundary data for event: ' + eventId)
+        return True
+    
     def upsertEventFeatures(self, event, report, perimeter):
         #GET location data from portal (if it exists)
         eventId = self.getEventId(event)
