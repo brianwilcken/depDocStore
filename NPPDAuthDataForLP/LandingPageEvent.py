@@ -89,7 +89,12 @@ class LandingPageEvent:
         validDateTime = forecast['VALIDTIME'].split('/')
         validDate = int(validDateTime[0])
         validTime = validDateTime[1]
-        self.summary = self.summary + 'By the ' + p.ordinal(validDate) + ' at ' + validTime + ' hours ' + forecast['TIMEZONE'] + ', ' + rprt['STORMNAME'] + ' is expected to ' + change + ', with maximum sustained winds of ' + str(forecast['MAXWIND']) + 'kts and gusts up to ' + str(forecast['GUST']) + 'kts.'
+        self.summary = self.summary + 'By the ' + p.ordinal(validDate) + ' at ' + validTime + ' hours ' + forecast['TIMEZONE'] + ', ' + rprt['STORMNAME'] + ' is expected to ' + change + ', with maximum sustained winds of ' + str(forecast['MAXWIND']) + 'kts'
+        gust = forecast['GUST']
+        if gust > 0:
+            self.summary = self.summary + ' and gusts up to ' + str(forecast['GUST']) + 'kts.'
+        else:
+            self.summary = self.summary + '.'
         self.category = 'Hurricane'
         self.latitude = rprt['LAT']
         self.longitude = rprt['LON']
