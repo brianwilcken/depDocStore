@@ -66,28 +66,43 @@ class HurricaneEventsTracker:
         #self.forecastErrorConeFs.load(self.activeHurricaneUrl + self.forecastErrorConeLayer + self.forecastErrorConeQuery + self.querySuffix + self.serverTokenParam)
         self.forecastPositionFs = arcpy.FeatureSet()
         self.forecastPositionFs.load(self.activeHurricaneUrl + self.forecastPositionLayer + self.forecastPositionQuery + self.querySuffix + self.serverTokenParam)
+        
+        #load all JSON data from the ArcGIS feature sets
+        self.posJson = json.loads(self.observedPositionFs.JSON)
+        self.trackJson = json.loads(self.observedTrackFs.JSON)
+        #self.forecastErrorConeJson = json.loads(self.forecastErrorConeFs.JSON)
+        self.forecastPositionJson = json.loads(self.forecastPositionFs.JSON)
+        
+        self.processAuthoritativeData()
+        
+    def getTestData(self, stormName):
+        with open('hurricane_' + stormName + '_op.json') as f:
+            self.posJson = json.load(f)
+            
+        with open('hurricane_' + stormName + '_ot.json') as f:
+            self.trackJson = json.load(f)
+            
+        with open('hurricane_' + stormName + '_fp.json') as f:
+            self.forecastPositionJson = json.load(f)
+            
         self.processAuthoritativeData()
 
     def processAuthoritativeData(self):
         self.logger.info('Process hurricane data')
-        posJson = json.loads(self.observedPositionFs.JSON)
-        positions = posJson['features']
-        trackJson = json.loads(self.observedTrackFs.JSON)
-        tracks = trackJson['features']
-        #forecastErrorConeJson = json.loads(self.forecastErrorConeFs.JSON)
+        positions = self.posJson['features']
+        tracks = self.trackJson['features']
         #forecastErrorCones = forecastErrorConeJson['features']
-        forecastPositionJson = json.loads(self.forecastPositionFs.JSON)
-        forecastPositions = forecastPositionJson['features']
+        forecastPositions = self.forecastPositionJson['features']
 
         #group all of the storm reports together under a common storm name
         stormReports = {}
-        for k, v in groupby(positions, key=lambda x:x['attributes']['STORMNAME'][:]):
-            stormReports[k] = list(v)
+#        for k, v in groupby(positions, key=lambda x:x['attributes']['STORMNAME'][:]):
+#            stormReports[k] = list(v)
             
         #group all of the forecast reports together under a common storm name
         forecastReports = {}
-        for k, v in groupby(forecastPositions, key=lambda x:x['attributes']['STORMNAME'][:]):
-            forecastReports[k] = list(v)
+#        for k, v in groupby(forecastPositions, key=lambda x:x['attributes']['STORMNAME'][:]):
+#            forecastReports[k] = list(v)
             
         #Get the most recent observed position for the storm
         mostRecentPositions = {}
@@ -122,7 +137,6 @@ class HurricaneEventsTracker:
             stormTracks[k] = [item for sublist in [d['geometry']['paths'] for d in trackData] for item in sublist]
             #stormTracks[k] = [item for sublist in [item for sublist in [d['geometry']['paths'] for d in trackData] for item in sublist] for item in sublist]
         
-
         #form 100 mile buffer around observed path
         stormPathPolygons = {}
         stormPathPolylines = {}
@@ -140,11 +154,16 @@ class HurricaneEventsTracker:
         #Dissolve 100 mile buffer polygons into single polygon per storm
         stormBufferFeatures = {}
         arcpy.Delete_management('in_memory')
+        fileCount = 0
         for stormName in stormPathPolygons:
-            stormPathBufferFC = 'in_memory\\' + stormName + '_stormPathBuffer_featureClass'
-            arcpy.Dissolve_management(stormPathPolygons[stormName], stormPathBufferFC)
+            fileCount += 1
+            stormPathBufferFC = 'in_memory\\stormPathBuffer_featureClass_' + str(fileCount)
+            simplifiedPathBufferFC = 'in_memory\\simplifiedPathBuffer_featureClass_' + str(fileCount)
+            arcpy.Dissolve_management(stormPathPolygons[stormName], stormPathBufferFC, multi_part = False)
+            arcpy.SimplifyPolygon_cartography(stormPathBufferFC, simplifiedPathBufferFC, tolerance=100)
             dissolvedFs = arcpy.FeatureSet()
-            dissolvedFs.load(stormPathBufferFC)
+            dissolvedFs.load(simplifiedPathBufferFC)
+            #arcpy.FeaturesToJSON_conversion(stormPathBufferFC, 'output.json', 'GEOJSON')
             stormBufferFeatures[stormName] = dissolvedFs
 
         #iterate through the storms whiule posting events to the backend and to portal
@@ -163,7 +182,8 @@ class HurricaneEventsTracker:
                 response = requests.post(self.eventsServiceUrl, data=event.toJSON(), headers=self.requestHeaders)
                 if response.ok:
                     self.logger.info('POST successful for event: ' + event.title)
-                    bufferGeometryJSON = json.loads(stormBufferFeatures[stormName].JSON)
+                    bufferGeometryPolygon = stormBufferFeatures[stormName]
+                    bufferGeometryJSON = json.loads(bufferGeometryPolygon.JSON)
                     bufferGeometry = bufferGeometryJSON['features'][0]
                     self.portal.upsertHurricaneEventFeatures(response.content, posAttr, foreAttr, bufferGeometry)
                 else:

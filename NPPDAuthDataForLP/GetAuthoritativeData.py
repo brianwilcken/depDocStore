@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed May 16 09:04:06 2018
-
-@author: WILCBM
-"""
-
 import logging
 import logging.config
 import WildfireEventsTracker
@@ -28,4 +21,5 @@ logger = logging.getLogger('authDataLogger')
 logger.info('Begin Processing Hurricane Events from NPPD')
 hurricaneEventsTracker = HurricaneEventsTracker.HurricaneEventsTracker()
 hurricaneEventsTracker.getAuthoritativeData()
+#hurricaneEventsTracker.getTestData('daniel')
 logger.info('Finished Processing Hurricane Events from NPPD')
