@@ -36,7 +36,12 @@ class WildFireEventsTracker:
     def processAuthoritativeData(self):
         self.logger.info('Process wildfire data')
         reportJson = json.loads(self.wildfireReportsFs.JSON)
-        perimeterJson = json.loads(self.wildfirePerimetersFs.JSON)
+        
+        fc="in_memory\\_wildfireBoundary_featureClass"
+        arcpy.SimplifyPolygon_cartography(self.wildfirePerimetersFs,fc,'BEND_SIMPLIFY','5000 Feet')
+        wildfireBoundariesFs = arcpy.FeatureSet()
+        wildfireBoundariesFs.load(fc)
+        perimeterJson = json.loads(wildfireBoundariesFs.JSON)
         reports = reportJson['features']
         perimeters = perimeterJson['features']
 

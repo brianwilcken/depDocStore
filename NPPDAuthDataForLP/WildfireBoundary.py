@@ -24,7 +24,6 @@ class WildfireBoundary:
                 'inc_num': (('', perim['attributes']['INC_NUM'])[perim['attributes']['INC_NUM'] is not None]).encode('utf-8'),
                 'load_date': str(perim['attributes']['LOAD_DATE']),
                 'date_time': str(perim['attributes']['DATE_TIME']),
-                'shape_leng': perim['attributes']['Shape_Length'],
                 'latitude': rprt['LATITUDE'],
                 'longitude': rprt['LONGITUDE'],
                 'area_meas': (('', rprt['AREA_MEAS'])[rprt['AREA_MEAS'] is not None]).encode('utf-8'),
