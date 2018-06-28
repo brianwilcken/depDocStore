@@ -96,13 +96,13 @@ class HurricaneEventsTracker:
 
         #group all of the storm reports together under a common storm name
         stormReports = {}
-#        for k, v in groupby(positions, key=lambda x:x['attributes']['STORMNAME'][:]):
-#            stormReports[k] = list(v)
+        for k, v in groupby(positions, key=lambda x:x['attributes']['STORMNAME'][:]):
+            stormReports[k] = list(v)
             
         #group all of the forecast reports together under a common storm name
         forecastReports = {}
-#        for k, v in groupby(forecastPositions, key=lambda x:x['attributes']['STORMNAME'][:]):
-#            forecastReports[k] = list(v)
+        for k, v in groupby(forecastPositions, key=lambda x:x['attributes']['STORMNAME'][:]):
+            forecastReports[k] = list(v)
             
         #Get the most recent observed position for the storm
         mostRecentPositions = {}
@@ -130,12 +130,12 @@ class HurricaneEventsTracker:
         startDates = {}
         stormTracks = {}
         for k, v in groupby(tracks, key=lambda x:x['attributes']['STORMNAME'][:]):
+            stormName = k.encode('utf-8')
             trackData = list(v)
-            startDates[k] = trackData[0]['attributes']['STARTDTG']
-            if startDates[k] is None:
-                startDates[k] = firstPositions[k]['attributes']['DTG']
-            stormTracks[k] = [item for sublist in [d['geometry']['paths'] for d in trackData] for item in sublist]
-            #stormTracks[k] = [item for sublist in [item for sublist in [d['geometry']['paths'] for d in trackData] for item in sublist] for item in sublist]
+            startDates[stormName] = trackData[0]['attributes']['STARTDTG']
+            if startDates[stormName] is None:
+                startDates[stormName] = firstPositions[stormName]['attributes']['DTG']
+            stormTracks[stormName] = [item for sublist in [d['geometry']['paths'] for d in trackData] for item in sublist]
         
         #form 100 mile buffer around observed path
         stormPathPolygons = {}
