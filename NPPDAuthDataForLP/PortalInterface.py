@@ -131,11 +131,16 @@ class PortalInterface:
         portalResponse = requests.post(self.hurricaneBoundariesUrl + self.addFeatures, data=hurricaneBoundary.urlEncode(), headers=self.tokenHeaders)
         if portalResponse.ok:
             responseJSON = json.loads(portalResponse.content)
-            success = responseJSON['addResults'][0]['success']
-            if success == True:
-                self.logger.info('Hurricane boundary data added for event: ' + eventId)
+            if 'addResults' in responseJSON:
+                success = responseJSON['addResults'][0]['success']
+                if success == True:
+                    self.logger.info('Hurricane boundary data added for event: ' + eventId)
+                else:
+                    self.logger.warn('Unable to add Hurricane boundary data for event: ' + eventId)
+            elif 'error' in responseJSON:
+                self.logger.error('Server error occurred when adding boundary data for event: ' + eventId)
             else:
-                self.logger.warn('Unable to add Hurricane boundary data for event: ' + eventId)
+                self.logger.error('Unknown error occurred when adding boundary data for event: ' + eventId)
         else:
             self.logger.error('Server error (' + portalResponse.status_code + ') occurred while adding Hurricane boundary data for event: ' + eventId)
         return True

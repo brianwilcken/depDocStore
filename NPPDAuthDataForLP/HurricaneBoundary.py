@@ -27,7 +27,7 @@ class HurricaneBoundary:
                 'o_lat': pos['LAT'],
                 'o_lon': pos['LON'],
                 'f_advdate': str(fore['ADVDATE']),
-                'f_advisnum': int(fore['ADVISNUM']),
+                #'f_advisnum': ((None, int(fore['ADVISNUM']))[fore['ADVISNUM'] is not None]),
                 'f_fcstprd': fore['FCSTPRD'],
                 'f_basin': (('', fore['BASIN'])[fore['BASIN'] is not None]).encode('utf-8'),
                 'f_validtim': (('', fore['VALIDTIME'])[fore['VALIDTIME'] is not None]).encode('utf-8'),
@@ -50,9 +50,21 @@ class HurricaneBoundary:
                 'stormid' : (('', pos['STORMID'])[pos['STORMID'] is not None]).encode('utf-8'),
                 'appid' : (('', appid)[appid is not None]).encode('utf-8'),
                 'eventid' : event['data']['id'].encode('utf-8')
-                }, 'geometry' : {
+                } 
+            }
+        
+        if fore['ADVISNUM'] is not None and fore['ADVISNUM'].strip():
+            featureData['f_advisnum'] = int(fore['ADVISNUM'])
+    
+        if 'rings' in buff['geometry']:
+            featureData['geometry'] = {
                             'rings' : buff['geometry']['rings']
-                            } }
+                            }
+        elif 'curveRings' in buff['geometry']:
+            featureData['geometry'] = {
+                            'curveRings' : buff['geometry']['curveRings']
+                            }
+        
         self.features = [featureData]
         
     def urlEncode(self):
