@@ -166,7 +166,7 @@ class HurricaneEventsTracker:
             #arcpy.FeaturesToJSON_conversion(stormPathBufferFC, 'output.json', 'GEOJSON')
             stormBufferFeatures[stormName] = dissolvedFs
 
-        #iterate through the storms whiule posting events to the backend and to portal
+        #iterate through the storms while posting events to the backend and to portal
         for stormName in mostRecentPositions:
             position = mostRecentPositions[stormName]
             posAttr = position['attributes']
