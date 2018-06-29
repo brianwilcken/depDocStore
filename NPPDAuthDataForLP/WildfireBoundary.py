@@ -9,7 +9,7 @@ import urllib
 class WildfireBoundary:
     features = []
     
-    def consume(self, event, appid, rprt, perim):       
+    def consume(self, event, appid, rprt, perim, boundary):       
         featureData = { 'attributes' : {
                 'acres': perim['attributes']['ACRES'],
                 'agency': (('', perim['attributes']['AGENCY'])[perim['attributes']['AGENCY'] is not None]).encode('utf-8'),
@@ -42,7 +42,7 @@ class WildfireBoundary:
                 'appid' : (('', appid)[appid is not None]).encode('utf-8'),
                 'eventid' : event['data']['id'].encode('utf-8')
                 }, 'geometry' : {
-                        'rings' : perim['geometry']['rings']
+                        'rings' : boundary['geometry']['rings']
                         } }
         self.features = [featureData]
         

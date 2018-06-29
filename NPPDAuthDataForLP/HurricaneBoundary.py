@@ -11,7 +11,7 @@ class HurricaneBoundary:
     
     def consume(self, event, appid, pos, fore, buff):       
         featureData = { 'attributes' : {
-                'stormname': (('', pos['STORMNAME'])[pos['STORMNAME'] is not None]).encode('utf-8'),
+                'stormname': (('', pos['STORMNAME'])[pos['STORMNAME'] is not None]).encode('utf-8')[:8],
                 'o_dtg': str(pos['DTG']),
                 'o_year': pos['YEAR'],
                 'o_month': (('', pos['MONTH'])[pos['MONTH'] is not None]).encode('utf-8'),
@@ -54,7 +54,7 @@ class HurricaneBoundary:
             }
         
         if fore['ADVISNUM'] is not None and fore['ADVISNUM'].strip():
-            featureData['f_advisnum'] = int(fore['ADVISNUM'])
+            featureData['attributes']['f_advisnum'] = int(fore['ADVISNUM'])
     
         if 'rings' in buff['geometry']:
             featureData['geometry'] = {
