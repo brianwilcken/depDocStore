@@ -5,6 +5,7 @@ import json
 import LandingPageEvent
 import PortalInterface
 import logging
+from datetime import datetime
 from itertools import groupby
 
 class HurricaneEventsTracker:
@@ -14,8 +15,6 @@ class HurricaneEventsTracker:
     generateTokenUrl='https://www.arcgis.com/sharing/rest/generateToken'
     serverTokenUrl='https://www.arcgis.com/sharing/generateToken?request=getToken&serverUrl=https%3A%2F%2Flivefeeds.arcgis.com%2Farcgis%2Flogin%2F..%2Frest%2Fservices&referer=livefeeds.arcgis.com&f=json&token='
     
-    #Java NLP service
-    eventsServiceUrl = 'http://localhost:8080/eventNLP/api/events'
     requestHeaders = {'Content-type': 'application/json'}
 
     #NPPD Hurricane Feature Service
@@ -36,7 +35,8 @@ class HurricaneEventsTracker:
     
     metersPerMile = 1609.34
 
-    def __init__(self):
+    def __init__(self, eventsServiceUrl, portalInfo):
+        self.eventsServiceUrl = eventsServiceUrl
         self.logger = logging.getLogger('authDataLogger')
         
         #obtain an auth token for arcgis
@@ -52,7 +52,7 @@ class HurricaneEventsTracker:
         self.logger.info(self.serverTokenParam)
         
         self.logger.info('Begin instantiate portal interface')
-        self.portal = PortalInterface.PortalInterface()
+        self.portal = PortalInterface.PortalInterface(portalInfo)
         self.logger.info('End instantiate portal interface')
 
     def getAuthoritativeData(self):
@@ -116,14 +116,14 @@ class HurricaneEventsTracker:
             firstPositions[stormName] = stormReports[stormName][index]
             #Get the first forecast report with a date/time greater than the most recent observed position
             if forecastReports[stormName] is not None and len(forecastReports[stormName]) > 0:
-                mostRecentDT = str(mostRecentPositions[stormName]['attributes']['DAY']) + '/' + str(mostRecentPositions[stormName]['attributes']['HHMM'])
-                seq = sorted([x['attributes']['VALIDTIME'] for x in forecastReports[stormName]])
+                mostRecentDT = self.getMostRecentDateTime(mostRecentPositions[stormName]['attributes'])
+                seq = sorted([self.getForecastValidDateTime(x['attributes']) for x in forecastReports[stormName]])
                 for forecastDT in seq:
                     if forecastDT > mostRecentDT:
                         firstForecastDT = forecastDT
                         break
 
-                firstForecast = next((x for x in forecastReports[stormName] if x['attributes']['VALIDTIME'] == firstForecastDT), None)
+                firstForecast = next((x for x in forecastReports[stormName] if self.getForecastValidDateTime(x['attributes']) == firstForecastDT), None)
                 firstForecasts[stormName] = firstForecast
             
         #flatten the set of observed tracks per storm report into a single list
@@ -188,4 +188,18 @@ class HurricaneEventsTracker:
                     self.portal.upsertHurricaneEventFeatures(response.content, posAttr, foreAttr, bufferGeometry)
                 else:
                     self.logger.warn('POST failed for event: ' + event.title)
+                    
+    def getMostRecentDateTime(self, mostRecentPosition):
+        day = mostRecentPosition['DAY']
+        month = mostRecentPosition['MONTH']
+        mostRecentDT = str(month).zfill(2) + '/' + str(day).zfill(2) + '/' + str(mostRecentPosition['HHMM'])
+        return mostRecentDT
+    
+    def getForecastValidDateTime(self, forecastPosition):
+        datetimestr = forecastPosition['FLDATELBL'][:-4]
+        dt = datetime.strptime(datetimestr, '%Y-%m-%d %I:%M %p %a')
+        forecastDT = str(dt.month).zfill(2) + '/' + forecastPosition['VALIDTIME']
+        return forecastDT
+        
+        
                 
