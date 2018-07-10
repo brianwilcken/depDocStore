@@ -7,9 +7,7 @@ import PortalInterface
 import logging
 
 class WildFireEventsTracker:
-    
-    #Java NLP service
-    eventsServiceUrl = 'http://localhost:8080/eventNLP/api/events'
+
     requestHeaders = {'Content-type': 'application/json'}
 
     #NPPD Wildfire Feature Service
@@ -18,10 +16,12 @@ class WildFireEventsTracker:
     activePerimeterLayer = '2'
     wildFireActivityQuery = '/query?f=pjson&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&orderByFields=OBJECTID%20ASC&outSR=102100'
 
-    def __init__(self):
+    def __init__(self, eventsServiceUrl, portalInfo):
+        #Java NLP service
+        self.eventsServiceUrl = eventsServiceUrl
         self.logger = logging.getLogger('authDataLogger')
         self.logger.info('Begin instantiate portal interface')
-        self.portal = PortalInterface.PortalInterface()
+        self.portal = PortalInterface.PortalInterface(portalInfo)
         self.logger.info('End instantiate portal interface')
 
     def getAuthoritativeData(self):

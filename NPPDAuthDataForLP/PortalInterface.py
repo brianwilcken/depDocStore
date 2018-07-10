@@ -13,29 +13,42 @@ import BoundaryFeature
 import WildfireBoundary
 import HurricaneBoundary
 import logging
+from requests_negotiate_sspi import HttpNegotiateAuth
 
 class PortalInterface:
     
     tokenHeaders = {'Content-type': 'application/x-www-form-urlencoded'}
-    tokenCred = 'username=NiccAppSys&password=TrnWK9*!CbR&ip=&referer=&client=requestip&expiration=60&f=pjson'
-    generateTokenUrl = 'https://cloudgis.k2geomatics.io/portal/sharing/rest/generateToken'
-    serverTokenUrl = 'https://cloudgis.k2geomatics.io/portal/sharing/generateToken?request=getToken&serverUrl=https%3A%2F%2Fcloudgis.k2geomatics.io%2Fserver%2Flogin%2F..%2Frest%2Fservices&referer=cloudgis.k2geomatics.io&f=json&token='
-    
-    eventLocationsUrl = 'https://cloudgis.k2geomatics.io/server/rest/services/Hosted/Event_Locations/FeatureServer/0'
-    eventBoundariesUrl = 'https://cloudgis.k2geomatics.io/server/rest/services/Hosted/Event_Boundaries/FeatureServer/0'
-    wildfireBoundariesUrl = 'http://cloudgis.k2geomatics.io/server/rest/services/Hosted/Wildfire_Boundaries/FeatureServer/0'
-    hurricaneBoundariesUrl = 'http://cloudgis.k2geomatics.io/server/rest/services/Hosted/Hurricane_Boundaries/FeatureServer/0'
-    
-    def __init__(self):
+
+    def __init__(self, portalInfo):
         self.logger = logging.getLogger('authDataLogger')
+        
+        self.portalInfo = portalInfo
+        
+        #server credentials
+        self.tokenCred = portalInfo['tokenCred']
+        self.generateTokenUrl = portalInfo['generateTokenUrl']
+        self.serverTokenUrl = portalInfo['serverTokenUrl']
+        
+        #feature service URLs
+        self.eventLocationsUrl = portalInfo['baseUrl'] + '/Event_Locations/FeatureServer/0'
+        self.eventBoundariesUrl = portalInfo['baseUrl'] + '/Event_Boundaries/FeatureServer/0'
+        self.wildfireBoundariesUrl = portalInfo['baseUrl'] + '/Wildfire_Boundaries/FeatureServer/0'
+        self.hurricaneBoundariesUrl = portalInfo['baseUrl'] + '/Hurricane_Boundaries/FeatureServer/0'
+        
         #obtain an auth token for portal
         self.logger.info('get portal token')
-        response = requests.post(self.generateTokenUrl, data=self.tokenCred, headers=self.tokenHeaders)
+        if portalInfo['useNegotiateAuth'] == True:
+            response = requests.post(self.generateTokenUrl, data=self.tokenCred, headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+        else:
+            response = requests.post(self.generateTokenUrl, data=self.tokenCred, headers=self.tokenHeaders)
         portalToken = json.loads(response.content)
         
         #get a portal server token
         self.logger.info('get server token')
-        response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders)
+        if portalInfo['useNegotiateAuth'] == True:
+            response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders)
+        else:
+            response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
         serverToken = json.loads(response.content)
         serverTokenParam = 'token=' + serverToken['token']
         self.logger.info(serverTokenParam)
@@ -106,10 +119,15 @@ class PortalInterface:
                 appid_temp = boundary['attributes']['appid']
                 if appid_temp is not None:
                     appid = appid_temp
-                fid = boundary['attributes']['fid']
-                deleteResponse = requests.post(self.wildfireBoundariesUrl + self.deleteFeatures, data='where=fid=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
-                if not deleteResponse.ok:
-                    self.logger.warn('Unable to delete old boundary data for wildfire event: ' + eventId)
+                if 'env' in self.portalInfo:
+                    if self.portalInfo['env'] == 'D':
+                        fid = boundary['attributes']['fid']
+                        deleteResponse = requests.post(self.wildfireBoundariesUrl + self.deleteFeatures, data='where=fid=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
+                    elif self.portalInfo['env'] == 'S':
+                        fid = boundary['attributes']['objectid1']
+                        deleteResponse = requests.post(self.wildfireBoundariesUrl + self.deleteFeatures, verify=False, auth=HttpNegotiateAuth(), data='where=objectid1=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
+                    if not deleteResponse.ok:
+                        self.logger.warn('Unable to delete old boundary data for wildfire event: ' + eventId)
         else:
             simplifyBoundaryFC = "in_memory\\_wildfireBoundarySimplified_featureClass"
             arcpy.SimplifyPolygon_cartography(new_boundary_polygon, simplifyBoundaryFC, 'BEND_SIMPLIFY', '5000 Feet')
@@ -125,7 +143,10 @@ class PortalInterface:
             wildfireBoundary.consume(self.indexedEventJson, appid, report['attributes'], perimeter, boundary[0])
             
             #POST data to portal
-            portalResponse = requests.post(self.wildfireBoundariesUrl + self.addFeatures, data=wildfireBoundary.urlEncode(), headers=self.tokenHeaders)
+            if self.portalInfo['useNegotiateAuth'] == True:
+                portalResponse = requests.post(self.wildfireBoundariesUrl + self.addFeatures, data=wildfireBoundary.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+            else:
+                portalResponse = requests.post(self.wildfireBoundariesUrl + self.addFeatures, data=wildfireBoundary.urlEncode(), headers=self.tokenHeaders)
             if portalResponse.ok:
                 responseJSON = json.loads(portalResponse.content)
                 success = responseJSON['addResults'][0]['success']
@@ -160,7 +181,10 @@ class PortalInterface:
                 if appid_temp is not None:
                     appid = appid_temp
                 fid = boundary['attributes']['fid']
-                deleteResponse = requests.post(self.hurricaneBoundariesUrl + self.deleteFeatures, data='where=fid=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
+                if self.portalInfo['useNegotiateAuth'] == True:
+                    deleteResponse = requests.post(self.hurricaneBoundariesUrl + self.deleteFeatures, data='where=fid=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+                else:
+                    deleteResponse = requests.post(self.hurricaneBoundariesUrl + self.deleteFeatures, data='where=fid=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
                 if not deleteResponse.ok:
                     self.logger.warn('Unable to delete old boundary data for hurricane event: ' + eventId)
                     
@@ -169,7 +193,10 @@ class PortalInterface:
         hurricaneBoundary.consume(self.indexedEventJson, appid, position, forecast, pathBuffer)
         
         #POST data to portal
-        portalResponse = requests.post(self.hurricaneBoundariesUrl + self.addFeatures, data=hurricaneBoundary.urlEncode(), headers=self.tokenHeaders)
+        if self.portalInfo['useNegotiateAuth'] == True:
+            portalResponse = requests.post(self.hurricaneBoundariesUrl + self.addFeatures, data=hurricaneBoundary.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+        else:
+            portalResponse = requests.post(self.hurricaneBoundariesUrl + self.addFeatures, data=hurricaneBoundary.urlEncode(), headers=self.tokenHeaders)
         if portalResponse.ok:
             responseJSON = json.loads(portalResponse.content)
             if 'addResults' in responseJSON:
@@ -214,14 +241,20 @@ class PortalInterface:
             if len(portalBoundariesJson['features']) > 0:
                 objectId = portalBoundariesJson['features'][0]['attributes']['objectid']
                 appid = portalBoundariesJson['features'][0]['attributes']['appid']
-                deleteResponse = requests.post(self.eventBoundariesUrl + self.deleteFeatures, data='objectIds=' + str(objectId) + '&where=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
+                if self.portalInfo['useNegotiateAuth'] == True:
+                    deleteResponse = requests.post(self.eventBoundariesUrl + self.deleteFeatures, data='objectIds=' + str(objectId) + '&where=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+                else:
+                    deleteResponse = requests.post(self.eventBoundariesUrl + self.deleteFeatures, data='objectIds=' + str(objectId) + '&where=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
                 if not deleteResponse.ok:
                     self.logger.warn('Unable to delete old boundary data for event: ' + eventId)
             
             #insert the updated boundary data
             boundaryFeature = BoundaryFeature.BoundaryFeature()
             boundaryFeature.consume(self.indexedEventJson, perimeter['geometry'], appid)
-            portalResponse = requests.post(self.eventBoundariesUrl + self.addFeatures, data=boundaryFeature.urlEncode(), headers=self.tokenHeaders)
+            if self.portalInfo['useNegotiateAuth'] == True:
+                portalResponse = requests.post(self.eventBoundariesUrl + self.addFeatures, data=boundaryFeature.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+            else:
+                portalResponse = requests.post(self.eventBoundariesUrl + self.addFeatures, data=boundaryFeature.urlEncode(), headers=self.tokenHeaders)
             if portalResponse.ok:
                 self.logger.info('Boundary data updated for event: ' + eventId)
             else:
@@ -236,10 +269,15 @@ class PortalInterface:
             boundaryFeature.consume(self.indexedEventJson, perimeter['geometry'], None)
             
             #POST data to portal
-            portalResponse = requests.post(self.eventLocationsUrl + self.addFeatures, data=locationFeature.urlEncode(), headers=self.tokenHeaders)
+            if self.portalInfo['useNegotiateAuth'] == True:
+                portalResponse = requests.post(self.eventLocationsUrl + self.addFeatures, data=locationFeature.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+                portalResponse = requests.post(self.eventLocationsUrl + self.addFeatures, data=locationFeature.urlEncode(), headers=self.tokenHeaders)
             if portalResponse.ok:
                 self.logger.info('Location data added for event: ' + eventId)
-                portalResponse = requests.post(self.eventBoundariesUrl + self.addFeatures, data=boundaryFeature.urlEncode(), headers=self.tokenHeaders)
+                if self.portalInfo['useNegotiateAuth'] == True:
+                    portalResponse = requests.post(self.eventBoundariesUrl + self.addFeatures, data=boundaryFeature.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+                else:
+                    portalResponse = requests.post(self.eventBoundariesUrl + self.addFeatures, data=boundaryFeature.urlEncode(), headers=self.tokenHeaders)
                 if portalResponse.ok:
                     self.logger.info('Boundary data added for event: ' + eventId)
                 else:
