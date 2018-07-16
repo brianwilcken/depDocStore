@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 
+import datacapableapi.DataCapableClient;
 import eventsregistryapi.model.*;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -26,10 +27,14 @@ import eventsregistryapi.EventRegistryClient;
 import nlp.EventCategorizer;
 import solrapi.SolrClient;
 import solrapi.SolrConstants;
+import solrapi.model.IndexedEvent;
+import solrapi.model.IndexedEventSource;
+import solrapi.model.IndexedEventsQueryParams;
 import webapp.models.JsonResponse;
 import webapp.services.ModelTrainingService;
 import webapp.services.RefreshEventsService;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
 @CrossOrigin
@@ -37,6 +42,7 @@ import javax.servlet.http.HttpServletRequest;
 @RequestMapping("/api/events")
 public class EventsController {
 	private EventRegistryClient eventRegistryClient;
+	private DataCapableClient dataCapableClient;
 	private SolrClient solrClient;
 	private EventCategorizer categorizer;
 	private Gson gson;
@@ -67,6 +73,7 @@ public class EventsController {
 
 	public EventsController() {
 		eventRegistryClient = new EventRegistryClient();
+		dataCapableClient = new DataCapableClient();
 		solrClient = new SolrClient(Tools.getProperty("solr.url"));
 		categorizer = new EventCategorizer();
 		gson = new Gson();
@@ -76,10 +83,15 @@ public class EventsController {
 	public EventRegistryClient getEventRegistryClient() {
 		return eventRegistryClient;
 	}
-	
-	//@PostConstruct
+
+	public DataCapableClient getDataCapableClient() {
+		return dataCapableClient;
+	}
+
+	@PostConstruct
 	public void initRefreshEventsProcess() {
 		try {
+			logger.info("Initializing events refresh process");
 			refreshEventsService.process(this);
 		} catch (Exception e) {}
 	}

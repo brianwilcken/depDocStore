@@ -1,10 +1,8 @@
-package eventsregistryapi.model;
+package solrapi.model;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +11,8 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import eventsregistryapi.model.Info;
+import eventsregistryapi.model.Story;
 import nlp.NLPTools;
 import opennlp.tools.stemmer.Stemmer;
 import org.apache.commons.codec.binary.Hex;

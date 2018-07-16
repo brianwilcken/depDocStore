@@ -1,6 +1,7 @@
 package eventsregistryapi.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import solrapi.model.IndexedEventSource;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ArticleResult {

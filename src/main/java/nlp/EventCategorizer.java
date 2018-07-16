@@ -1,18 +1,14 @@
 package nlp;
 
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 
 import common.Tools;
-import eventsregistryapi.model.IndexedEvent;
+import solrapi.model.IndexedEvent;
 import opennlp.tools.cmdline.doccat.DoccatEvaluationErrorListener;
 import opennlp.tools.doccat.DoccatCrossValidator;
 import opennlp.tools.doccat.DoccatEvaluationMonitor;
@@ -24,9 +20,7 @@ import opennlp.tools.doccat.DocumentSample;
 import opennlp.tools.doccat.DocumentSampleStream;
 import opennlp.tools.stemmer.PorterStemmer;
 import opennlp.tools.tokenize.TokenizerModel;
-import opennlp.tools.util.InputStreamFactory;
 import opennlp.tools.util.ObjectStream;
-import opennlp.tools.util.PlainTextByLineStream;
 import opennlp.tools.util.TrainingParameters;
 import org.springframework.core.io.ClassPathResource;
 

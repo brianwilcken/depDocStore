@@ -1,4 +1,4 @@
-package eventsregistryapi.model;
+package solrapi.model;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,8 +1,7 @@
-package webscraper.model;
+package solrapi.model;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eventsregistryapi.model.IndexedObject;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.solr.client.solrj.beans.Field;
 import org.apache.solr.common.SolrDocument;

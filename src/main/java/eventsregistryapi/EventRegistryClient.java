@@ -1,6 +1,8 @@
 package eventsregistryapi;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,6 +11,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.apache.solr.client.solrj.SolrServerException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -28,8 +31,8 @@ import eventsregistryapi.model.EventsRegistryEventDetailsQuery;
 import eventsregistryapi.model.EventsRegistryEventStreamResponse;
 import eventsregistryapi.model.EventsRegistryEventsQuery;
 import eventsregistryapi.model.EventsRegistryEventsResponse;
-import eventsregistryapi.model.IndexedEventSource;
-import eventsregistryapi.model.IndexedEvent;
+import solrapi.model.IndexedEventSource;
+import solrapi.model.IndexedEvent;
 import eventsregistryapi.model.Info;
 import eventsregistryapi.model.Location;
 import eventsregistryapi.model.Result;
@@ -46,15 +49,19 @@ public class EventRegistryClient {
 	private final String apiKey = Tools.getProperty("eventRegistry.apiKey");
 	private final String eventRegistryCategories = Tools.getProperty("eventRegistry.categories");
 	private final String proxyUrl = Tools.getProperty("proxy");
+	private final int proxyPort = Integer.parseInt(Tools.getProperty("proxyPort"));
+	private final Boolean useProxy = Boolean.parseBoolean(Tools.getProperty("use.proxy"));
 	private final String solrUrl = Tools.getProperty("solr.url");
 	
 	public EventRegistryClient() {
 		solrClient = new SolrClient(solrUrl);
 		SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
 
-//	    Proxy proxy = new Proxy(Type.HTTP, new InetSocketAddress(proxyUrl, 8080));
-//	    requestFactory.setProxy(proxy);
-	    
+		if (useProxy) {
+			Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyUrl, proxyPort));
+			requestFactory.setProxy(proxy);
+		}
+
 		restTemplate = new RestTemplate(requestFactory);
 	}
 	
@@ -153,8 +160,16 @@ public class EventRegistryClient {
 //		}
 //		
 //		return null;
-		
-		EventsRegistryEventStreamResponse response = restTemplate.getForObject(minuteStreamEventsUrl + "?apiKey=" + apiKey, EventsRegistryEventStreamResponse.class);
+
+		ResponseEntity<EventsRegistryEventStreamResponse> response = restTemplate.getForEntity(minuteStreamEventsUrl + "?apiKey=" + apiKey, EventsRegistryEventStreamResponse.class);
+
+		if (response.getHeaders().containsKey("x-ratelimit-remaining")) {
+			String remTok = response.getHeaders().getFirst("x-ratelimit-remaining");
+			int remainingTokens = Integer.parseInt(remTok);
+			if (remainingTokens <= 50000) {
+
+			}
+		}
 
 //		//Temporary Simulation Stuff
 //		EventsRegistryEventStreamResponse response = null;
@@ -167,7 +182,7 @@ public class EventRegistryClient {
 //			e.printStackTrace();
 //		}
 		
-		return response;
+		return response.getBody();
 	}
 	
 	public EventRegistryEventDetailsResponse QueryEvent(String eventUri) {
