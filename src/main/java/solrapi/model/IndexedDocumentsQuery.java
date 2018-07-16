@@ -1,4 +1,4 @@
-package eventsregistryapi.model;
+package solrapi.model;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

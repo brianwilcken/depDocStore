@@ -1,8 +1,8 @@
 package webapp.controllers;
 
 import common.Tools;
-import eventsregistryapi.model.IndexedEventSource;
-import eventsregistryapi.model.IndexedEventSourcesQueryParams;
+import solrapi.model.IndexedEventSource;
+import solrapi.model.IndexedEventSourcesQueryParams;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;

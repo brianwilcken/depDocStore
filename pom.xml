@@ -181,6 +181,9 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://localhost:8983/solr</index.url>
+				<useProxy>false</useProxy>
+				<proxy.host>webbalance.inl.gov</proxy.host>
+				<proxy.port>8080</proxy.port>
 			</properties>
 		</profile>
 		<profile>
@@ -195,6 +198,43 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://ipgdevgis:8983/solr</index.url>
+				<useProxy>false</useProxy>
+				<proxy.host>webbalance.inl.gov</proxy.host>
+				<proxy.port>8080</proxy.port>
+			</properties>
+		</profile>
+		<profile>
+			<id>staging</id>
+			<activation>
+				<property>
+					<name>env</name>
+					<value>staging</value>
+				</property>
+			</activation>
+			<properties>
+				<log.file>C:/log/nicc-lp-app.log</log.file>
+				<log.path>C:/log/time-based-logs</log.path>
+				<index.url>http://localhost:8983/solr</index.url>
+				<useProxy>true</useProxy>
+				<proxy.host>146.137.176.11</proxy.host>
+				<proxy.port>3128</proxy.port>
+			</properties>
+		</profile>
+		<profile>
+			<id>production</id>
+			<activation>
+				<property>
+					<name>env</name>
+					<value>production</value>
+				</property>
+			</activation>
+			<properties>
+				<log.file>C:/log/nicc-lp-app.log</log.file>
+				<log.path>C:/log/time-based-logs</log.path>
+				<index.url>http://localhost:8983/solr</index.url>
+				<useProxy>true</useProxy>
+				<proxy.host>146.137.176.11</proxy.host>
+				<proxy.port>3128</proxy.port>
 			</properties>
 		</profile>
 	</profiles>

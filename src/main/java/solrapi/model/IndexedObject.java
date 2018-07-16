@@ -1,4 +1,4 @@
-package eventsregistryapi.model;
+package solrapi.model;
 
 import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;

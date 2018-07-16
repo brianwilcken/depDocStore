@@ -2,7 +2,7 @@ package webscraper;
 
 import com.bericotech.clavin.gazetteer.GeoName;
 import com.bericotech.clavin.resolver.ResolvedLocation;
-import eventsregistryapi.model.IndexedEventSource;
+import solrapi.model.IndexedEventSource;
 import geoparsing.LocationResolver;
 
 import common.DetectHtml;
@@ -31,7 +31,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.core.io.ClassPathResource;
 import solrapi.SolrClient;
-import webscraper.model.IndexedEventSourceLocation;
+import solrapi.model.IndexedEventSourceLocation;
 
 import java.io.File;
 import java.io.IOException;

@@ -1,8 +1,7 @@
-package eventsregistryapi.model;
+package solrapi.model;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.UUID;
 
 import com.google.common.base.Strings;
 import org.apache.commons.codec.binary.Hex;

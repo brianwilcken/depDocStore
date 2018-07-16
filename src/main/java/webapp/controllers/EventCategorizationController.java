@@ -14,7 +14,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 
 import common.Tools;
-import eventsregistryapi.model.IndexedEvent;
+import solrapi.model.IndexedEvent;
 import nlp.EventCategorizer;
 import solrapi.SolrClient;
 import solrapi.SolrConstants;
