@@ -182,6 +182,7 @@ public class Webclient {
                     }
                 }
             }
+
             //index the source data to solr
             try {
                 if (indexedLocations.size() > 0) {
@@ -234,7 +235,7 @@ public class Webclient {
     private Elements getGoogleSearchResults(String queryTerm, String timeFrameSelector, int start) {
         Document doc = null;
         try {
-            doc = Jsoup.connect("https://www.google.com/search?q=" + queryTerm + "&tbas=0&tbs=sbd:1," + timeFrameSelector + "&tbm=nws&start=" + start)
+            doc = Jsoup.connect("https://www.google.com/search?q=" + queryTerm + "&cr=countryUS&lr=lang_en&tbas=0&tbs=sbd:1," + timeFrameSelector + ",lr:lang_1en,ctr:countryUS&tbm=nws&start=" + start)
                     .userAgent(USER_AGENT)
                     .get();
         } catch (IOException e) {

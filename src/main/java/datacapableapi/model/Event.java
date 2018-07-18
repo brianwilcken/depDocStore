@@ -49,19 +49,6 @@ public class Event {
                 .map(p -> p.getIndexedEventSource(event.getId()))
                 .collect(Collectors.toList());
 
-//        IndexedEventSource source = new IndexedEventSource();
-//        source.setEventId(event.getId());
-//        source.setArticleDate(event.getEventDate());
-//        source.setUrl("https://twitter.com/");
-//        source.setSourceName("Twitter");
-//        source.setSourceLocation("");
-//        source.setTitle(event.getUri());
-//        source.setSummary(event.getUri());
-//        source.initId();
-//
-//        List<IndexedEventSource> sources = new ArrayList<>();
-//        sources.add(source);
-
         event.setSources(sources);
 
         return event;

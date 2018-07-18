@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import eventsregistryapi.model.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -19,28 +22,15 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import common.Tools;
-import eventsregistryapi.model.ArticleResult;
-import eventsregistryapi.model.Category;
-import eventsregistryapi.model.Concept;
-import eventsregistryapi.model.EventArticles;
-import eventsregistryapi.model.EventData;
-import eventsregistryapi.model.EventRegistryEventArticlesResponse;
-import eventsregistryapi.model.EventRegistryEventDetailsResponse;
-import eventsregistryapi.model.EventsRegistryEventArticlesQuery;
-import eventsregistryapi.model.EventsRegistryEventDetailsQuery;
-import eventsregistryapi.model.EventsRegistryEventStreamResponse;
-import eventsregistryapi.model.EventsRegistryEventsQuery;
-import eventsregistryapi.model.EventsRegistryEventsResponse;
 import solrapi.model.IndexedEventSource;
 import solrapi.model.IndexedEvent;
-import eventsregistryapi.model.Info;
-import eventsregistryapi.model.Location;
-import eventsregistryapi.model.Result;
 import nlp.EventCategorizer;
 import solrapi.SolrClient;
 import solrapi.SolrConstants;
 
 public class EventRegistryClient {
+
+	final static Logger logger = LogManager.getLogger(EventRegistryClient.class);
 
 	private RestTemplate restTemplate;
 	private SolrClient solrClient;
@@ -52,6 +42,9 @@ public class EventRegistryClient {
 	private final int proxyPort = Integer.parseInt(Tools.getProperty("proxyPort"));
 	private final Boolean useProxy = Boolean.parseBoolean(Tools.getProperty("use.proxy"));
 	private final String solrUrl = Tools.getProperty("solr.url");
+	private final String TOTAL_TOKENS_KEY = "X-RateLimit-Limit";
+    private final String REMAINING_TOKENS_KEY = "X-RateLimit-Remaining";
+
 	
 	public EventRegistryClient() {
 		solrClient = new SolrClient(solrUrl);
@@ -74,7 +67,8 @@ public class EventRegistryClient {
 	public List<IndexedEvent> PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) throws SolrServerException {
 		List<String> eventCategories = GetEventRegistryValidCategories();
 		List<IndexedEvent> validEvents = new ArrayList<IndexedEvent>();
-		List<IndexedEvent> readyToIndex = new ArrayList<IndexedEvent>();
+		List<IndexedEvent> readyToIndexEvents = new ArrayList<IndexedEvent>();
+		List<IndexedEventSource> readyToIndexEventSources = new ArrayList<IndexedEventSource>();
 		
 		//Only care about English language events, so get set of English event URIs
 		List<String> engEvents = Arrays.stream(response.getRecentActivityEvents().getActivity())
@@ -105,7 +99,7 @@ public class EventRegistryClient {
 		});
 		
 		//Aggregate the valid events that have not yet been indexed
-		List<IndexedEvent> indexableEvents = GetIndexableEvents(validEvents);
+		List<IndexedEvent> indexableEvents = solrClient.GetIndexableEvents(validEvents);
 		
 		//Perform NLP on the index-ready events.  This phase uses the NICC taxonomy to produce a PRELIMINARY category for each event.  
 		//The preliminary category may then either be updated by the user or accepted as-is within the NICC landing page UI.
@@ -121,37 +115,26 @@ public class EventRegistryClient {
 			EventRegistryEventDetailsResponse eventDetailsResponse = QueryEvent(event.getUri());
 			if (eventDetailsResponse != null) {
 				Info eventInfo = eventDetailsResponse.getEventDetails().get(event.getUri()).getInfo();
-				readyToIndex.add(event.updateWithEventDetails(eventInfo));
+				readyToIndexEvents.add(event.updateWithEventDetails(eventInfo));
+
+				//Index each of the sources contained within the stories collection
+				for (Story story : eventInfo.getStories()) {
+					if (story.getMedoidArticle().getLang().equalsIgnoreCase("eng")) {
+						readyToIndexEventSources.add(story.getMedoidArticle().getIndexedEventSource(event.getId()));
+					}
+				}
 			}
 		}
-		
-		solrClient.indexDocuments(readyToIndex);
-		
-		return readyToIndex;
-	}
-	
-	private List<IndexedEvent> GetIndexableEvents(List<IndexedEvent> events) throws SolrServerException {
-		List<SolrServerException> exs = new ArrayList<SolrServerException>();
-		List<IndexedEvent> indexableEvents = events.stream()
-				.filter(p -> {
-					try {
-						return !solrClient.IsDocumentAlreadyIndexed(p.getUri());
-					} catch (SolrServerException e) {
-						exs.add(e);
-						return false;
-					}
-				})
-				.collect(Collectors.toList());
-		
-		if (!exs.isEmpty()) {
-			throw exs.get(0);
-		}
-		
-		return indexableEvents;
+
+		//Index all events and all event sources
+		solrClient.indexDocuments(readyToIndexEvents);
+		solrClient.indexDocuments(readyToIndexEventSources);
+
+		return readyToIndexEvents;
 	}
 	
 	public EventsRegistryEventStreamResponse QueryEventRegistryMinuteStream() throws RestClientException {
-//		String responseStr = restTemplate.getForObject(minuteStreamEventsUrl + "?apiKey=" + apiKey, String.class);
+//		String responseStr = restTemplate.getForEntity(minuteStreamEventsUrl + "?apiKey=" + apiKey, String.class);
 //		try {
 //			FileUtils.writeStringToFile(new File("data/EventsStreamResponse.json"), responseStr);
 //		} catch (IOException e) {
@@ -163,13 +146,7 @@ public class EventRegistryClient {
 
 		ResponseEntity<EventsRegistryEventStreamResponse> response = restTemplate.getForEntity(minuteStreamEventsUrl + "?apiKey=" + apiKey, EventsRegistryEventStreamResponse.class);
 
-		if (response.getHeaders().containsKey("x-ratelimit-remaining")) {
-			String remTok = response.getHeaders().getFirst("x-ratelimit-remaining");
-			int remainingTokens = Integer.parseInt(remTok);
-			if (remainingTokens <= 50000) {
-
-			}
-		}
+		AssessRemainingTokens(response);
 
 //		//Temporary Simulation Stuff
 //		EventsRegistryEventStreamResponse response = null;
@@ -184,17 +161,34 @@ public class EventRegistryClient {
 		
 		return response.getBody();
 	}
+
+	private <T> void AssessRemainingTokens(ResponseEntity<T> response) {
+		//requirements regarding service throttling, due to token depletion TBD
+		if (response.getHeaders().containsKey(REMAINING_TOKENS_KEY) && response.getHeaders().containsKey(TOTAL_TOKENS_KEY)) {
+			int remainingTokens = Integer.parseInt(response.getHeaders().getFirst(REMAINING_TOKENS_KEY));
+			int totalTokens = Integer.parseInt(response.getHeaders().getFirst(TOTAL_TOKENS_KEY));
+			if ((double)remainingTokens/(double)totalTokens < 0.25) { //fewer than 125,000 tokens
+				logger.warn("Event Registry tokens at 25%");
+			} else if ((double)remainingTokens/(double)totalTokens < 0.1) { //fewer than 50,000 tokens
+				logger.warn("Event Registry tokens at 10%");
+			} else if ((double)remainingTokens/(double)totalTokens < 0.01) { //fewer than 5,000 tokens
+				logger.warn("Event Registry tokens at 1%");
+			}
+			logger.info("Remaining Event Registry Tokens: " + remainingTokens);
+		}
+	}
 	
 	public EventRegistryEventDetailsResponse QueryEvent(String eventUri) {
 		EventsRegistryEventDetailsQuery query = new EventsRegistryEventDetailsQuery(eventUri, apiKey);
 		String url = eventDetailsUrl + Tools.GetQueryString(query);
-		String response = restTemplate.getForObject(url, String.class);
-		response = "{ \"eventDetails\":" + response + "}";
+		ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+		AssessRemainingTokens(response);
+		String responseBody = "{ \"eventDetails\":" + response.getBody() + "}";
 		
 		ObjectMapper mapper = new ObjectMapper();
 		EventRegistryEventDetailsResponse eventDetailsResponse = null;
 		try {
-			eventDetailsResponse = mapper.readValue(response, EventRegistryEventDetailsResponse.class);
+			eventDetailsResponse = mapper.readValue(responseBody, EventRegistryEventDetailsResponse.class);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 		}
@@ -203,38 +197,27 @@ public class EventRegistryClient {
 	}
 	
 	public EventsRegistryEventsResponse QueryEvents(String conceptUri, List<String> subConcepts) {
+		logger.info("Now querying Event Registry concepts search with the following list of concepts: " + conceptUri + ", " + String.join(", ", subConcepts));
 		EventsRegistryEventsQuery query = new EventsRegistryEventsQuery(apiKey);
 		String url = eventDetailsUrl + Tools.GetQueryString(query);
-		String eventsRegistryQuery = query.getEventsRegistryQuery(conceptUri, subConcepts);
-		EventsRegistryEventsResponse response = restTemplate.getForObject(url, EventsRegistryEventsResponse.class, eventsRegistryQuery);
+		String eventsRegistryQuery = query.getEventsRegistryConceptsQuery(conceptUri, subConcepts);
+		ResponseEntity<EventsRegistryEventsResponse> response = restTemplate.getForEntity(url, EventsRegistryEventsResponse.class, eventsRegistryQuery);
+		AssessRemainingTokens(response);
 
-		return response;
+		return response.getBody();
 	}
 	
 	public List<IndexedEvent> PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts) throws SolrServerException {
 		if (response.getEvents() != null) {
 			//Filter out events that are missing a summary/title 
-			List<Result> weighedResults = Arrays.stream(response.getEvents().getResults())
+			List<IndexedEvent> validEvents = Arrays.stream(response.getEvents().getResults())
 					.filter(p -> p.getTitle().getEng() != null)
 					.filter(p -> p.getSummary().getEng() != null)
+					.map(p -> p.GetIndexedEvent())
 					.collect(Collectors.toList());
-			
-			//Gather the set of valid concepts for comparison against the concepts associated with each of the events
-			subConcepts.add(conceptUri);
-			
-			//We only care about search results where the concept URI is above 50.
-			List<IndexedEvent> conceptFilteredEvents = new ArrayList<IndexedEvent>();
-			for (Result result : weighedResults) {
-				for (Concept concept : result.getConcepts()) {
-					String conceptLabel = concept.getLabel().getEng();
-					if(subConcepts.stream().anyMatch(p -> p.equals(conceptLabel)) && concept.getScore() >= 50) {
-						conceptFilteredEvents.add(result.GetIndexedEvent());
-					}
-				}
-			}
 
 			//Only index events that have not yet been indexed
-			List<IndexedEvent> indexableEvents = GetIndexableEvents(conceptFilteredEvents);
+			List<IndexedEvent> indexableEvents = solrClient.GetIndexableEvents(validEvents);
 			
 			//Categorize the events
 			EventCategorizer categorizer = new EventCategorizer();
@@ -245,16 +228,20 @@ public class EventRegistryClient {
 			});
 			
 			solrClient.indexDocuments(categorizedEvents);
-			
+
+			logger.info("Successfully indexed " + categorizedEvents.size() + " events.");
+
 			return categorizedEvents;
 		}
+		logger.info("No events found.");
 		return new ArrayList<IndexedEvent>();
 	}
 	
 	public EventRegistryEventArticlesResponse QueryEventSources(String eventUri) {
 		EventsRegistryEventArticlesQuery query = new EventsRegistryEventArticlesQuery(eventUri, apiKey);
 		String url = eventDetailsUrl + Tools.GetQueryString(query);
-		String response = restTemplate.getForObject(url, String.class);
+		ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+		AssessRemainingTokens(response);
 		
 //		try {
 //		FileUtils.writeStringToFile(new File("data/EventArticlesResponse.json"), response);
@@ -263,12 +250,12 @@ public class EventRegistryClient {
 //		e.printStackTrace();
 //	}
 		
-		response = "{ \"eventArticles\":" + response + "}";
+		String responseBody = "{ \"eventArticles\":" + response.getBody() + "}";
 		
 		ObjectMapper mapper = new ObjectMapper();
 		EventRegistryEventArticlesResponse eventArticlesResponse = null;
 		try {
-			eventArticlesResponse = mapper.readValue(response, EventRegistryEventArticlesResponse.class);
+			eventArticlesResponse = mapper.readValue(responseBody, EventRegistryEventArticlesResponse.class);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			String details = e.toString();

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -108,7 +109,27 @@ public class SolrClient {
             e.printStackTrace();
         }
     }
-	
+
+	public List<IndexedEvent> GetIndexableEvents(List<IndexedEvent> events) throws SolrServerException {
+		List<SolrServerException> exs = new ArrayList<SolrServerException>();
+		List<IndexedEvent> indexableEvents = events.stream()
+				.filter(p -> {
+					try {
+						return !IsDocumentAlreadyIndexed(p.getUri());
+					} catch (SolrServerException e) {
+						exs.add(e);
+						return false;
+					}
+				})
+				.collect(Collectors.toList());
+
+		if (!exs.isEmpty()) {
+			throw exs.get(0);
+		}
+
+		return indexableEvents;
+	}
+
 	public Boolean IsDocumentAlreadyIndexed(String uri) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setRows(0);
@@ -123,10 +144,10 @@ public class SolrClient {
 		}
 	}
 
-	public SimpleOrderedMap<?> QueryFacets(String facetQuery) throws SolrServerException {
+	public SimpleOrderedMap<?> QueryFacets(String queryStr, String facetQuery) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setRows(0);
-		query.setQuery("*:*");
+		query.setQuery(queryStr);
 		query.add("json.facet", facetQuery);
 		try {
 			QueryResponse response = client.query("events", query);
@@ -228,9 +249,10 @@ public class SolrClient {
 		SolrQuery query = new SolrQuery();
 		query.setRows(1000000);
 		query.setQuery("eventState:* AND -eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
-		query.addFilterQuery("category:* AND -category:" + SolrConstants.Events.CATEGORY_UNKNOWN);
+		query.addFilterQuery("category:* AND -category:" + SolrConstants.Events.CATEGORY_UNCATEGORIZED);
 		query.addFilterQuery("-userCreated:true");
 		query.addFilterQuery("-feedType:" + SolrConstants.Events.FEED_TYPE_AUTHORITATIVE);
+		query.addFilterQuery("concepts:*");
 		try {
 			File file = new File(trainingFilePath);
 			file.getParentFile().mkdirs();

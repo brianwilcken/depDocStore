@@ -184,6 +184,10 @@
 				<useProxy>false</useProxy>
 				<proxy.host>webbalance.inl.gov</proxy.host>
 				<proxy.port>8080</proxy.port>
+				<erAuto>true</erAuto>
+				<dcAuto>true</dcAuto>
+				<erInterval>3600000</erInterval>
+				<dcInterval>900000</dcInterval>
 			</properties>
 		</profile>
 		<profile>
@@ -201,6 +205,10 @@
 				<useProxy>false</useProxy>
 				<proxy.host>webbalance.inl.gov</proxy.host>
 				<proxy.port>8080</proxy.port>
+				<erAuto>false</erAuto>
+				<dcAuto>false</dcAuto>
+                <erInterval>3600000</erInterval>
+                <dcInterval>900000</dcInterval>
 			</properties>
 		</profile>
 		<profile>
@@ -218,6 +226,10 @@
 				<useProxy>true</useProxy>
 				<proxy.host>146.137.176.11</proxy.host>
 				<proxy.port>3128</proxy.port>
+				<erAuto>true</erAuto>
+				<dcAuto>true</dcAuto>
+                <erInterval>900000</erInterval>
+                <dcInterval>300000</dcInterval>
 			</properties>
 		</profile>
 		<profile>
@@ -235,6 +247,10 @@
 				<useProxy>true</useProxy>
 				<proxy.host>146.137.176.11</proxy.host>
 				<proxy.port>3128</proxy.port>
+				<erAuto>true</erAuto>
+				<dcAuto>true</dcAuto>
+                <erInterval>60000</erInterval>
+                <dcInterval>15000</dcInterval>
 			</properties>
 		</profile>
 	</profiles>
