@@ -118,11 +118,7 @@ public class DataCapableClient {
             List<IndexedEvent> updEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + event.getId(), 1, 0, null);
             if (!updEvents.isEmpty()) {
                 IndexedEvent updEvent = updEvents.get(0);
-                event.setDashboard(updEvent.getDashboard());
-                event.setFeatureIds(updEvent.getFeatureIds());
-                event.setCategorizationState(updEvent.getCategorizationState());
-                event.setEventState(updEvent.getEventState());
-                event.setCategory(updEvent.getCategory());
+                event.updateForDynamicFields(updEvent);
             }
         }
 

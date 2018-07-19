@@ -2,6 +2,11 @@ package webscraper;
 
 import com.bericotech.clavin.gazetteer.GeoName;
 import com.bericotech.clavin.resolver.ResolvedLocation;
+import nlp.EventCategorizer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.solr.client.solrj.SolrServerException;
+import solrapi.model.IndexedEvent;
 import solrapi.model.IndexedEventSource;
 import geoparsing.LocationResolver;
 
@@ -13,7 +18,6 @@ import nlp.NLPTools;
 import nlp.NamedEntityRecognizer;
 import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.stemmer.PorterStemmer;
-import org.apache.solr.client.solrj.SolrServerException;
 //import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 //import org.deeplearning4j.models.paragraphvectors.ParagraphVectors;
 //import org.deeplearning4j.models.word2vec.VocabWord;
@@ -52,59 +56,83 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class Webclient {
+public class WebClient {
+
+    final static Logger logger = LogManager.getLogger(WebClient.class);
 
     private String USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36";
 
-    private ArticleExtractor articleExtractor;
-    private NamedEntityRecognizer ner;
-    private PorterStemmer stemmer;
-    private SentenceModel sentModel;
-    private LocationResolver locationResolver;
-    private SolrClient solrClient;
+    private final ArticleExtractor articleExtractor;
+    private final NamedEntityRecognizer ner;
+    private final PorterStemmer stemmer;
+    private final SentenceModel sentModel;
+    private final LocationResolver locationResolver;
+    private final SolrClient solrClient;
+    private final EventCategorizer categorizer;
+
+    private static final int REQUEST_DELAY = 300000;
+
+    public static final String QUERY_TIMEFRAME_LAST_HOUR = "qdr:h";
+    public static final String QUERY_TIMEFRAME_ALL_ARCHIVED = "ar:1";
 
     public static void main(String[] args) {
-        Webclient client = new Webclient();
+        WebClient client = new WebClient();
         //past hour
-        //client.queryGoogle("qdr:h", client::processSearchResults);
+        client.queryGoogle(QUERY_TIMEFRAME_LAST_HOUR, client::processSearchResult);
         //archives
-        //client.queryGoogle("ar:1", client::gatherData);
-        client.queryGoogle("qdr:h", client::gatherData);
+        //client.queryGoogle(QUERY_TIMEFRAME_ALL_ARCHIVED, client::gatherData);
+        //client.queryGoogle(QUERY_TIMEFRAME_LAST_HOUR, client::gatherData);
     }
 
-    public Webclient() {
+    public WebClient() {
         articleExtractor = new ArticleExtractor();
         ner = new NamedEntityRecognizer();
         stemmer = new PorterStemmer();
+        categorizer = new EventCategorizer();
         sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
         locationResolver = new LocationResolver();
         solrClient = new SolrClient(Tools.getProperty("solr.url"));
     }
 
-    private void queryGoogle(String timeFrameSelector, BiConsumer<Document, Element> action) {
+    public int queryGoogle(String timeFrameSelector, BiConsumer<Document, Element> action) {
         String[] queryCategories = getQueryCategories();
+        int totalArticles = 0;
         for (String category : queryCategories) {
             try {
                 int start = 0;
 
+                logger.info("Searching Google for: " + category);
                 Elements results = getGoogleSearchResults(category, timeFrameSelector, start);
-                while (results.eachText().size() > 0) {
-                    for (Element result : results){
-                        String href = result.attr("href");
-                        try {
-                            Document article = Jsoup.connect(href).userAgent(USER_AGENT).get();
-                            action.accept(article, result);
+                if (results != null && results.eachText() != null) {
+                    while (results.eachText().size() > 0) {
+                        int resultsSize = results.eachText().size();
+                        totalArticles += resultsSize;
+                        for (Element result : results){
+                            String href = result.attr("href");
+                            try {
+                                Document article = Jsoup.connect(href).userAgent(USER_AGENT).get();
+                                action.accept(article, result);
+                                logger.info("Scraped data from: " + href);
+                            }
+                            catch (HttpStatusException e) {}
                         }
-                        catch (HttpStatusException e) {}
+                        if (resultsSize >= 10) {
+                            start += resultsSize;
+                            Thread.sleep(REQUEST_DELAY);
+                            results = getGoogleSearchResults(category, timeFrameSelector, start);
+                        } else {
+                            break;
+                        }
                     }
-                    start += 10;
-                    results = getGoogleSearchResults(category, timeFrameSelector, start);
                 }
-
+                Thread.sleep(REQUEST_DELAY);
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+        return totalArticles;
     }
 
     private File gatherData(Document article, Element result) {
@@ -158,12 +186,13 @@ public class Webclient {
 //        WordVectorSerializer.writeParagraphVectors(vec, "paragraphVectorsModel.zip");
 //    }
 
-    private void processSearchResults(Document article, Element result) {
+    public void processSearchResult(Document article, Element result) {
         String body = getArticleBody(article);
 
         IndexedEventSource source = extractArticleMetadata(article, result);
         if (source != null) {
             source.setSummary(body);
+            IndexedEvent event = source.getIndexedEvent();
             List<IndexedEventSourceLocation> indexedLocations = new ArrayList<>();
             List<ResolvedLocation> locations = locationResolver.resolveLocations(body);
             for (ResolvedLocation location : locations) {
@@ -183,16 +212,31 @@ public class Webclient {
                 }
             }
 
-            //index the source data to solr
-            try {
-                if (indexedLocations.size() > 0) {
-                    List<IndexedEventSource> coll = new ArrayList<>();
-                    coll.add(source);
-                    solrClient.indexDocuments(coll);
-                    solrClient.indexDocuments(indexedLocations);
+            if (indexedLocations.size() > 0) {
+                IndexedEventSourceLocation loc = indexedLocations.get(0);
+                event.setLocation(loc.getLocation());
+                event.setLatitude(loc.getLatitude());
+                event.setLongitude(loc.getLongitude());
+
+                List<IndexedEventSource> sources = new ArrayList<>();
+                sources.add(source);
+
+                try {
+                    List<IndexedEvent> events = new ArrayList<>();
+                    events.add(event);
+                    List<IndexedEvent> updEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + event.getId(), 1, 0, null);
+                    if (!updEvents.isEmpty()) {
+                        IndexedEvent updEvent = updEvents.get(0);
+                        event.updateForDynamicFields(updEvent);
+                    } else {
+                        categorizer.detectEventDataCategories(events);
+                    }
+
+                    solrClient.indexDocuments(events);
+                    solrClient.indexDocuments(sources);
+                } catch (SolrServerException e) {
+                    e.printStackTrace();
                 }
-            } catch (SolrServerException e) {
-                e.printStackTrace();
             }
         }
     }
@@ -239,6 +283,7 @@ public class Webclient {
                     .userAgent(USER_AGENT)
                     .get();
         } catch (IOException e) {
+            logger.error(e.getMessage(), e);
             return null;
         }
 

@@ -120,6 +120,18 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 		return this;
 	}
 
+	//A previously indexed copy of this event may have fields that are not
+	//communicated by the source from which this event arises (Data Capable, etc..).
+	//Ensure this event is updated with such fields before re-indexing it to Solr.
+	//updEvent is a previously indexed copy of this event.
+	public void updateForDynamicFields(IndexedEvent updEvent) {
+		this.setDashboard(updEvent.getDashboard());
+		this.setFeatureIds(updEvent.getFeatureIds());
+		this.setCategorizationState(updEvent.getCategorizationState());
+		this.setEventState(updEvent.getEventState());
+		this.setCategory(updEvent.getCategory());
+	}
+
 	public String[] GetDocCatTokens(TokenizerModel model, Stemmer stemmer) {
 		String normalized = getNormalizedDocCatString(stemmer);
 		String[] tokens = NLPTools.detectTokens(model, normalized);

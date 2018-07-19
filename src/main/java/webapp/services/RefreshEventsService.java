@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import eventsregistryapi.model.EventsRegistryEventStreamResponse;
 import solrapi.model.IndexedEvent;
 import webapp.controllers.EventsController;
+import webscraper.WebClient;
 
 import java.util.List;
 
@@ -20,10 +21,12 @@ public class RefreshEventsService {
 
     private final Boolean erAutoRefresh = Boolean.parseBoolean(Tools.getProperty("eventRegistry.autoRefresh"));
     private final Boolean dcAutoRefresh = Boolean.parseBoolean(Tools.getProperty("dataCapable.autoRefresh"));
+    private final Boolean wsAutoRefresh = Boolean.parseBoolean(Tools.getProperty("webScraper.autoRefresh"));
 
 	private final int BASE_TIMEOUT = 15000; //milliseconds
     private final int DATA_CAPABLE_INTERVAL = Integer.parseInt(Tools.getProperty("dataCapable.refreshInterval"));
     private final int EVENT_REGISTRY_INTERVAL = Integer.parseInt(Tools.getProperty("eventRegistry.refreshInterval"));
+    private final int WEB_SCRAPER_INTERVAL = Integer.parseInt(Tools.getProperty("webScraper.refreshInterval"));
 
     @FunctionalInterface
     private interface CheckedConsumer<T> {
@@ -36,7 +39,6 @@ public class RefreshEventsService {
         private final EventsController eventsController;
         private final Boolean autoRefresh;
 
-        private int currentMillis = 0;
         private int totalElapsed = 0;
 
         public RefreshTimer(int interval, CheckedConsumer<EventsController> refresher, EventsController eventsController, Boolean autoRefresh) {
@@ -48,13 +50,11 @@ public class RefreshEventsService {
 
         public void refresh(int millis) throws Exception {
             if (autoRefresh) {
-                currentMillis += millis;
-                totalElapsed += currentMillis;
+                totalElapsed += millis;
 
                 if (totalElapsed >= interval) {
                     refresher.apply(eventsController);
                     totalElapsed = 0;
-                    currentMillis = 0;
                 }
             }
         }
@@ -63,16 +63,15 @@ public class RefreshEventsService {
 	@Async("processExecutor")
     public void process(EventsController eventsController) throws Exception {
         try {
-            refreshEventRegistry(eventsController);
-            refreshDataCapable(eventsController);
-
             RefreshTimer erRefresher = new RefreshTimer(EVENT_REGISTRY_INTERVAL, this::refreshEventRegistry, eventsController, erAutoRefresh);
             RefreshTimer dcRefresher = new RefreshTimer(DATA_CAPABLE_INTERVAL, this::refreshDataCapable, eventsController, dcAutoRefresh);
+            RefreshTimer wsRefresher = new RefreshTimer(WEB_SCRAPER_INTERVAL, this::refreshWebScraper, eventsController, wsAutoRefresh);
             while(true) {
                 Thread.sleep(BASE_TIMEOUT);
 
                 erRefresher.refresh(BASE_TIMEOUT);
                 dcRefresher.refresh(BASE_TIMEOUT);
+                wsRefresher.refresh(BASE_TIMEOUT);
             }
         } catch (Exception e) {
             eventsController.refreshEventsProcessExceptionHandler(e);
@@ -92,5 +91,12 @@ public class RefreshEventsService {
         Event[] response = eventsService.getDataCapableClient().QueryEvents();
         List<IndexedEvent> indexedEventList = eventsService.getDataCapableClient().ProcessEvents(response);
         logger.info("Number Data Capable events returned: " + indexedEventList.size());
+    }
+
+    private void refreshWebScraper(EventsController eventsService) {
+        logger.info("Start Scraping!!!");
+        WebClient client = eventsService.getWebClient();
+        int totalScraped = client.queryGoogle(WebClient.QUERY_TIMEFRAME_LAST_HOUR, client::processSearchResult);
+        logger.info("Number of events scraped from the web: " + totalScraped);
     }
 }
