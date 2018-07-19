@@ -33,6 +33,7 @@ import solrapi.model.IndexedEventsQueryParams;
 import webapp.models.JsonResponse;
 import webapp.services.ModelTrainingService;
 import webapp.services.RefreshEventsService;
+import webscraper.WebClient;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +44,7 @@ import javax.servlet.http.HttpServletRequest;
 public class EventsController {
 	private EventRegistryClient eventRegistryClient;
 	private DataCapableClient dataCapableClient;
+	private WebClient webClient;
 	private SolrClient solrClient;
 	private EventCategorizer categorizer;
 	private Gson gson;
@@ -74,6 +76,7 @@ public class EventsController {
 	public EventsController() {
 		eventRegistryClient = new EventRegistryClient();
 		dataCapableClient = new DataCapableClient();
+		webClient = new WebClient();
 		solrClient = new SolrClient(Tools.getProperty("solr.url"));
 		categorizer = new EventCategorizer();
 		gson = new Gson();
@@ -87,6 +90,8 @@ public class EventsController {
 	public DataCapableClient getDataCapableClient() {
 		return dataCapableClient;
 	}
+
+	public WebClient getWebClient() { return webClient; }
 
 	@PostConstruct
 	public void initRefreshEventsProcess() {

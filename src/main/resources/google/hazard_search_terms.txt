@@ -1,13 +1,44 @@
 Active Shooter
+Serial Killer
+School Shooting
 Chemical Spill
+Oil Spill
+Chemical Accident
+Industrial Accident
 Earthquake
+Tsunami
+Aftershock
 Explosion
+Nuclear explosion
 Flood
+Flash Flood
+Storm Surge
+Lahar
+Cloudburst
+Flood Alert
+Mudflow
+Landslide
 Gas Leak
+Gas Explosion
 Hurricane
-Nuclear
+Tropical Cyclone
+Tropical Storm
+Tropical Depression
 Power Outage
+Rolling Blackout
 Protest
+Riot
+Violent Demonstration
 Terrorism
+Suicide Attack
 Wildfire
+Firestorm
+Heat Wave
 Winter Storm
+Severe Weather
+Tornado
+Hail
+Freezing Rain
+Blizzard
+Dust Storm
+Haboob

@@ -208,9 +208,9 @@ public class EventCategorizationController {
 		String eventState = model.asMap().get("mode").toString();
 		List<IndexedEvent> indexedEvents = null;
 		if (model.asMap().containsKey("category")) {
-			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:\"" + model.asMap().get("category") + "\"");
+			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:\"" + model.asMap().get("category") + "\"", "concepts:*");
 		} else {
-			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:*");
+			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:*", "concepts:*");
 		}
 		if (!indexedEvents.isEmpty()) {
 			IndexedEvent indexedEvent = indexedEvents.get(0);
@@ -240,7 +240,7 @@ public class EventCategorizationController {
 	
 	private String[] getAvailableCategories() throws SolrServerException {
 		List<String> availableCategories = new ArrayList<String>();
-		SimpleOrderedMap<?> facets = solrClient.QueryFacets("{categories:{type:terms,field:category,limit:10000}}");
+		SimpleOrderedMap<?> facets = solrClient.QueryFacets("concepts:*","{categories:{type:terms,field:category,limit:10000}}");
 		SimpleOrderedMap<?> categories = (SimpleOrderedMap<?>) facets.get("categories");
 		List<?> buckets = (ArrayList<?>) categories.get("buckets");
 		for (int i = 0; i < buckets.size(); i++) {
