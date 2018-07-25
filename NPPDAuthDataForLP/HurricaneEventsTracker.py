@@ -192,7 +192,7 @@ class HurricaneEventsTracker:
     def getMostRecentDateTime(self, mostRecentPosition):
         day = mostRecentPosition['DAY']
         month = mostRecentPosition['MONTH']
-        mostRecentDT = str(month).zfill(2) + '/' + str(day).zfill(2) + '/' + str(mostRecentPosition['HHMM'])
+        mostRecentDT = str(datetime.strptime(month,'%b').month).zfill(2) + '/' + str(day).zfill(2) + '/' + str(mostRecentPosition['HHMM'])
         return mostRecentDT
     
     def getForecastValidDateTime(self, forecastPosition):

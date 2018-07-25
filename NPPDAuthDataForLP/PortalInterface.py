@@ -123,7 +123,7 @@ class PortalInterface:
                     if self.portalInfo['env'] == 'D':
                         fid = boundary['attributes']['fid']
                         deleteResponse = requests.post(self.wildfireBoundariesUrl + self.deleteFeatures, data='where=fid=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
-                    elif self.portalInfo['env'] == 'S':
+                    elif self.portalInfo['env'] == 'S' or self.portalInfo['env'] == 'P':
                         fid = boundary['attributes']['objectid1']
                         deleteResponse = requests.post(self.wildfireBoundariesUrl + self.deleteFeatures, verify=False, auth=HttpNegotiateAuth(), data='where=objectid1=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
                     if not deleteResponse.ok:
@@ -131,8 +131,11 @@ class PortalInterface:
         else:
             simplifyBoundaryFC = "in_memory\\_wildfireBoundarySimplified_featureClass"
             arcpy.SimplifyPolygon_cartography(new_boundary_polygon, simplifyBoundaryFC, 'BEND_SIMPLIFY', '5000 Feet')
-            simplifiedWildfireBoundaryFS = arcpy.FeatureSet()
-            simplifiedWildfireBoundaryFS.load(simplifyBoundaryFC)
+        if self.portalInfo['useNegotiateAuth'] == True:
+            temp=requests.get(self.wildfireBoundariesUrl + wildfireQuery,verify=False,auth=HttpNegotiateAuth())
+        else:
+            temp=requests.get(self.wildfireBoundariesUrl + wildfireQuery)
+        wildfireBoundariesFs=arcpy.AsShape(temp.content,True)
             
         boundaryJSON = json.loads(simplifiedWildfireBoundaryFS.JSON)
         boundary = boundaryJSON['features']
@@ -189,9 +192,12 @@ class PortalInterface:
                     self.logger.warn('Unable to delete old boundary data for hurricane event: ' + eventId)
                     
         #insert new hurricane boundaries data
-        hurricaneBoundary = HurricaneBoundary.HurricaneBoundary()
-        hurricaneBoundary.consume(self.indexedEventJson, appid, position, forecast, pathBuffer)
-        
+        if self.portalInfo['useNegotiateAuth'] == True:
+            temp=requests.get(self.hurricaneBoundariesUrl + hurricaneQuery,verify=False,auth=HttpNegotiateAuth())
+        else:
+            temp=requests.get(self.hurricaneBoundariesUrl + hurricaneQuery)
+        hurricaneBoundariesFs=arcpy.AsShape(temp.content,True)
+
         #POST data to portal
         if self.portalInfo['useNegotiateAuth'] == True:
             portalResponse = requests.post(self.hurricaneBoundariesUrl + self.addFeatures, data=hurricaneBoundary.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
