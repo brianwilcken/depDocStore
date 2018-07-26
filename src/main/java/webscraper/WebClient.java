@@ -70,7 +70,7 @@ public class WebClient {
     private final SolrClient solrClient;
     private final EventCategorizer categorizer;
 
-    private static final int REQUEST_DELAY = 300000;
+    private static final int REQUEST_DELAY = 0;
 
     public static final String QUERY_TIMEFRAME_LAST_HOUR = "qdr:h";
     public static final String QUERY_TIMEFRAME_ALL_ARCHIVED = "ar:1";
@@ -110,15 +110,20 @@ public class WebClient {
                         for (Element result : results){
                             String href = result.attr("href");
                             try {
+                                logger.info("Scraping data from: " + href);
                                 Document article = Jsoup.connect(href).userAgent(USER_AGENT).get();
                                 action.accept(article, result);
-                                logger.info("Scraped data from: " + href);
+                                logger.info("Successfully scraped data from: " + href);
                             }
-                            catch (HttpStatusException e) {}
+                            catch (Exception e) {
+                                logger.info("Failed to scrape data from: " + href);
+                                logger.error(e.getMessage(), e);
+                            }
                         }
-                        if (resultsSize >= 10) {
+                        if (resultsSize >= 10 && start <= 200) {
                             start += resultsSize;
                             Thread.sleep(REQUEST_DELAY);
+                            logger.info("Getting next page of Google results for: " + category);
                             results = getGoogleSearchResults(category, timeFrameSelector, start);
                         } else {
                             break;
@@ -126,8 +131,6 @@ public class WebClient {
                     }
                 }
                 Thread.sleep(REQUEST_DELAY);
-            } catch (IOException e) {
-                e.printStackTrace();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

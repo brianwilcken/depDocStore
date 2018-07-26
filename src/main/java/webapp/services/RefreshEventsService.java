@@ -28,20 +28,15 @@ public class RefreshEventsService {
     private final int EVENT_REGISTRY_INTERVAL = Integer.parseInt(Tools.getProperty("eventRegistry.refreshInterval"));
     private final int WEB_SCRAPER_INTERVAL = Integer.parseInt(Tools.getProperty("webScraper.refreshInterval"));
 
-    @FunctionalInterface
-    private interface CheckedConsumer<T> {
-        void apply(T t) throws Exception;
-    }
-
     private static class RefreshTimer{
         private final int interval;
-        private final CheckedConsumer<EventsController> refresher;
+        private final Tools.CheckedConsumer<EventsController> refresher;
         private final EventsController eventsController;
         private final Boolean autoRefresh;
 
         private int totalElapsed = 0;
 
-        public RefreshTimer(int interval, CheckedConsumer<EventsController> refresher, EventsController eventsController, Boolean autoRefresh) {
+        public RefreshTimer(int interval, Tools.CheckedConsumer<EventsController> refresher, EventsController eventsController, Boolean autoRefresh) {
             this.interval = interval;
             this.refresher = refresher;
             this.eventsController = eventsController;
@@ -96,7 +91,7 @@ public class RefreshEventsService {
     private void refreshWebScraper(EventsController eventsService) {
         logger.info("Start Scraping!!!");
         WebClient client = eventsService.getWebClient();
-        int totalScraped = client.queryGoogle(WebClient.QUERY_TIMEFRAME_LAST_HOUR, client::processSearchResult);
+        int totalScraped = client.queryGoogle(WebClient.QUERY_TIMEFRAME_ALL_ARCHIVED, client::processSearchResult);
         logger.info("Number of events scraped from the web: " + totalScraped);
     }
 }

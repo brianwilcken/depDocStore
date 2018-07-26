@@ -111,6 +111,13 @@ public class EventCategorizationController {
 	public String postHandler(@RequestBody MultiValueMap<String, String> form, Model model) {
 		String mode = form.get("mode").get(0);
 		model.addAttribute("mode", mode);
+
+		String title = form.get("title").get(0);
+		String summary = form.get("summary").get(0);
+		if (title.isEmpty() || summary.isEmpty()) {
+			return "error";
+		}
+
 		try {
 			if (mode.compareTo("C") == 0) {
 				//special case for creating mock event
@@ -126,6 +133,8 @@ public class EventCategorizationController {
 				} else {
 					indexedEvent.setCategory(form.get("category").get(0));
 				}
+				indexedEvent.setTitle(title);
+				indexedEvent.setSummary(summary);
 				indexedEvent.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
 				indexedEvent.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
 				solrClient.indexDocuments(indexedEvents);
@@ -171,7 +180,7 @@ public class EventCategorizationController {
 	
 	@PostMapping("/classify/TrainModel")
 	public String trainModelPostHandler(Model model) {
-		solrClient.writeEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
+		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"), solrClient::getDoccatDataQuery, solrClient::formatForEventCategorization);
 		double accuracy = categorizer.trainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
 		model.addAttribute("accuracy", String.format("%.2f%%", 100 * accuracy));
 		model.addAttribute("mode", "N");
