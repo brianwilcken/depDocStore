@@ -40,6 +40,14 @@ def main(argv):
                     portalInfo['baseUrl'] = 'https://webadaptorstag1.lens.iacc.dis.anl.gov/arcgis/rest/services/Hosted'
                     portalInfo['tokenCred'] = 'username=svcArcGis&domain=LENS&password=INLsvc!15&ip=&referer=&client=requestip&expiration=60&f=pjson'
                     portalInfo['useNegotiateAuth'] = True
+                elif arg == 'P':
+                    logger.info('Production mode')
+                    eventsServiceUrl = 'http://p-nicc-web01:8080/eventNLP/api/events'
+                    portalInfo['generateTokenUrl'] = 'https://webadaptor1.lens.iacc.dis.anl.gov/arcgis/sharing/rest/generateToken'
+                    portalInfo['serverTokenUrl'] = 'https://webadaptor1.lens.iacc.dis.anl.gov/arcgis/sharing/generateToken?request=getToken&serverUrl=https%3A%2F%2Fwebadaptor1.lens.iacc.dis.anl.gov%2Farcgis%2Flogin%2F..%2Frest%2Fservices&referer=webadaptor1.lens.iacc.dis.anl.gov&f=json&token='
+                    portalInfo['baseUrl'] = 'https://webadaptor1.lens.iacc.dis.anl.gov/arcgis/rest/services/Hosted'
+                    portalInfo['tokenCred'] = 'username=svcArcGis&domain=LENS&password=INLsvc!15&ip=&referer=&client=requestip&expiration=60&f=pjson'
+                    portalInfo['useNegotiateAuth'] = True
     else:
         logger.info('Local Development mode')
         eventsServiceUrl = 'http://localhost:8080/eventNLP/api/events'
