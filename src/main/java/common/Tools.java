@@ -114,4 +114,14 @@ public class Tools {
 
 		return response;
 	}
+
+	@FunctionalInterface
+	public interface CheckedConsumer<T> {
+		void apply(T t) throws Exception;
+	}
+
+	@FunctionalInterface
+	public interface CheckedBiConsumer<T, U> {
+		void apply(T t, U u) throws Exception;
+	}
 }

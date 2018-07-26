@@ -383,8 +383,12 @@ public class EventsController {
 		return eventRegistryClient.PipelineProcessEvents(response, conceptUri, subConcepts);
 	}
 
-	private void dumpTrainingDataToFile() {
-		solrClient.writeEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
+	private void dumpEventCategorizationTrainingDataToFile() {
+		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"), solrClient::getDoccatDataQuery, solrClient::formatForEventCategorization);
+	}
+
+	private void dumpEventClusteringTrainingDataToFile() {
+		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.clusteringTrainingFile"), solrClient::getClusteringDataQuery, solrClient::formatForLDAClustering);
 	}
 	
 	private void dumpEventDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
@@ -412,7 +416,7 @@ public class EventsController {
 	}
 
 	public double initiateModelTraining() {
-		dumpTrainingDataToFile();
+		dumpEventCategorizationTrainingDataToFile();
 		double accuracy = processTrainingData();
 
 		return accuracy;

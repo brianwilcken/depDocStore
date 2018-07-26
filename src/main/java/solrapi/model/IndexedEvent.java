@@ -146,6 +146,15 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 		return NLPTools.normalizeText(stemmer, docCatStr);
 	}
 
+    private String getNormalizedDocCatStringNoConcepts(Stemmer stemmer) {
+        String docCatStr = title + " " + summary;
+        docCatStr = docCatStr.replace("\r", " ")
+                .replace("\n", " ")
+                .replace(",", "");
+
+        return NLPTools.normalizeText(stemmer, docCatStr);
+    }
+
 	private String getConceptsString() {
 		if (this.getConcepts() != null && !this.getConcepts().isEmpty()) {
 			HashMap<String,Long> conceptMap = new Gson().fromJson(this.getConcepts(), new TypeToken<HashMap<String, Long>>(){}.getType());
@@ -170,6 +179,10 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 
 	public String GetModelTrainingForm() {
 		return category + "\t" + getNormalizedDocCatString(new PorterStemmer());
+	}
+
+	public String GetLDAClusteringForm() {
+		return id + "," + getNormalizedDocCatStringNoConcepts(new PorterStemmer());
 	}
 
 	public String getId() {

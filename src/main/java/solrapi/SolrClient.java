@@ -12,9 +12,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 //import org.apache.commons.codec.binary.Hex;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -35,8 +38,11 @@ import com.google.common.io.Files;
 import common.Tools;
 import solrapi.model.IndexedEventSource;
 import solrapi.model.IndexedEvent;
+import webscraper.WebClient;
 
 public class SolrClient {
+
+	final static Logger logger = LogManager.getLogger(SolrClient.class);
 
 	private HttpSolrClient client;
 	private static ObjectMapper mapper = new ObjectMapper();
@@ -47,12 +53,12 @@ public class SolrClient {
 	
 	public static void main(String[] args) {
 		SolrClient solrClient = new SolrClient("http://localhost:8983/solr");
-		try {
-			solrClient.UpdateIndexedEventsFromFile("data/solrData.json");
-		} catch (SolrServerException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.clusteringTrainingFile"), solrClient::getClusteringDataQuery, solrClient::formatForLDAClustering);
+//		try {
+//			solrClient.UpdateIndexedEventsFromFile("data/solrData.json");
+//		} catch (SolrServerException e) {
+//			e.printStackTrace();
+//		}
 	}
 	
 	public void UpdateIndexedArticlesFromFile(String filePath) throws SolrServerException {
@@ -61,8 +67,7 @@ public class SolrClient {
 			IndexedEventSource[] articles = mapper.readValue(file, IndexedEventSource[].class);
 			indexDocuments(Arrays.asList(articles));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 		}
 	}
 	
@@ -75,8 +80,7 @@ public class SolrClient {
 			}
 			indexDocuments(Arrays.asList(events));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 		}
 	}
 	
@@ -91,8 +95,7 @@ public class SolrClient {
 				}
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 		}
 	}
 
@@ -105,8 +108,7 @@ public class SolrClient {
                 //TODO What should happen if the update fails?
             }
         } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+			logger.error(e.getMessage(), e);
         }
     }
 
@@ -138,8 +140,7 @@ public class SolrClient {
 			QueryResponse response = client.query("events", query);
 			return response.getResults().getNumFound() > 0;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 			return false;
 		}
 	}
@@ -154,8 +155,7 @@ public class SolrClient {
 			SimpleOrderedMap<?> facets = (SimpleOrderedMap<?>) response.getResponse().get("facets");
 			return facets;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 			return null;
 		}
 	}
@@ -177,8 +177,7 @@ public class SolrClient {
 			List<IndexedEvent> events = convertSolrDocsToTypedDocs(IndexedEvent.class.getConstructor(SolrDocument.class), response);
 			return events;
 		} catch (IOException | NoSuchMethodException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 			return null;
 		}
 	}
@@ -200,6 +199,7 @@ public class SolrClient {
 			SolrDocumentList response = client.query("events", query).getResults();
 			return response;
 		} catch (IOException e) {
+			logger.error(e.getMessage(), e);
 			return null;
 		}
 	}
@@ -228,6 +228,7 @@ public class SolrClient {
 			List<T> typedDocs = convertSolrDocsToTypedDocs(cons, response);
 			return typedDocs;
 		} catch (IOException e) {
+			logger.error(e.getMessage(), e);
 			return null;
 		}
 	}
@@ -238,6 +239,7 @@ public class SolrClient {
 				return cons.newInstance(p);
 			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
 					| InvocationTargetException e) {
+				logger.error(e.getMessage(), e);
 				return null;
 			}
 		}).collect(Collectors.toList());
@@ -245,14 +247,9 @@ public class SolrClient {
 		return typedDocs;
 	}
 	
-	public void writeEventCategorizationTrainingDataToFile(String trainingFilePath) {
-		SolrQuery query = new SolrQuery();
-		query.setRows(1000000);
-		query.setQuery("eventState:* AND -eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
-		query.addFilterQuery("category:* AND -category:" + SolrConstants.Events.CATEGORY_UNCATEGORIZED);
-		query.addFilterQuery("-userCreated:true");
-		query.addFilterQuery("-feedType:" + SolrConstants.Events.FEED_TYPE_AUTHORITATIVE);
-		query.addFilterQuery("concepts:*");
+	public void writeTrainingDataToFile(String trainingFilePath, Function<SolrQuery, SolrQuery> queryGetter, Tools.CheckedBiConsumer<IndexedEvent, FileOutputStream> consumer) {
+		SolrQuery query = queryGetter.apply(new SolrQuery());
+		appendFilterQueries(query);
 		try {
 			File file = new File(trainingFilePath);
 			file.getParentFile().mkdirs();
@@ -265,16 +262,44 @@ public class SolrClient {
 	          tmpDoc = tmpQueue.take();
 	          if (!(tmpDoc instanceof StopDoc)) {
 	        	  IndexedEvent event = new IndexedEvent(tmpDoc);
-		          fos.write(event.GetModelTrainingForm().getBytes(Charset.forName("Cp1252")));
+	        	  consumer.apply(event, fos);
 		          fos.write(System.lineSeparator().getBytes());
 	          }
 	        } while (!(tmpDoc instanceof StopDoc));
 	        
 	        fos.close();
-		} catch (SolrServerException | IOException | InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
 		}
+	}
+
+	public void formatForEventCategorization(IndexedEvent event, FileOutputStream fos) throws IOException {
+		fos.write(event.GetModelTrainingForm().getBytes(Charset.forName("Cp1252")));
+	}
+
+	public void formatForLDAClustering(IndexedEvent event, FileOutputStream fos) throws IOException {
+		fos.write(event.GetLDAClusteringForm().getBytes(Charset.forName("Cp1252")));
+	}
+
+	public SolrQuery getDoccatDataQuery(SolrQuery query) {
+		query.setRows(1000000);
+		query.setQuery("eventState:* AND -eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
+
+		return query;
+	}
+
+	public SolrQuery getClusteringDataQuery(SolrQuery query) {
+		query.setRows(1000000);
+		query.setQuery("eventState:*");
+
+		return query;
+	}
+
+	private void appendFilterQueries(SolrQuery query) {
+		query.addFilterQuery("category:* AND -category:" + SolrConstants.Events.CATEGORY_UNCATEGORIZED);
+		query.addFilterQuery("-userCreated:true");
+		query.addFilterQuery("-feedType:" + SolrConstants.Events.FEED_TYPE_AUTHORITATIVE);
+		query.addFilterQuery("concepts:*");
 	}
 
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
@@ -286,8 +311,7 @@ public class SolrClient {
 			file.getParentFile().mkdirs();
 			Files.write(output, file, Charset.forName("Cp1252"));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 		}
 	}
 
@@ -300,8 +324,7 @@ public class SolrClient {
 			file.getParentFile().mkdirs();
 			Files.write(output, file, Charset.forName("Cp1252"));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 		}
 	}
 
@@ -314,8 +337,7 @@ public class SolrClient {
 			file.getParentFile().mkdirs();
 			Files.write(output, file, Charset.forName("Cp1252"));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 		}
 	}
 	

@@ -1,44 +1,12 @@
-Active Shooter
-Serial Killer
-School Shooting
-Chemical Spill
-Oil Spill
-Chemical Accident
-Industrial Accident
-Earthquake
-Tsunami
-Aftershock
-Explosion
-Nuclear explosion
-Flood
-Flash Flood
-Storm Surge
-Lahar
-Cloudburst
-Flood Alert
-Mudflow
-Landslide
-Gas Leak
-Gas Explosion
-Hurricane
-Tropical Cyclone
-Tropical Storm
-Tropical Depression
-Power Outage
-Rolling Blackout
-Protest
-Riot
-Violent Demonstration
-Terrorism
-Suicide Attack
-Wildfire
-Firestorm
-Heat Wave
-Winter Storm
-Severe Weather
-Tornado
-Hail
-Freezing Rain
-Blizzard
-Dust Storm
-Haboob
+"Active+Shooter"+%7C+"Serial+Killer"+%7C+"School+Shooting"
+"Chemical+Spill"+%7C+"Oil+Spill"+%7C+"Chemical+Accident"+%7C+"Industrial+Accident"
+"Earthquake"+%7C+"Tsunami"+%7C+"Aftershock"
+"Explosion"+%7C+"Nuclear+explosion"
+"Flood"+%7C+"Flash+Flood"+%7C+"Storm+Surge"+%7C+"Lahar"+%7C+"Cloudburst"+%7C+"Flood+Alert"+%7C+"Mudflow"+%7C+"Landslide"
+"Gas+Leak"+%7C+"Gas+Explosion"
+"Hurricane"+%7C+"Tropical+Cyclone"+%7C+"Tropical+Storm"+%7C+"Tropical+Depression"
+"Power+Outage"+%7C+"Rolling+Blackout"
+"Protest"+%7C+"Riot"+%7C+"Violent+Demonstration"
+"Terrorism"+%7C+"Suicide+Attack"
+"Wildfire"+%7C+"Firestorm"+%7C+"Heat+Wave"
+"Winter+Storm"+%7C+"Severe+Weather"+%7C+"Tornado"+%7C+"Hail"+%7C+"Freezing+Rain"+%7C+"Blizzard"+%7C+"Dust+Storm"+%7C+"Haboob"

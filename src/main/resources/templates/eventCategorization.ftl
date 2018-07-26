@@ -28,14 +28,14 @@
         <div class="form-row">
             <label>
                 <span>Title</span>
-                <textarea name="title" readonly="true">${title}</textarea>
+                <textarea name="title">${title}</textarea>
             </label>
         </div>
 
         <div class="form-row">
             <label>
                 <span>Summary</span>
-                <textarea name="summary" readonly="true">${summary}</textarea>
+                <textarea name="summary">${summary}</textarea>
             </label>
         </div>
 

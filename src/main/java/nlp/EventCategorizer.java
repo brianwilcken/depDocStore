@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import common.Tools;
+import opennlp.tools.cmdline.doccat.DoccatFineGrainedReportListener;
 import solrapi.model.IndexedEvent;
 import opennlp.tools.cmdline.doccat.DoccatEvaluationErrorListener;
 import opennlp.tools.doccat.DoccatCrossValidator;
@@ -82,11 +83,13 @@ public class EventCategorizer {
 	}
 
 	private double crossValidateEventCategorizationModel(ObjectStream<DocumentSample> samples, TrainingParameters params) {
-		DoccatEvaluationMonitor[] listeners = { new DoccatEvaluationErrorListener() };
+		DoccatFineGrainedReportListener reportListener = new DoccatFineGrainedReportListener();
+		DoccatEvaluationMonitor[] listeners = { new DoccatEvaluationErrorListener(), reportListener};
 
 		DoccatCrossValidator validator = new DoccatCrossValidator("en", params, new DoccatFactory(), listeners);
 		try {
 			validator.evaluate(samples, 5);
+			reportListener.writeReport();
 			return validator.getDocumentAccuracy();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
