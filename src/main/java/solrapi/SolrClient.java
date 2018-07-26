@@ -14,7 +14,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 //import org.apache.commons.codec.binary.Hex;
-import eventsregistryapi.model.IndexedEventsQueryParams;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -33,8 +32,8 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.io.Files;
 
 import common.Tools;
-import eventsregistryapi.model.IndexedEventSource;
-import eventsregistryapi.model.IndexedEvent;
+import solrapi.model.IndexedEventSource;
+import solrapi.model.IndexedEvent;
 
 public class SolrClient {
 
@@ -150,7 +149,7 @@ public class SolrClient {
 			//remove any potential documents that are not IndexedEvents
 			for (int i = 0; i < response.size(); i++) {
 				SolrDocument doc = response.get(i);
-				if (doc.containsKey("eventId")) { //only source documents contain this field
+				if (doc.containsKey("eventId") || doc.containsKey("sourceId")) { //only source documents contain these fields
 					response.remove(i--);
 				}
 			}

@@ -1,6 +1,5 @@
 package nlp;
 
-import common.Tools;
 import opennlp.tools.ml.EventTrainer;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
@@ -11,10 +10,11 @@ import opennlp.tools.util.InputStreamFactory;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.PlainTextByLineStream;
 import opennlp.tools.util.TrainingParameters;
-import org.apache.lucene.analysis.StopFilter;
+import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.util.Version;
 import org.springframework.core.io.ClassPathResource;
 
 import java.io.ByteArrayInputStream;
@@ -291,28 +291,33 @@ public class NLPTools {
     }
 
     public static String normalizeText(Stemmer stemmer, String text) {
-        //Normalize, lemmatize and remove stop words
-        StandardAnalyzer analyzer = new StandardAnalyzer();
-        String normalized = analyzer.normalize("", text).utf8ToString();
-        TokenStream stream = analyzer.tokenStream("", normalized);
-        StopFilter filter = new StopFilter(stream, analyzer.getStopwordSet());
-        StringBuilder str = new StringBuilder();
         try {
+            //produce a token stream for use by the stopword filters
+            StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
+            TokenStream stream = analyzer.tokenStream("", text);
+
+            //get a handle to the filter that will remove stop words
+            StopFilter stopFilter = new StopFilter(Version.LUCENE_4_9, stream, analyzer.getStopwordSet());
             stream.reset();
-            while(filter.incrementToken()) {
-                CharTermAttribute attr = filter.getAttribute(CharTermAttribute.class);
+            StringBuilder str = new StringBuilder();
+            //iterate through each token observed by the stop filter
+            while(stopFilter.incrementToken()) {
+                //get the next token that passes the filter
+                CharTermAttribute attr = stopFilter.getAttribute(CharTermAttribute.class);
+                //lemmatize the token and append it to the final output
                 str.append(stemmer.stem(attr.toString()) + " ");
             }
             analyzer.close();
-            filter.end();
-            filter.close();
+            stopFilter.end();
+            stopFilter.close();
             stream.end();
             stream.close();
+            return str.toString();
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
-        return str.toString();
+        return null;
     }
 }

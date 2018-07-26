@@ -2,14 +2,12 @@
 import arcpy
 import requests
 import json
-import WildFireEvent
+import LandingPageEvent
 import PortalInterface
 import logging
 
 class WildFireEventsTracker:
-    
-    #Java NLP service
-    eventsServiceUrl = 'http://localhost:8080/eventNLP/api/events'
+
     requestHeaders = {'Content-type': 'application/json'}
 
     #NPPD Wildfire Feature Service
@@ -18,10 +16,12 @@ class WildFireEventsTracker:
     activePerimeterLayer = '2'
     wildFireActivityQuery = '/query?f=pjson&where=1%3D1&returnGeometry=true&spatialRel=esriSpatialRelIntersects&outFields=*&orderByFields=OBJECTID%20ASC&outSR=102100'
 
-    def __init__(self):
+    def __init__(self, eventsServiceUrl, portalInfo):
+        #Java NLP service
+        self.eventsServiceUrl = eventsServiceUrl
         self.logger = logging.getLogger('authDataLogger')
         self.logger.info('Begin instantiate portal interface')
-        self.portal = PortalInterface.PortalInterface()
+        self.portal = PortalInterface.PortalInterface(portalInfo)
         self.logger.info('End instantiate portal interface')
 
     def getAuthoritativeData(self):
@@ -52,8 +52,8 @@ class WildFireEventsTracker:
             
             if perimeterAttr is not None:
                 #initialize event object to be POSTed to the event service
-                event = WildFireEvent.WildFireEvent()
-                event.consume(reportAttr, perimeterAttr)
+                event = LandingPageEvent.LandingPageEvent()
+                event.consumeWildfireReport(reportAttr, perimeterAttr)
                 
                 self.logger.info('POST wildfire event to backend: ' + event.title)
                 response = requests.post(self.eventsServiceUrl, data=event.toJSON(), headers=self.requestHeaders)

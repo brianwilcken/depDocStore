@@ -11,12 +11,21 @@ class BoundaryFeature:
     features = []
     
     def consume(self, eventJson, geometry, appid):
-        featureData = { 'attributes' : {
-                'eventid' : eventJson['data']['id'].encode('utf-8'),
-                'appid' : appid.encode('utf-8')
-                }, 'geometry' : {
-                        'rings' : geometry['rings']
-                        } }
+        if geometry['rings'] is not None:
+            featureData = { 'attributes' : {
+                    'eventid' : eventJson['data']['id'].encode('utf-8'),
+                    'appid' : appid.encode('utf-8')
+                    }, 'geometry' : {
+                            'rings' : geometry['rings']
+                            } }
+        else:
+            featureData = { 'attributes' : {
+                    'eventid' : eventJson['data']['id'].encode('utf-8'),
+                    'appid' : appid.encode('utf-8')
+                    }, 'geometry' : {
+                            'curveRings' : geometry['curveRings']
+                            } }
+        
         self.features = [featureData]
         
     def urlEncode(self):

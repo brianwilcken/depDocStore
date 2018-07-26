@@ -10,6 +10,8 @@
 
 	<properties>
 	      <start-class>webapp.EventsApplication</start-class>
+		<dl4j.version>1.0.0-beta</dl4j.version>
+		<datavec.version>1.0.0-beta</datavec.version>
 	</properties>
 
 	<dependencies>
@@ -115,15 +117,55 @@
 		    <version>1.9.3</version>
 		</dependency>
 		<dependency>
-		    <groupId>org.apache.lucene</groupId>
-		    <artifactId>lucene-core</artifactId>
-		    <version>7.2.1</version>
-		</dependency>
-		<dependency>
 		    <groupId>org.freemarker</groupId>
 		    <artifactId>freemarker</artifactId>
 		    <version>2.3.23</version>
 		</dependency>
+		<dependency>
+			<groupId>com.robbypond</groupId>
+			<artifactId>boilerpipe</artifactId>
+			<version>1.2.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.11.3</version>
+		</dependency>
+		<dependency>
+			<groupId>com.bericotech</groupId>
+			<artifactId>clavin-nerd</artifactId>
+			<version>2.1.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>ch.qos.logback</groupId>
+					<artifactId>logback-classic</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!--DeepLearning4j dependencies-->
+		<!--<dependency>-->
+			<!--<groupId>org.datavec</groupId>-->
+			<!--<artifactId>datavec-api</artifactId>-->
+			<!--<version>${datavec.version}</version>-->
+		<!--</dependency>-->
+		<!--<dependency>-->
+			<!--<groupId>org.deeplearning4j</groupId>-->
+			<!--<artifactId>deeplearning4j-core</artifactId>-->
+			<!--<version>${dl4j.version}</version>-->
+		<!--</dependency>-->
+
+		<!--<dependency>-->
+			<!--<groupId>org.deeplearning4j</groupId>-->
+			<!--<artifactId>deeplearning4j-nlp</artifactId>-->
+			<!--<version>${dl4j.version}</version>-->
+		<!--</dependency>-->
+
+		<!--<dependency>-->
+			<!--<groupId>org.deeplearning4j</groupId>-->
+			<!--<artifactId>deeplearning4j-zoo</artifactId>-->
+			<!--<version>${dl4j.version}</version>-->
+		<!--</dependency>-->
 	</dependencies>
 
 	<profiles>
@@ -139,6 +181,9 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://localhost:8983/solr</index.url>
+				<useProxy>false</useProxy>
+				<proxy.host>webbalance.inl.gov</proxy.host>
+				<proxy.port>8080</proxy.port>
 			</properties>
 		</profile>
 		<profile>
@@ -153,6 +198,43 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://ipgdevgis:8983/solr</index.url>
+				<useProxy>false</useProxy>
+				<proxy.host>webbalance.inl.gov</proxy.host>
+				<proxy.port>8080</proxy.port>
+			</properties>
+		</profile>
+		<profile>
+			<id>staging</id>
+			<activation>
+				<property>
+					<name>env</name>
+					<value>staging</value>
+				</property>
+			</activation>
+			<properties>
+				<log.file>C:/log/nicc-lp-app.log</log.file>
+				<log.path>C:/log/time-based-logs</log.path>
+				<index.url>http://localhost:8983/solr</index.url>
+				<useProxy>true</useProxy>
+				<proxy.host>146.137.176.11</proxy.host>
+				<proxy.port>3128</proxy.port>
+			</properties>
+		</profile>
+		<profile>
+			<id>production</id>
+			<activation>
+				<property>
+					<name>env</name>
+					<value>production</value>
+				</property>
+			</activation>
+			<properties>
+				<log.file>C:/log/nicc-lp-app.log</log.file>
+				<log.path>C:/log/time-based-logs</log.path>
+				<index.url>http://localhost:8983/solr</index.url>
+				<useProxy>true</useProxy>
+				<proxy.host>146.137.176.11</proxy.host>
+				<proxy.port>3128</proxy.port>
 			</properties>
 		</profile>
 	</profiles>
