@@ -45,7 +45,6 @@ public class Event {
         event.initId();
 
         List<IndexedEventSource> sources = Arrays.stream(posts)
-                .filter(p -> p.source.compareTo("TWITTER") == 0)
                 .map(p -> p.getIndexedEventSource(event.getId()))
                 .collect(Collectors.toList());
 
@@ -64,7 +63,6 @@ public class Event {
 
     private String getSummary() {
         String summary = Arrays.stream(posts)
-                .filter(p -> p.source.compareTo("TWITTER") == 0)
                 .map(p -> p.message.replace("\n", "").replace("\r", ""))
                 .findFirst().get();
 
@@ -73,7 +71,6 @@ public class Event {
 
     private String[] getImages() {
         String[] images = Arrays.stream(posts)
-                .filter(p -> p.source.compareTo("TWITTER") == 0)
                 .filter(p -> Strings.isNotEmpty(p.imageUrl) && Strings.isNotBlank(p.imageUrl))
                 .map(p -> p.imageUrl)
                 .toArray(String[]::new);
