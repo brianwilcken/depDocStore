@@ -34,6 +34,7 @@ public class EventRegistryClient {
 
 	private RestTemplate restTemplate;
 	private SolrClient solrClient;
+	private EventCategorizer categorizer;
 	private final String minuteStreamEventsUrl = Tools.getProperty("eventRegistry.minuteStreamEventsUrl");
 	private final String eventDetailsUrl = Tools.getProperty("eventRegistry.eventDetailsUrl");
 	private final String apiKey = Tools.getProperty("eventRegistry.apiKey");
@@ -48,6 +49,7 @@ public class EventRegistryClient {
 	
 	public EventRegistryClient() {
 		solrClient = new SolrClient(solrUrl);
+		categorizer = new EventCategorizer(solrClient);
 		SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
 
 		if (useProxy) {
@@ -64,7 +66,7 @@ public class EventRegistryClient {
 		return eventCategoriesList;
 	}
 	
-	public List<IndexedEvent> PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) throws SolrServerException {
+	public List<IndexedEvent> PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) throws SolrServerException, IOException {
 		List<String> eventCategories = GetEventRegistryValidCategories();
 		List<IndexedEvent> validEvents = new ArrayList<IndexedEvent>();
 		List<IndexedEvent> readyToIndexEvents = new ArrayList<IndexedEvent>();
@@ -103,7 +105,6 @@ public class EventRegistryClient {
 		
 		//Perform NLP on the index-ready events.  This phase uses the NICC taxonomy to produce a PRELIMINARY category for each event.  
 		//The preliminary category may then either be updated by the user or accepted as-is within the NICC landing page UI.
-		EventCategorizer categorizer = new EventCategorizer();
 		List<IndexedEvent> categorizedEvents = categorizer.detectEventDataCategories(indexableEvents);
 
 		//Iterate through the categorized events to query Event Registry for event details
@@ -207,7 +208,7 @@ public class EventRegistryClient {
 		return response.getBody();
 	}
 	
-	public List<IndexedEvent> PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts) throws SolrServerException {
+	public List<IndexedEvent> PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts) throws SolrServerException, IOException {
 		if (response.getEvents() != null) {
 			//Filter out events that are missing a summary/title 
 			List<IndexedEvent> validEvents = Arrays.stream(response.getEvents().getResults())
@@ -220,7 +221,6 @@ public class EventRegistryClient {
 			List<IndexedEvent> indexableEvents = solrClient.GetIndexableEvents(validEvents);
 			
 			//Categorize the events
-			EventCategorizer categorizer = new EventCategorizer();
 			List<IndexedEvent> categorizedEvents = categorizer.detectEventDataCategories(indexableEvents);
 			
 			categorizedEvents.stream().forEach(p -> {

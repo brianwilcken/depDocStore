@@ -1,0 +1,940 @@
+index,id,title,cluster,distance,category
+0,52a87b032780b22fb415ee621d4324809aa52b41,Travel deals: Reopening sale at two St. Maarten resorts hit by Hurricane Irma - The Washington Post,"s, saying, n't, states, county",1.456802323,
+1,8328bf41940ad4e5cd7f9aa4b8eab3e10cffa59a,How to improve critical hurricane-related supply chains,"health, s, study, hospital, patients",1.309695011,Irrelevant
+2,a30665107430318c9006489c88a642c3f3953008,Brazil Prison Riot Leaves 9 Dead - The New York Times,"inmates, riot, prison, corrections, lee",1.487232191,Irrelevant
+3,f769ae26425b7894e9a1399a2d74d542a9c186da,'Renoir sucks at painting' movement demands removal of artist's works | Art and design | The Guardian,"s, saying, n't, states, county",1.625052413,
+4,97c68dc7005c32f47461207974fe71425c910b3c,What Happened In The Litchfield Riot? 'Orange Is The New Black' Season 6 Hinges On Some Of The Finer Details,"inmates, riot, prison, corrections, lee",1.357629495,Irrelevant
+5,20e43ebb9ec26812314760c2a52d912e3bc4a586,Oregon wildfire: Police suspect Eagle Creek started by teens with fireworks - The Washington Post,"s, city, t, people, time",1.070307379,
+6,e5d29be1a1fd1c382ac9846cf23abd9b9aee7872,Wildfire in San Martin burns multiple structures,"s, saying, n't, states, county",0.287950421,
+7,adbcfc35d6d2021dd368c23d64af9d4e0c3c70f4,When a wildfire threatens your summer vacation - SFGate,"s, saying, n't, states, county",1.21180094,
+8,17b8cf996679ff8d49432f8b825f6cab748fc264,Keeping wildfire smoke out of large indoor spaces | Columnists | missoulian.com,"health, s, study, hospital, patients",1.802546394,Irrelevant
+9,961c13520cc01fa27fef758fe95ad1ef5227b9b5,Firenado: California fire vortex phenomenon seen amid chaos of Carr Fire near Redding California - CBS News,"s, saying, n't, states, county",1.516584892,
+10,e71d3348dce629897dc5dee17aadc0b21b1f0a27,Exploding targets ignite wildfire debate | East Idaho News,"s, saying, n't, states, county",1.587344287,
+11,b3ca5c9c5e07487f78a6c64999cabdb1d5e65dea,Writing workshop helps wildfire victims heal from 'surreal days',"s, saying, n't, states, county",0.914547383,
+12,a93d63cb862c74cc4c30ed8bb50265175369d1a5,After a destructive wildfire flash floods and debris flows; the long cleanup from the Dollar Ridge Fire begins | fox13now.com,"s, city, t, people, time",1.464142232,
+13,55c021c211c0136408227d03393c637179a0567a,Why you may hear tornado sirens Tuesday - KMOV.com,"gmt, edt, july, monday, pm",1.231351421,Irrelevant
+14,114e4883c3aa4efbaacfbe8586556495bbf68198,Five at 5: Mt. Zion man accused of shooting at parents pleads not guilty and 4 other stories to see | Local | herald-review.com,"murder, killer, case, s, investigates",2.214021148,Irrelevant
+15,cbba5c3f13a6a3f2a4655c11740a67c283a9f07f,Gov't report accuses agency of inadequate recall monitoring | | hastingstribune.com,"s, saying, n't, states, county",1.742381374,
+16,1cdf8c108dc5f0cf1e12fc0208e2554709a99254,With a new librarian Gays Mills library is evolving with the changing times,"s, saying, n't, states, county",1.374560384,
+17,f4a628f942152ed7ebae1f17365508ef918aefcf,Utah prosecutors file charges in viral campground confrontation | KUTV,"inmates, riot, prison, corrections, lee",1.266442661,Irrelevant
+18,80978d0af4da993ddf8f88a1baafb7d383ebe83e,Wildfire launches virtual coin platform to promote app discovery and engagement - MarTech Today,"s, saying, n't, states, county",1.713200406,
+19,ee1e17936356a8a7e0b8884b8ffb7902d5f76f22,PREMIER Center's Concert Plans During Severe Weather,"s, saying, n't, states, county",1.456071072,
+20,df55a61c35c984b932078d6106148bcd16ae2674,USM's Picasso Nelson nominated for AFCA Good Works Team,"playing, players, sports, football, years",1.147433346,Irrelevant
+21,0272c627fe47a0dbf121ae9194d3db7e0a391c01,Minnesota allows tax extension for victims of recent storms flooding – Twin Cities,"s, saying, n't, states, county",1.561364592,
+22,7121fc3a6c1cb46648a3cd1eb7d00002c1704f03,City officials: Rise in industrial development will help keep tax rate steady in light of Katy's $19.5M bond | Community Impact Newspaper,"s, saying, n't, states, county",1.249263475,
+23,1eb4f0ed404baca65b09941e847ee14ba39e9f93,Riverside Bridge in Ozark is going to be apart of the Ozark Mill project,"s, saying, n't, states, county",1.465511016,
+24,446e7ad79911c0642dc032e821769e20305077f1,Montgomery to retire from Duluth administration | Duluth News Tribune,"s, city, t, people, time",1.10613151,
+25,0c6a929723e5160fed5d5e47cdbd6a55e5b42d34,The Day - Family remembers airman who died in overseas accident - News from southeastern Connecticut,"s, saying, n't, states, county",0.876955749,
+26,e193f251bfb43472431d8519f5b2536b89744dfd,S.L. mayor residents decry rushed process as inland port bill heads to special session vote | KSL.com,"s, city, t, people, time",1.678123586,
+27,6f962eabb16f6bdc79ae2846a4f0a0fa5bd91a40,Kim Basinger Priscilla Presley Protest Dog Meat Industry In Los Angeles | Very Real,"s, saying, n't, states, county",1.68064749,
+28,9323d2147e67fa1e6e235b6be78326f3580819b0,ERCOT says heat wave causes electric demand peak record - Valley Morning Star : State,"health, s, study, hospital, patients",1.466811525,Irrelevant
+29,9d504e7577bc1291d8a1369a9f491b49902f9860,Co-founder and CEO of Team Rubicon to be presented with ESPY’s Pat Tillman Award for Service | Beatrice News Channel,"s, saying, n't, states, county",1.074574195,
+30,66888b405335b24ea933243db7bec386dc03edb0,Clues to Confederate mystery: Sub's crew never dumped weight - News - Tuscaloosa News - Tuscaloosa AL,"s, saying, n't, states, county",1.408777362,
+31,922d1949fa1baa8d95c182914c652f5f61ec2f1e,3 injured in explosion fire at Oklahoma disposal well | State | ccenterdispatch.com,"playing, players, sports, football, years",2.073406726,Irrelevant
+32,0aadfc63541c1be845001d7c8c1e258a02be482e,CAUTION: Heavy downpours cause severe flooding in Harrison Count - WLOX.com - The News for South Mississippi,"gmt, edt, july, monday, pm",1.231678651,Flood
+33,1506727878ce0e57f820a733b902e353fe0b75d8,A Pearl of Great Price: The Value of a Flowing Pearl River in Jackson | Jackson Free Press | Jackson MS,"s, saying, n't, states, county",1.470143317,
+34,4c4171f212e46525a55d158acf629591df92c471,Tax-free holiday kicks off Friday but Georgia is once again out of luck,"s, saying, n't, states, county",1.366972492,
+35,e60beaf88f72cd1bcd20295cc69736f2cdf4a6b5,The Day - Stonington PZC approves replacement of downtown Mystic building - News from southeastern Connecticut,"s, saying, n't, states, county",1.60946695,
+36,75c40bb98ab61eae8221c062831265377786b407,Coastal Authority hears pros -- and cons -- of Mid-Barataria Sediment Diversion | NOLA.com,"s, saying, n't, states, county",1.084656493,
+37,b633ede24d2b63689a536c8173b5caad89c6808f,Increasing projections of sea level rise lead Maine's coastal communities to get prepared,"s, city, t, people, time",1.398942392,
+38,ddf894794a7d8ac2bd95b070fa95733aaf3b7fa3,Sun Prairie family's mixed emotions in homecoming after explosio - WKOW 27: Madison WI Breaking News Weather and Sports,"s, saying, n't, states, county",0.665789635,
+39,8c67794b06a00aaee39e6bf094c870208dffa430,Protesters march on EKEDC - The Nation Nigeria,"s, saying, n't, states, county",1.448462213,
+40,d1a022a36cceb4f1590d6cf1fdcc43afd493dda8,Defaced “Dare to Dissent” mural in Raleigh repaired by artist Dare Coulter | News & Observer,"s, city, t, people, time",1.460837079,
+41,51160305b4f7fcf5c0810836b7b3c61b8c268560,Local Movement Draws National Support –,"s, saying, n't, states, county",1.482368598,
+42,4a608ba0f0e637edac8f2221df5bac63a1ccde35,State Water Regulators' Plans To Impact New Melones | myMotherLode.com,"s, city, t, people, time",0.445036082,
+43,048e74abcf8d3a93ad3e09a47461490775af905b,Nassau sees a 'tsunami' of property tax grievances lawyer says | Newsday,"s, saying, n't, states, county",1.474757036,
+44,6587293ea5b730be62366e969d6c40b06ff8fe35,L7 brings DIY ethic and attitude to Saint Andrew's Hall,"playing, players, sports, football, years",1.135922127,Irrelevant
+45,9de13991a2ceb8bc1410096aed4be24964b932a8,Six including former Weber County employee charged in confrontation with Hispanic family | Deseret News,"inmates, riot, prison, corrections, lee",0.891086913,Irrelevant
+46,0e639129705f489938d613e65ed45ae7f6a2c717,For Some Relatives of Inmates Not Charged in Delaware Prison Rio - WBOC-TV 16 Delmarvas News Leader FOX 21 -,"inmates, riot, prison, corrections, lee",1.453889466,Irrelevant
+47,3d1067611c1ab9bb5875ddc808208c9bae9c4f2a,Halliburton Staff Called Muslim American Employees ‘Terrorist’ and ‘Camel Jockey’ at Workplace Alleges EEOC Suit | Global Indian | indiawest.com,"s, saying, n't, states, county",1.430526507,
+48,76706e92fb22951e753447d95de6523bbecb7e2a,As state of emergency ends Turkey mulls new terror laws - Valley Morning Star : World,"health, s, study, hospital, patients",2.198053355,Irrelevant
+49,c7e69238f0826a12164043414bbf3f5cef2c0f22,Santa Rosa one of 14 U.S. cities named as finalists in bid for $1 million art grants,"s, saying, n't, states, county",1.203586086,
+50,d72218998170809545e5b8232531ca1084408a73,krem.com | Inmate crews help fight Upriver Beacon Fire from the front lines,"inmates, riot, prison, corrections, lee",1.836457668,Irrelevant
+51,745d404e72eeb9be88c23c89f3dbc3e04ffa3850,Northwell launches security pilot program - Queens Chronicle: North/Northeast Queens News,"health, s, study, hospital, patients",1.842531076,Irrelevant
+52,c94e15b15143a54bfd098fa6810f61482d7bc67a,AP-NORC Poll: If DNA shows health risks most want to know | The Columbian,"health, s, study, hospital, patients",1.194707406,Irrelevant
+53,f595c091681f09e6000dc6655095c9a142bebfb8,Jeff Simon: ESPN’s ESPYS weren’t about sports – they were about life – The Buffalo News,"murder, killer, case, s, investigates",0.704792733,Irrelevant
+54,a60c2ade55d1cfc270ab492a0fc4a06b84a5dde5,OSHA investigating fatal industrial accident at hospital | Boston Herald,"health, s, study, hospital, patients",1.49820714,Irrelevant
+55,ac305fc096b6c0a6b71d0395361aaef9890ccb1a,NYPD ‘cleared’ Mayor De Blasio’s flight home on $3m spy plane | Tremont Herald,"s, city, t, people, time",1.315375649,
+56,185d2f38a03de1045b6b89e091a1ef4719e9cb99,Flood damage marks the next snag for Minnesota farmers | Agri News | postbulletin.com,"s, saying, n't, states, county",1.143223372,
+57,037678908877d3491fd57a2964eafc3cc605ea80,Crude advances as Saudi Arabia dismisses oversupply speculation,"s, city, t, people, time",2.116028928,
+58,e8cde2d0df620daac665f2ee931c723e511c86bb,'Hell's princess' – LaPorte serial killer may get her own TV series | WSBT,"murder, killer, case, s, investigates",2.015405297,Irrelevant
+59,fc6b5ff8846452ad687f935b6fa2918dec80e3f6,Investigators searched a million people’s DNA to find Golden State serial killer - MIT Technology Review,"murder, killer, case, s, investigates",0.407596773,Irrelevant
+60,97e485c2665998dc2eacd86c0b34d4ed4539d5df,Earthquake rattles doesn't wreck Napa wineries,"s, saying, n't, states, county",1.344437258,
+61,208d107d6bd18b26b117c57dea6ef07c03729755,Japan's post-Fukushima earthquake health woes go beyond radiation effects : Nature News & Comment,"health, s, study, hospital, patients",0.66977582,Irrelevant
+62,6bee01454e0b270b581f6a8b4a767ac569a13614,Greenland: Iceberg prompts tsunami fears threatens village of Innaarsuit where evacuations are already underway - CBS News,"s, saying, n't, states, county",1.546032667,
+63,dffeffbb20f2bd066b26a4fcd5fc278c60d596a9,Moore woman finds photos from Japan tsunami trip in desk from Goodwill seeks owners | KFOR.com,"s, saying, n't, states, county",1.540665466,
+64,87c632fb5ab27ea1238e4b7230f6d16ae69d142b,Nigeria oil explosion: A tanker carrying petroleum exploded in rush hour killing nine - The Washington Post,"s, saying, n't, states, county",1.267467272,
+65,327a87af9dba76ab90504758f95b410b58686fb0,Safety Board: Superior Refinery Explosion Happened In Fluid Catalytic Cracking Unit | Wisconsin Public Radio,"s, saying, n't, states, county",0.561786686,
+66,a52788225d13023e1412a3c12b625dd821eaa1e2,SpaceX narrows down cause of Falcon 9 pad explosion - SpaceNews.com,"s, saying, n't, states, county",1.130271209,
+67,c120aab770fc01e2654452320f7233fd9e798a9e,1 injured flown to hospital following pressure well explosion i - KLTV.com - Tyler Longview Jacksonville |ETX News,"gmt, edt, july, monday, pm",1.079823973,Explosion
+68,69f372ff047fbe314f03dac9ae805ea79000553e,Oxmoor Valley Elem. School evacuated due to gas leak - WBRC FOX6 News - Birmingham AL,"gmt, edt, july, monday, pm",1.437306886,GasLeak
+69,eb8516d9617d4df4f0b29b8b09b0243e4a79c623,All lanes of I-25 reopened after oil spill caused traffic nightmare – The Denver Post,"health, s, study, hospital, patients",1.988217963,Irrelevant
+70,01ef2dcd20678fbcd62cce54e52b2ec6307fcb98,Aging Southeast: 'Silver Tsunami' hits the region - KRBD,"health, s, study, hospital, patients",0.724469253,Irrelevant
+71,36238dc346cf76e7192aeb4e2d9f8b1bc798fb38,Meet Mexico City's First Elected Female Mayor : NPR,"s, city, t, people, time",1.159974834,
+72,37d5f6f2dd41cf3565f537dee8444b928c357709,Fukushima’s Nuclear Imprint Is Found in California Wine (Drinkers Don’t Panic) - The New York Times,"health, s, study, hospital, patients",1.548967742,Irrelevant
+73,cb2ddb121ad95f4e76b3dca4834de1cb6f496f2a,Fundraiser for family affected by Topeka home explosion,"s, saying, n't, states, county",1.68383454,
+74,db73f242139fd31ec9fb0c86cde96595333523f9,Man Sentenced to Life in Prison in Wife's Death Explosion | Wisconsin News | US News,"s, saying, n't, states, county",1.184834699,
+75,41c99c20ff5be01f5e2946e03cc4e6a496edca58,Louisiana flood managers meet in Lafayette for quarterly meeting - KATC.com | Continuous News Coverage | Acadiana-Lafayette,"s, saying, n't, states, county",1.785661661,
+76,f9760ff534face507ebc885fc32be22f7f04adc9,Mason-Montgomery reopens after a gas leak - Cincinnati News Weather Sports from FOX19 NOW-WXIX,"gmt, edt, july, monday, pm",3.526639154,Irrelevant
+77,e84ccfa51bc0e26d21f11c9635ad00b8128ea0c7,Keys hospital rebuilds after knockout punch by Hurricane Irma | Miami Herald,"health, s, study, hospital, patients",0.448447882,Irrelevant
+78,cb4ac070f3e7b311a521ebee0899c35011d88277,Woman Gives Birth At Six Flags Georgia & Gets Lifetime Passes | PEOPLE.com,"s, saying, n't, states, county",1.572925647,
+79,2e2a52d46959c318d33ebcf5daa46f9a7a1ff179,S. Utah library workers: Removal of LGBTQ displays is discrimination,"s, saying, n't, states, county",1.401334753,
+80,b2bf924cca83c25a0675bcc4081dd8744312d66d,WV Open: Hurricane's Clark plays his final round as a pro | Sports | herald-dispatch.com,"playing, players, sports, football, years",1.080417869,Irrelevant
+81,846990d60d2f18a69234725f083cddfc925a294c,Another Miami Hurricane Tyrone Moss dies way too young | Miami Herald,"s, city, t, people, time",0.457190067,
+82,2cb7ba982f2c6e118b1819fb9e05eda146f49054,'It was just about that Western': Texas pilots aided Caribbean hurricane rescue | Commentary | Dallas News,"s, saying, n't, states, county",0.43607092,
+83,8518c0dc539b7ed275f097c77d80953fa6e54fea,Widespread power outage affects NJ homes schools businesses,"gmt, edt, july, monday, pm",1.536794127,PowerOutage
+84,1e874c59dc0539b32324f8cfa32ea9b52fd91d09,SF coffee shop turns down Salesforce contract in immigration protest - SFChronicle.com,"s, saying, n't, states, county",1.143438717,
+85,501bf54da072c1374d99efafe78aa89f8c85d239,Prominent LGBTQ Lawyer Sets Self On Fire In 'Protest Suicide' Of Climate Change | HuffPost,"s, city, t, people, time",0.750960597,
+86,a45eb6c9c0b726d9cd30d66a37e2fed9a473705f,A church put Jesus in a cage to protest immigration policies. No - KMOV.com,"s, saying, n't, states, county",1.403222546,
+87,7e6a4778dd3e183db826d7055acaf4e6b1b2c537,Malawi vice president says quit ruling party in protest at graft | Reuters,"playing, players, sports, football, years",1.406620559,Irrelevant
+88,8448d3f04b84b9de65684bf857c61ba6ed6b442d,Man Arrested for Flying Drone Over Wildfire Delaying Firefighters | Digital Trends,"s, saying, n't, states, county",0.936266273,
+89,fdd7137c466cb20e6c815621cab186977f1e1850,Utah family who recently moved to California loses home in wildfire | fox13now.com,"s, city, t, people, time",0.968328477,
+90,9bd98ae6b6491d67c54fa4a5e8cd7b34ceb4c8c0,In Japan Deadly Heat Wave Tests Endurance of Even the Most Stoic - The New York Times,"s, city, t, people, time",0.819314943,
+91,fde4521ace865611e8e3401bd69d2bc477de2701,Lost medical records complicate Joplin hospital's tornado recovery | News - State & Regional - Missouri | stltoday.com,"health, s, study, hospital, patients",1.827804171,Irrelevant
+92,23044d6ea3e857b88ed946d1df6863c6f3b64ecf,You sent us a flurry of Blizzard of ‘78 stories. Here are some of the best ones. - The Boston Globe,"s, city, t, people, time",0.510913324,
+93,01e939be6af0568dae8194e5ae524efb70cfacd5,Wildfire Smoke: Does Masks Protect You?,"health, s, study, hospital, patients",1.842639713,Irrelevant
+94,9bf42e653d95265c5c1d6978a498721fff4fdb39,Crews battle growing wildfire in Middle Canyon | KSL.com,"s, saying, n't, states, county",1.654881787,
+95,b623933cce4f46c76d176a8aaff7a81cbaae868e,"Two USAF E-4B ""Doomsday Planes"" Damaged In Tornado At Offutt Air Force Base - The Drive","s, saying, n't, states, county",1.351923409,
+96,b25f453d4906bcb3f1d2324ee8d5c04cf7f16a47,National Weather Service upgrades Lynchburg tornado to an EF3 - NBC12 - WWBT - Richmond VA News On Your Side,"gmt, edt, july, monday, pm",0.738116825,LocalHazard
+97,967000f57be6fc0bec41babcf381ccf8477b5358,Judge: Release Florida school shooting suspect's statement,"murder, killer, case, s, investigates",2.085049758,Irrelevant
+98,c0c8487b67f9abc99e8eac876a7006b6fee02f55,Police Find Severed Heads in Coolers in Serial Killer Case That Stuns Japan - The New York Times,"murder, killer, case, s, investigates",0.650293225,Irrelevant
+99,6a00cb342d8b0728779e6f8048e6791057c947f0,Couple survives Grafton boat explosion but still needs help | ksdk.com,"s, saying, n't, states, county",1.380454416,
+100,ccd396a8a2fdfa769db8b646aaafd4c5fac2b4b1,Solo explosion next for Jon Spencer | Music | southbendtribune.com,"s, city, t, people, time",2.482373,
+101,08351228b937aadac720896015eb6ca3cc97d441,Transformer explosion sparks grass fire in Santa Barbara - KEYT,"s, saying, n't, states, county",1.440925271,
+102,c3d8a94ecacccb3c9e9c65825543308a68d5e2f9,Africa‘s Christian Explosion | Southgate Observer,"health, s, study, hospital, patients",2.171313489,Irrelevant
+103,1db5e57c559874118968906695c69d85d712eadb,Japan's post-Fukushima earthquake health woes go beyond radiation effects : Nature News & Comment,"health, s, study, hospital, patients",0.672849058,Irrelevant
+104,dcfe60e9e755f5d7bcc333526bb1417dc24965b9,TRAFFIC ALERT: SH 18 near Monahans temporarily closed due to com - KWES NewsWest 9 / Midland Odessa Big Spring TX: newswest9.com |,"gmt, edt, july, monday, pm",1.673893994,Irrelevant
+105,4705ba2e030d0d2897242f8320b8faea38443ae5,WATCH: Officials keeping wary eye on slow-motion landslide in Yakima Co. | KOMO,"s, saying, n't, states, county",1.515777461,
+106,12ea44b4df453780eee6613614ae7fa3307ed210,IRS Announces Tax Relief For California Gas Leak Victims,"s, saying, n't, states, county",1.70766947,
+107,08f32b667f918e58b3cb75f7e728c6eb95efdbc2,How A Massive Power Outage Sent People Out In The Street : NPR,"playing, players, sports, football, years",0.588260827,Irrelevant
+108,bd07d1d399dc03502eb19893cdb0c3c1931becbe,Nadia Tolokonnikova and Masha Alyokhina No Longer Members of Pussy Riot | Pitchfork,"inmates, riot, prison, corrections, lee",1.103196541,Irrelevant
+109,4869d1b425b12bf9c8b51ccabe8cb3224d85c600,Fighting terrorism in New York City - CBS News,"murder, killer, case, s, investigates",2.343315409,Irrelevant
+110,17eed93ca072bfbddc60b277ce28e06aad721ab2,Benioff Metallica join forces for wildfire relief concert at AT&T Park - Curbed SF,"s, saying, n't, states, county",1.51524687,
+111,a574ba78a8603b560cd1edae371f8b762ead8d27,Father husband of wildfire victims sues federal government for $13.5 million,"s, saying, n't, states, county",1.307487243,
+112,8a2d792d0f81ed72d0c8142653f884f57da0e8af,How New York is prepping for the next superstorm - The Verge,"s, city, t, people, time",1.756385817,
+113,283620d3bc8c3338e2a1d62cad6b8ab17c096925,Cut Throat City Trailer: RZA's Heist Film Set After Hurricane Katrina – /Film,"s, city, t, people, time",1.308365418,
+114,4b3f0c874555003724bcd0497310b46d6f2ba9c8,Sean Penn visits Savannah for teen hurricane preparedness | Island Packet,"s, city, t, people, time",1.708878923,
+115,08729c66e768a3fc16947b769c88eb667ea53b5a,Church 'detains' Jesus Mary Joseph to protest Trump's immigration policy - Religion News Service,"s, city, t, people, time",1.97700204,
+116,b144a86457286f6d870dcebc836fa8cf194014cf,Detroit Movie and 1967 Riot: What We Still Get Wrong | Time,"inmates, riot, prison, corrections, lee",1.954230405,Irrelevant
+117,4d9047d2c7b925e79cc40da461defd658da3f231,Exploding targets ignite wildfire debate | KSL.com,"s, saying, n't, states, county",1.430813196,
+118,7d588126d42ee348f9c9a471313454b3d73d29d3,Sheriff: Sixth person found dead in Northern California wildfire that has destroyed more than 500 buildings.,"s, saying, n't, states, county",1.431357934,
+119,ede03806facb3c636d9f2bc28289ff312e824af1,Review: In ‘Hail Caesar!’ the Coens Revisit Old Hollywood - The New York Times,"s, city, t, people, time",0.844505689,
+120,8d8263047a5d08f1b57625d8db1b5437d8548c9d,NJ weather: Tornado watch issued for Ocean County by National Weather Service,"s, saying, n't, states, county",1.764357196,
+121,dcb9e16717ddf71c096b4de0eff88a2296045db7,Injuries reported after tornado touches down in Baldwin County - FOX10 News | WALA,"gmt, edt, july, monday, pm",1.732304682,LocalHazard
+122,7ae8b489d47cb459e63383992ff78d2638bdf026,Origins of 'Hail Mary': Cowboys legend Roger Staubach remembers how it stuck,"playing, players, sports, football, years",1.409960091,Irrelevant
+123,7642c2bb7a0805bafbf2e119455baa3737c4d308,Glencore snaps up Rio Tinto's Hail Creek coal mine project for $1.7 billion | Reuters,"s, city, t, people, time",1.427075492,
+124,c609ad427c116f8be3b8c75489a3ab8dedd4a6db,The History Of 'Hail To The Chief' — A Song Trump Has Not Yet Embraced : NPR,"playing, players, sports, football, years",1.294208657,Irrelevant
+125,e838ba465dd8318dfc6e3149076605f2c4c00461,Florida school shooting: Teacher of the year's emotional Facebook post,"health, s, study, hospital, patients",1.78413096,Irrelevant
+126,5e8dd0ee51290bf303d5e5581c1b18c696960645,Girl who witnessed Townville school shooting gets letter from President Trump,"s, city, t, people, time",1.566210725,
+127,4a12b1553eb5a15e42b1c34b40df9eeb4a44cd44,30 years later: Who is highway serial killer?,"murder, killer, case, s, investigates",0.176460818,Irrelevant
+128,fdd9ee517dc132267bb197dc840a3fe0f65257bc,Zimbabwe's President Emmerson Mnangagwa Unharmed After Explosion At Campaign Rally : NPR,"s, saying, n't, states, county",1.398951024,
+129,d0c313c3549f0eb0d01be2c175c389d0b39d147c,Gilbert Gottfried Fired As Aflac Duck After Japanese Tsunami Tweets | HuffPost,"s, saying, n't, states, county",1.600468848,
+130,1f224434346434805e6dbde3fe360d5f62c27ec4,Superior Wisconsin explosion: Blast rocks Husky Energy oil refinery in Superior Wisconsin today; injuries reported - live updates - CBS News,"s, saying, n't, states, county",0.707197283,
+131,07a05b84d7b6daa5c85b30308b8e010d9a5f0ba0,SpaceX Announces Cause of Falcon 9 Explosion Sets New Launch Date,"s, saying, n't, states, county",1.652536622,
+132,b5c1c2d9b13aa13ca5bc93f783cc02b14e1c1820,Laptops in Checked Bags Pose Fire and Explosion Risk FAA Warns,"s, saying, n't, states, county",1.338812607,
+133,54382fdcfb016d3e398cb3f6fb90651c0bd852d5,Explosion in East Boston caused by man playing with chemicals,"s, saying, n't, states, county",1.448404744,
+134,4d1802adf9e8d39b7579cf8e7de3d7447d40e2b0,St. Charles firefighter grateful after surviving explosion | ksdk.com,"health, s, study, hospital, patients",2.153284594,Irrelevant
+135,8ea91c3e414d6e6c2278e6063ef195ce1612a06e,SDCC '18: Graphic Novel Explosion Reaches Libraries Why Can't You Find Any to Read? — The Beat,"s, saying, n't, states, county",1.494158808,
+136,748457a467c050129046c71c796159683cbc3558,Indiana governor surveys flood damage in Aurora,"s, saying, n't, states, county",0.754338001,
+137,7950a1dd8061b17274522b40c2fb202569ce17ea,Family loses home of 35 years due to landslide in Duquesne Heights,"s, saying, n't, states, county",1.206782814,
+138,5fc32d87e4fa52e0829547d35d98e98a9248bd93,Portion of Gray Mule Farm Rd in Emanuel County remains closed fo - Tri-State News Weather & Sports,"gmt, edt, july, monday, pm",1.134084008,Irrelevant
+139,cd406c92e8dd7adcf97a5ee99d52cf34221ddf16,Missing college student TeNiya Jones drowns in Tel Aviv Israel,"s, saying, n't, states, county",1.463309649,
+140,927f82938b004b903dc44731cf7ffddd9eb863fc,Aleksandar Mitrovic joins Fulham from Newcastle on five-year deal | Football News | Sky Sports,"playing, players, sports, football, years",1.102431884,Irrelevant
+141,13428f2a5236aaf0b5a7d9569c99f129d6f52b59,Firefighters 'were not trained for the toxic conditions of Grenfell' | UK news | The Guardian,"s, saying, n't, states, county",1.373427845,
+142,6265062caf5cd014b1b55890be564aae3e359815,Big Mac is 50 but McDonald's sticks with aging icon - CBS News,"s, saying, n't, states, county",1.623800204,
+143,f64da4c4a094e3e3f388d6cf2e9128327c16cd6d,Cyclist in RideLondon 100 event dies after suffering cardiac arrest | UK news | The Guardian,"playing, players, sports, football, years",1.333333794,Irrelevant
+144,751ea2f671f024a88b333c106626144b40d9d890,Netflix exec defends 'Insatiable' after alleged fat-shaming draws cries for cancellation | Fox News,"playing, players, sports, football, years",1.034100241,Irrelevant
+145,ea1d0ab52e7259aef26512420f275945931375d3,Monday briefing: thinktank in ‘Brexit-influencing game’ | World news | The Guardian,"s, city, t, people, time",0.126439613,
+146,ad5a54b266fe8aa2f64d251b8c381582b906bacf,Walmart Discovers Why the 'Last Mile' Is the Hardest | Top News | US News,"s, saying, n't, states, county",1.286725011,
+147,d6375f6480276d73d18e485d6cb05054c7eb8738,'I'm racist as f---': Canadian man caught on camera threatening Indian couple | Fox News,"s, saying, n't, states, county",1.397173629,
+148,7afe5af0a84d6ae0ce95bae07ec10bd9262624e3,My View: A Tonawanda childhood formed fond memories – The Buffalo News,"s, city, t, people, time",0.902874976,
+149,10112ad9c8991b39d25e70da8dd429c50f3cbe35,Jerry Lawler’s son Brian Christopher dies - WMC Action News 5 - Memphis Tennessee,"playing, players, sports, football, years",1.452888819,Irrelevant
+150,78bde98ae752a92478c316898cb76d5928393443,Storm Advisory 7/29/18: NHL News Rumors Links and Daily Roundup - Canes Country,"playing, players, sports, football, years",1.383417373,Irrelevant
+151,b5850164c27fd081da580f8073cf2076a9de7b01,Universal basic income: Will it work? - CBS News,"s, saying, n't, states, county",0.978121291,
+152,5d1965d71c4ea82c784abf04c76fe2befc86e70c,20 Things You Never Knew About The Parent Trap | E! News,"s, city, t, people, time",2.142916349,
+153,2712cf5938cc9d9f7144ba88c52abc11e467fd20,Couple opens new antique store in downtown Jefferson | News | marshallnewsmessenger.com,"s, saying, n't, states, county",1.51525227,
+154,8785075f7e8293d4c3a9913148051aac4e7851b9,Cracking Cold Cases: Unsolved homicides in Klamath County | News | heraldandnews.com,"murder, killer, case, s, investigates",0.438596886,Irrelevant
+155,85d58ade8f3d8b01eb736eeacbd6fe1af07bebd7,U.S. Coast Guard Royal Australian Navy rescue sailing crew off - Hawaii News Now - KGMB and KHNL,"gmt, edt, july, monday, pm",1.675273397,Irrelevant
+156,715201ef62477fa9cfcaf7b27f331f0c14300283,In 'Quiet Skies' program TSA is tracking regular travelers like terrorists in secret surveillance - The Boston Globe,"s, saying, n't, states, county",1.155487137,
+157,8724481a0aa9e72bbc9934fdb8d9abc8e2848fe6,Alex Jones defends his brand of news in defamation cases,"s, saying, n't, states, county",1.504683212,
+158,6583bfa99a0eeab2cec544aa75b69e056a24cc3d,Unexpected Positive News In Chesapeake Energy - Chesapeake Energy Corporation (NYSE:CHK) | Seeking Alpha,"s, saying, n't, states, county",1.574362153,
+159,1444610eaf7ee3a61dbffefacc066e5fe35917ca,Matters of record received July 28 2018 | Duluth News Tribune,"s, saying, n't, states, county",1.67903329,
+160,f05c854f6ccd8fff118120bcd6b040fb0c4e5116,SR 261 Oak Grove Rd. back open after gas leak - wave3.com-Louisville News Weather & Sports,"gmt, edt, july, monday, pm",0.84775075,Irrelevant
+161,073fd394d596b62753a0a07fb6cd3db35518ec0b,Gas leak causes early voting location to shut down - WBRC FOX6 News - Birmingham AL,"gmt, edt, july, monday, pm",1.381021574,GasLeak
+162,cfbb956db69186f02359277d61062c0fd6ef984d,Gas Leak Forces Evacuation at Hotel Dewey - WBOC-TV 16 Delmarvas News Leader FOX 21 -,"s, saying, n't, states, county",1.556532615,
+163,a05005c90eb27f40e16211c4e82fa7daf61d362e,Long after hurricane hit NC unearthed bodies remain unidentified | WLOS,"s, city, t, people, time",1.338948308,
+164,2aec3297d0485b2ef5743f2d26465cf6ac1351dd,Hurricane Matthew: Goldsboro cemetery graves flooded | News & Observer,"s, city, t, people, time",1.491165211,
+165,8582d1713d7a7a36ee31d797bc1f3b8cf8cd00b5,California's massive and deadly Carr wildfire is creating 'firenadoes',"s, saying, n't, states, county",0.322895853,
+166,e4058a625e2405ce38607c1ed58f50b08ab35e8c,Wildfire moves through Redding destroys homes,"s, saying, n't, states, county",1.294880095,
+167,8c539ed5f8b6b494efab1df9ec33341c99b8b3de,Historic Barn Captured On Canvas Hours Before Tornado Knocks It Down | Tri States Public Radio,"s, saying, n't, states, county",1.466421127,
+168,9edc0d3090c51c81cf1884a6858ac861eda8bfd1,Tornado clean up continues on Whitemarsh Island,"s, saying, n't, states, county",1.349000977,
+169,63f4fe5e0f7932ff3073f2c560ea66ab27a2afc2,All hail the time lord – An Irishwoman’s Diary on Christopher Eccleston in ‘Macbeth’,"s, city, t, people, time",0.444751159,
+170,68e692757b00036554cf78ffe1a30da192472858,Tornado doesn't stop Kinzua Bridge from attracting visitors | News | bradfordera.com,"s, city, t, people, time",0.543115993,
+171,aa54312e8d5d441ba42e4ff7e245b29aec333fd7,Why is Ted Bundy Suddenly Everywhere?,"murder, killer, case, s, investigates",0.397396042,Irrelevant
+172,12ae6185927006ee20c13d94a603c414191d78e2,Doctors say accused Seminole Heights serial killer competent to stand trial,"murder, killer, case, s, investigates",2.416096877,Irrelevant
+173,2081374aa000867632797b102ddf6264d97eb64a,Fake Marine who housed serial killer suspect allegedly bilked man,"murder, killer, case, s, investigates",0.278436437,Irrelevant
+174,60652d770803f22d5874ea3a481320d20de4ef49,Dealership gives new car to Noblesville school shooting hero - Local News - 13 WTHR Indianapolis,"s, saying, n't, states, county",1.290945941,
+175,3c0179554bcd70eb674262bfcafe09d016cebff9,String of Scottsdale-area murders: Was this the work of a serial killer?,"murder, killer, case, s, investigates",1.534752074,Irrelevant
+176,e08241a46a489b473eb4ef6c258c4d9011c40bf3,Tornado hits small airport in Brush - KOAA.com | Continuous News | Colorado Springs and Pueblo,"s, saying, n't, states, county",1.45983529,
+177,bdf13ce6528af8e2e44e90ceacfcbe935a117688,Cops to suspected serial killer: 'We know it's you. Can you please tell us why?' - ABC News,"murder, killer, case, s, investigates",0.465668973,Irrelevant
+178,345f1c38fb0ac60a3fce2e1f9c98ad494a37c45a,Joleen Cummings missing: Kessler being investigated as possible serial killer source says | WJAX-TV,"murder, killer, case, s, investigates",0.900739493,Irrelevant
+179,a6aa3500a8e06885a896f4b9b9c073482c77b261,Autopsy may answer whether power outage led to woman’s death,"gmt, edt, july, monday, pm",1.249308298,Irrelevant
+180,a2ba50f697efb0780f03a5da7d5d236b94cee0f6,Dump truck's bed takes out power poles and causes outage,"s, saying, n't, states, county",1.597987037,
+181,ac10664c15ee07e11cddce81c296fc3b58030ac3,Walker trying to win federal aid for island power outage – The Daily Reporter – WI Construction News & Bids,"s, saying, n't, states, county",1.578997034,
+182,d025b64eff79e7a279f706d43556dc910c3fdd2a,"Al Sharpton announces rally in Florida to protest ""stand your ground"" killing of Markeis McGlockton - theGrio","murder, killer, case, s, investigates",0.380794391,Protest
+183,f7e2aa6152b1d400cd4479bf1f044f10f0d65cdd,Inmates Riot for 4 hours in Great Falls Jail No Injuries - Flathead Beacon,"inmates, riot, prison, corrections, lee",1.368290709,Irrelevant
+184,505bf1f1719ac974565375bdfb081cf9d51ccb86,Portland Timbers withdraw protest over USOC defeat to LAFC - U.S. Soccer,"playing, players, sports, football, years",1.134673606,Irrelevant
+185,84d51ee6114de836a04e24449b68db7a480a04d2,Venom Footage Reveals Riot Director Teases Future Spider-Man Fight | Collider,"s, city, t, people, time",0.640939031,
+186,991167206ca0e4aef1c7d955bf5da8f74e4e1dd6,Protest over killing of geese scheduled for Saturday morning - WMBFNews.com Myrtle Beach/Florence SC Weather,"gmt, edt, july, monday, pm",0.428049352,Protest
+187,7d482c3c634e49083751cb9fcae5133329068a8e,Protest planned after moms asked to cover up while breastfeeding at public pool in Mora - Bring Me The News,"s, saying, n't, states, county",1.115271325,
+188,5b8f261d0cef0f02cc179601bc8a90576c9429dd,After WNYC Leonard Lopate’s return to WBAI is met with protest - Columbia Journalism Review,"s, city, t, people, time",0.318389409,
+189,f21bf063d62bed0144744a27aab928611689abe2,Priyanka Chopra ‘Quantico’ Star Apologizes for Show’s Terrorism Plotline - The New York Times,"s, city, t, people, time",2.348425136,
+190,019455349c33a54afc1f594a8086cde862cb3abc,Tense modern-day race relations has roots in American racial terrorism | WBFO,"s, city, t, people, time",0.373355885,
+191,a771b38779ce585e7eae052b5374c50a93dcdec7,Spectre of terrorism upsets a cross-cultural romance in American Stage’s ‘Strait of Gibraltar’,"s, city, t, people, time",0.861180988,
+192,0f4c161435b9da637325173d61dd5f0258ccd458,Global War on Terrorism monument dedicated - News - The Fayetteville Observer - Fayetteville NC,"s, city, t, people, time",1.638928141,
+193,44f59144ff6ef43c24df4adf7b417287cba1ff51,War on terrorism memorial honoring 2 fallen Marines unveiled in Paducah,"s, city, t, people, time",2.277759754,
+194,a36c2f39b21e510c29765cb471fb3343ee912460,Orlando Set to Receive $1.5M From Federal Government to Fight Terrorism,"s, saying, n't, states, county",1.26179907,
+195,067f8b300fcc39e78165ee9b8684b30821390617,Orlando set to receive $1.5M from federal government to fight terrorism - Orlando Sentinel,"s, saying, n't, states, county",0.953258109,
+196,2f31c49d860fcfc3a44225c6627f9327dee41023,Great-grandfather details emotional last phone call before family killed in wildfire,"s, saying, n't, states, county",1.472333969,
+197,63da987929b6de1b8ccb553fbc101a7765b74f67,Short power outage on last night of 50th state fair - Honolulu Hawaii news sports & weather - KITV Channel 4,"playing, players, sports, football, years",1.471447675,Irrelevant
+198,bb292fcf4006302ab7661d6aa65ab6bd29b38b58,'Show up for democracy': Naperville woman to protest every night at Riverwalk until mid-term election - Naperville Sun,"s, city, t, people, time",0.62916527,
+199,a7d2181e39373bb7ae64ea4e1a5abe53aabb6220,Amazon Boycott Unites Workers Gamers Shoppers For Prime Day Protest,"playing, players, sports, football, years",1.08736339,Irrelevant
+200,2c84648ed23cf5cbf8e9a388162f616add5c84e8,Losing her faith: an interview with debut novelist R.O. Kwon - SFChronicle.com,"s, city, t, people, time",1.00816532,
+201,a77be8dcb5e840f08b325702796015e02bfde392,Seeking 'American Justice' Blumenthal Urges Federal Government To Declassify Remaining 9/11 Documents - Hartford Courant,"s, city, t, people, time",1.373995634,
+202,b2aee038dd632fbde0ba657b57ff980f8bc5e8d8,Sacha Baron Cohen Forces Roy Moore to Take a Pedophile Test on 'Who Is America?' | GQ,"s, saying, n't, states, county",1.628804528,
+203,b7a9fedd9d58676c893e32c535bce4271795b008,Ecological terrorism at the Gaza border creates shadows on Israel’s landscape - Arab-Israeli Conflict - Jerusalem Post,"s, saying, n't, states, county",1.273133284,
+204,e8551299853ee501b89b2a50b018fa40626a2ba8,Misogyny; it's a factor in terrorism too | cleveland.com,"s, saying, n't, states, county",1.551939045,
+205,2b9a7497db54fa16224a4014b6f5a3ebbac08442,Paducah Global War on Terrorism Memorial to be Unveiled Monday | WKMS,"s, saying, n't, states, county",1.647961546,
+206,9f4772e705a4695775d3ce062a8b2a830a460291,Orlando just landed $1.5 million in terrorism prevention funds | Blogs,"s, saying, n't, states, county",1.395648484,
+207,937cce2d231a031c821a519b4d8bc00dba424a81,The Latest: Wildfire Burning Northwest of Las Vegas | Nevada News | US News,"s, saying, n't, states, county",1.538914406,
+208,2d8ff0e338742e5b25dd36ac3f01c6c76aab52ee,Guy Fieri Is Feeding The California Wildfire Evacuees And First Responders,"s, saying, n't, states, county",1.402872495,
+209,fe5f322899efd1c5611cf05a168b4686c3ea5efd,Monday's Brief: Manhole Explosion Causes Power Outage Tourists on Social Media Peace Corps Stories NEWNC Meeting - NorthEndWaterfront.com,"s, city, t, people, time",1.015097317,
+210,f0ba2bf0f1fbaa1fcc62fc3f0a4a6ef8b7fd98dc,‘We Don’t Want Your Trash’: Residents Protest General Iron’s Move to Southeast Side | Chicago Tonight | WTTW,"s, saying, n't, states, county",1.024198103,
+211,a966d13418c0463bb70e2720fa75af063e5f4f92,Riz Ahmed is Playing Riot in Venom | ScreenRant,"inmates, riot, prison, corrections, lee",1.326144643,Irrelevant
+212,336f1f4bdfa395abeb593e6fd9270fe4699c79c5,Warm Springs elders protest Kah-Nee-Ta’s closure; Resort requires subsidies,"s, saying, n't, states, county",1.384832605,
+213,245f178daee89f712052f7e54b1d6676be32d169,Sacha Baron Cohen’s next victim: Roy Moore | Jewish Telegraphic Agency,"s, saying, n't, states, county",1.497753145,
+214,6f8b9f33b4d2c0f3199ea239a46dc3b0dca9ac16,Homeland Security: Photography Could be a Sign of Terrorism | TravelPulse,"s, saying, n't, states, county",1.272523476,
+215,4f9b59b91ed88f297c5d630ca261dc559d65a2e2,British Counter-Terrorism Officials Are Investigating Two More Novichok Poisonings,"health, s, study, hospital, patients",1.578546402,Irrelevant
+216,214ad1703220ff32292cffecba10438476691536,Rockefeller Bros Fund gives to groups funding Palestinian terrorism - Arab-Israeli Conflict - Jerusalem Post,"s, city, t, people, time",1.272925514,
+217,004d45a566880b29faaf2dc03ed90b79796e5570,How Robert Kennedy's Assassination Foreshadowed the Rise of Palestinian Terrorism – Tablet Magazine,"s, city, t, people, time",0.891476436,
+218,07b2aebf7c69ddfb83c3e310bd026b29fdc5d222,Gold Star Wife: Global War on Terrorism memorial is a dream come true for families of the fallen | Fox News,"s, city, t, people, time",1.960557241,
+219,5c1c40f3c0b540a00a088619888b9e81baf89c9b,Is The U.S. Fighting Terrorism The Wrong Way? | KJZZ,"s, saying, n't, states, county",1.652996186,
+220,3da486d4d82db9d99ecd8c9d333b570be7a61e5f,At parties Texas leaders tackle terrorism politics and more,"s, city, t, people, time",1.121922303,
+221,12d499126bb0c7e2e5076338888efbaeaa7b5e07,The globalization of threats — from terrorism to disease — is an unavoidable fact | Deseret News,"health, s, study, hospital, patients",0.70307405,Irrelevant
+222,18aa983225427a6b5c63642987904809f49b4ce5,Woman removed from Spirit flight after profanity-laced tirade - ABC News,"s, saying, n't, states, county",1.562175133,
+223,c6f1d3ffa41a92d172e4460521527d146f7918e7,'Make America Great Again' hats could double in price after new US tariffs: Merchandiser - ABC News,"s, saying, n't, states, county",1.692221458,
+224,b779ac0d567dd5ff9d2763d74e84c5dbd50994b7,Chicago could soon test universal basic income program | Fox News,"health, s, study, hospital, patients",1.135210763,Irrelevant
+225,43792fa6bd227922d26e28fbba19fb6cbee7469c,Potential CRISPR damage has been 'seriously underestimated' study finds,"health, s, study, hospital, patients",1.18374211,Irrelevant
+226,71afdc4d1cc3aa1be96061e5ed9b0f877d3d1014,Pruitt bars AP CNN from EPA summit on contaminants guards push reporter out of building,"health, s, study, hospital, patients",1.212745359,Irrelevant
+227,74cbbe1f7e29e8c83cb3cbc01368cf95af3f236e,Adopted woman searches for her long-lost sister only to learn she's living next door - ABC News,"s, saying, n't, states, county",1.813055489,
+228,502e9f2d6be2838c32ecfd5374121c511806578f,A Poet Laureate Sends News From the End of Life - The New York Times,"s, city, t, people, time",0.982099259,
+229,e5e74300f76a8f6ce902a43b04463f46400a4a79,Treasury Secretary Mnuchin requested government jet for European honeymoon - ABC News,"s, saying, n't, states, county",1.349869662,
+230,45aa7532f5a23faface019d2bfd9a2031a5c65c6,Protester arrested after climbing base of Statue of Liberty - ABC News,"s, saying, n't, states, county",1.652657879,
+231,c7406b272b6922337cb29d3268683d19e9f60c2c,Fox News Gay Voices Are Welcome Conservative Allies | National Review,"s, city, t, people, time",1.646188074,
+232,cb008d1f2a8b2dd0473cefc6a554ad00f8eace77,Tennessee college student defends her gun-toting 'graduation' photo - ABC News,"s, saying, n't, states, county",1.406478064,
+233,b3348f8d82ec24e8379fddfdc6e228d66d1179c0,Local - KPLC 7 News Lake Charles Louisiana,"gmt, edt, july, monday, pm",0.852435212,Irrelevant
+234,d99c4aed81368fd942aa67dd3b2435cf9b2d3aa5,Evangelist Billy Graham dies at 99 - ABC News,"s, city, t, people, time",0.205290411,
+235,f3dbe73fb3e7e4f8d7ab12390aa6923fcb6a9dc8,FIU bridge collapse: At least 4 killed after pedestrian bridge at Florida college collapses - ABC News,"s, saying, n't, states, county",1.476392396,
+236,1ccbbc2ff853ee210015df5b355a7b0da95f2cbd,Foreign cartels embrace home-grown marijuana in pot-legal states,"s, saying, n't, states, county",0.64137791,
+237,ce6c34ceab6e683233a49a47a1d841751ba0858c,Heartland News coverage for Missouri Illinois and Kentucky - KFVS12 News & Weather Cape Girardeau Carbondale Poplar Bluff,"gmt, edt, july, monday, pm",1.215062482,Irrelevant
+238,08d1ca6b30942111f92c1630130a57ba1f6b78de,8 stars who vanished from the public eye | Fox News,"s, city, t, people, time",0.90587743,
+239,251e240855d36f05bd9d259b95681000ca319b69,Controversial 'flipped' Ford GT supercar is for sale again | Fox News,"playing, players, sports, football, years",1.448859375,Irrelevant
+240,816f3954151b8adb7a2aaf002ea486c7b41bc7ac,Self-driving cars for country roads | MIT News,"s, saying, n't, states, county",1.167690129,
+241,dbb53e53a0c96067e24ccd6d584adedb7d319e16,Bride-to-be claims Medina photographer fat shamed her and fiance in engagement photos - News 5 Cleveland,"s, saying, n't, states, county",1.044485437,
+242,3afa1f25937fc34aeb68db86c743e44261158d89,Grizzly attacks cobra in Alaska. Shelby Cobra that is | Fox News,"s, saying, n't, states, county",1.181412453,
+243,963d8a746a10425646d5fa8f12bb853a54ca1cd5,Brock Turner wanted 'outercourse' not intercourse lawyer argues,"murder, killer, case, s, investigates",1.066663078,Irrelevant
+244,4fa8e28ff85e5fa65ee78a22b9a42a7c93bebec9,WYFF News 4 at 11pm,"s, saying, n't, states, county",1.745539226,
+245,00b8702d9d02e52978d4bcd1599ad2a3812fc17c,Bull Street back open after gas leak cleared - WTOC-TV: Savannah Beaufort SC News Weather & Sports,"gmt, edt, july, monday, pm",1.115905438,Irrelevant
+246,4f7bab178d9b64034e35b347c5b48be37501bd20,Eight people injured in natural gas explosion in NW Portland - KPTV - FOX 12,"gmt, edt, july, monday, pm",0.741052484,Explosion
+247,51c28a3b463788b69eb5cc16333f02bc3dbfd397,Gas leak in NE Portland homes evacuated - KPTV - FOX 12,"gmt, edt, july, monday, pm",0.50835486,GasLeak
+248,d4a14fa871c83b04f593e3dcbb7bbdf7e625716d,Gas leak from water heater likely killed American family in Mexico official says - ABC News,"s, saying, n't, states, county",1.697707419,
+249,a540274ef06903a435b452de57efac4a3e062e8f,Massive California Gas Leak Forces Thousands From Their Homes,"s, saying, n't, states, county",1.77607519,
+250,4db078c565695889b2e4fdd19e1cf726675fd493,Hundreds of New Illnesses Reported After Gas Leak Sealed,"s, saying, n't, states, county",1.776087941,
+251,ceab55bf0f98c6c25108a2beea7d25bd0192db4b,Gas leak at Burnsville bus garage delays school starts – Twin Cities,"s, saying, n't, states, county",0.712954421,
+252,82f92c69631cb7235662969445280b764df74320,Gas leak in downtown Aurora closes City Hall; City Council meeting moved - Aurora Beacon-News,"s, city, t, people, time",1.739324143,
+253,cfbd71db1a7a8d4b2518f67f7528b0fce2d4945b,1 dead 1 hurt in suspected natural-gas explosion at Phoenix home,"s, saying, n't, states, county",1.758987849,
+254,827f9d8d1fe9f54597c50215b184083517dbe52f,Timeline: Porter Ranch Gas Leak | KCET,"s, saying, n't, states, county",1.732570455,
+255,6113230971bab22d0e5dfcd1d55366531234d15c,Gas leak causes early voting location to shut down - WMC Action News 5 - Memphis Tennessee,"s, saying, n't, states, county",1.676204396,
+256,4468fa8e1b7596bfc6f01358e7aa305c46222917,Road reopens following gas leak - KATC.com | Continuous News Coverage | Acadiana-Lafayette,"gmt, edt, july, monday, pm",0.869160051,Irrelevant
+257,7fb5f537d50a7e49f9512be9ed8c2207107e174a,Watch Michigan candidates discuss Line 5 pipeline in new documentary | The Scene,"s, saying, n't, states, county",1.438224383,
+258,9eb041ad22eb6ef087d19ff0b354d14926cd400b,Pascagoula now broke used BP money to balance budget | The Sun Herald,"s, city, t, people, time",0.809878663,
+259,0baef317782f135fc2727b1467e07d421c79d0a8,Harrison County Republican Women’s Meeting,"s, city, t, people, time",1.991256089,
+260,30805c5c51bff427c1fa5d5995d73a7ef3e318e9,On ‘Queen Sugar’ a refugee family gets to be more,"s, city, t, people, time",0.505011677,
+261,a3bf6e9d4d7a83d6c96b14914498db718821fa89,Florida attorney general,"s, saying, n't, states, county",0.704588217,
+262,b607ff0276fc3c643d0a4579f69ae400b3c04043,Rep. Martha Roby: How to meet the demands of our growing workforce - Yellowhammer News | Yellowhammer News,"s, city, t, people, time",0.693245686,
+263,545a4a7e8a98a39be87cb3792cca369655f9877f,What Does Haiti Have to Show for $13 Billion in Earthquake Aid?,"s, saying, n't, states, county",0.429326564,
+264,bf4e45b8dc6bbf11dae8e9307eebc0c36e484f30,Earthquake Tsunami Monsoon - What's Next For Honda? Locusts?,"s, saying, n't, states, county",1.533940944,
+265,45ae2cfbac1669e6832ddc9d34a175848b689a54,SpaceX Falcon 9 rocket satellite destroyed in explosion,"s, saying, n't, states, county",1.060549536,
+266,83e52182afda50ef295f3e7612911fb0b9168b71,Orbital Sciences' Antares Rocket Explosion in Pictures,"s, saying, n't, states, county",1.720201315,
+267,d926c1283eea6c427acba3eb57fb56c996f422ed,SpaceX Explains September Explosion Says It'll Try Again Sunday,"s, saying, n't, states, county",1.613796567,
+268,aff5e2658f52c203b3ab72381a40a8eb74a38c0d,Surveillance video shows Soulard boiler explosion - KMOV.com,"gmt, edt, july, monday, pm",1.256654337,Irrelevant
+269,e02a820716db59fc642b2f76f668f8119da465a3,Historic settlement for victims of Philly food truck explosion : Courts & Law : WHYY,"s, saying, n't, states, county",1.227496393,
+270,98c586758c0f7bbb2a1e47520438c3f884ad022f,UPDATE: No Injuries Reported In Explosion At Valero Refinery In Texas City – Houston Public Media,"s, saying, n't, states, county",1.605652414,
+271,43e67b9ac5ea7bf035781f82497716ae2c815e32,Explosion in East Boston caused by man playing with chemicals,"s, saying, n't, states, county",1.561104664,
+272,5a8641eb6ff8a10e7e1344b96ef5a3be2be777a8,Southwest passenger dies after being partially sucked out of window | World news | The Guardian,"s, saying, n't, states, county",0.784872505,
+273,861ac74699c4a65dff045d1a9ff9e3f7ba5b6759,The 'Downwinders' From Atomic Testing Get Deserved Attention : NPR,"s, saying, n't, states, county",1.482421135,
+274,616e7e492acfdcd82470a71ee0bc62a985d54b6f,Bahamas Boat Explosion Survivor Speaks About His Loss Recovery - NewsChannel 5 Nashville,"s, saying, n't, states, county",1.28085307,
+275,57bf128893f795ec364deef580db4925ebd4d920,National Guardsman's heroism in Ellicott City flood recalled as 'the most Eddie thing ever' - Baltimore Sun,"s, city, t, people, time",0.756507492,
+276,df3a33d4a13337010351a6528a173ab59922ef16,'Eddie strong': Maryland National Guardsman killed in Ellicott City flood remembered for his service and smile - Baltimore Sun,"s, city, t, people, time",0.301728666,
+277,f5bedf5939ca40dae153a9b47ae5085a68bfdb4b,7 Years After BP Oil Spill Oyster Farming Takes Hold In South : The Salt : NPR,"murder, killer, case, s, investigates",0.94468205,Irrelevant
+278,f293f538278378981578ecfa7d979e690d869b2d,Environmental Contamination in Romania | YaleGlobal Online,"s, saying, n't, states, county",1.004745367,
+279,dc1ab4e5a32bcf52ca44d5caa42b1c8bc381ef5e,Two Years Later Haitian Earthquake Death Toll in Dispute - Columbia Journalism Review,"health, s, study, hospital, patients",0.198578411,Irrelevant
+280,a1b39e15a6a08202f9368e5beabdc240d817e8e9,Review Finds ‘Tsunami’ of Fixed Matches in Lower Levels of Tennis - The New York Times,"playing, players, sports, football, years",1.001736544,Irrelevant
+281,5dbab06862d82ad24aec3b38c08c33495d8df72e,SpaceX Launches Rocket Its First Since Explosion on Launchpad - The New York Times,"s, saying, n't, states, county",1.02467794,
+282,a9f4907956d82f596b363db4b40b76089cdef3a9,FBI: IED caused explosion at Bloomington mosque | kare11.com,"s, saying, n't, states, county",1.433583633,
+283,00e62337c1d3e91bdecb263c6a336fe6fd98067f,Corroded steel caused 'catastrophic failure' leading to tank explosion that killed 4 near Soulard | Metro | stltoday.com,"s, saying, n't, states, county",1.230248327,
+284,e2385e5908eb9395f03c2398d0067271d120c8e7,California Today: Highway 1 Reopens a Year After the Mud Creek Landslide - The New York Times,"s, city, t, people, time",0.877021936,
+285,5a72acd2cfe0bffd05d4d67f821be26f0a94ac6a,As Cracks Widen In Washington State Government Prepares For A Landslide : NPR,"s, saying, n't, states, county",0.942152876,
+286,f678574fd2af6954c9d82a53aa0492cddeed8012,Family loses home of 35 years due to landslide in Duquesne Heights,"s, saying, n't, states, county",1.383896738,
+287,2588ee30cf2ec0edb4b9346c4c673253c1c1165e,Some residents below slow-moving landslide near Yakima won’t evacuate as crack widens officials say | The Seattle Times,"s, saying, n't, states, county",0.891104099,
+288,38c783aa90696ea288b5743e6e5b4209baabb533,Dozens Swept Away in Myanmar Landslide While Hunting for Jade - The New York Times,"s, city, t, people, time",0.612901523,
+289,bf9b57d19ef2a1466713aba444a6e6dfe48319f9,Flash flood watch canceled but threat of heavy rain remains - Hawaii News Now - KGMB and KHNL,"gmt, edt, july, monday, pm",1.367646871,Irrelevant
+290,641d820ce7e39e596b2c98a787ca0a15b8cf4e19,Residents Evacuated For Rattlesnake Ridge Landslide Can Go Back Home | NW News Network,"s, saying, n't, states, county",1.203876857,
+291,f1a3aaccbf5213550951d7b626bf7989449c459b,Column: Guest Commentary (7/30/18) | Spencer Daily Reporter,"s, city, t, people, time",0.754449368,
+292,3eab8bd7a23704a7bb7f46f2362f29e9fb025916,Mark Blazis: Birders say Plum Island turning into a prune - News - telegram.com - Worcester MA,"s, city, t, people, time",0.765905082,
+293,ac1b8b8d3111175c484dce16a80faaa9f936b9bd,Florida Man Hit By Car Doing “In My Feelings” Challenge | The Latest Hip-Hop News Music and Media | Hip-Hop Wired,"s, saying, n't, states, county",1.565140472,
+294,7511f084e1c64a4f02ca77feb56abda6737ae5ae,Fifth Texas package explosion reported outside of San Antonio | The Texas Tribune,"s, saying, n't, states, county",1.103927608,
+295,b8c41a3d93181456445c6f39d44111cff895cf82,An Argentine submarine went missing nine days ago - The Washington Post,"s, saying, n't, states, county",0.997355396,
+296,4be7aaa21569b27457e0588bcbd87a200039321a,2 men die from injuries in Redstone Arsenal explosion - WAFF-TV: News Weather and Sports for Huntsville AL,"gmt, edt, july, monday, pm",1.880532415,Explosion
+297,2e9aa33e77cd144aa0d710cfbd71750016d9f542,Natural gas pipeline explosion rocks rural Kansas - CBS News,"s, saying, n't, states, county",1.594045167,
+298,0c662917d5ebdf01718af0027bade9778967bcf5,1 Injured in Chicago Propane Tank Explosion Fire | Time,"s, saying, n't, states, county",1.608146654,
+299,cf36899a7d572ae789342afc3552250c8f1dd5bb,Havasu Falls near Grand Canyon flash flooding forces hiker evacuations,"s, saying, n't, states, county",1.859932869,
+300,2bdf2790f67d8af9d191dd51217f5fb679fc5b9a,Hawaii flood: Here's what travelers should know before visiting Kauai,"s, saying, n't, states, county",1.190638748,
+301,0a49ac54e2b8025545eaf2b04ad01c8043c672e1,Slow-moving landslide near Yakima has residents on high alert | KOMO,"s, saying, n't, states, county",1.260972958,
+302,110a19ab84118164e0dc68dfcf99e1cd49bb0ad9,Second group reaches $11.5 million Oso landslide settlement | KOMO,"s, saying, n't, states, county",1.480602784,
+303,ded8b63a6632f8f865b38b41bfad1ba773b221ac,Landslide danger at Rattlesnake Ridge in Yakima County causes evacuations | KIRO-TV,"s, saying, n't, states, county",0.943738849,
+304,8f982321439bfabbdb00ae29ade2a97132c5a65d,Get ready for more rain: Flash flood watch issued for state - Hawaii News Now - KGMB and KHNL,"gmt, edt, july, monday, pm",1.40316964,Flood
+305,ac791fcc436aa149a7881cde52d2dd4eb2f31962,California's Famed Highway 1 Reopens 15 Months After Landslide,"s, saying, n't, states, county",1.35671038,
+306,1956d28908081fc9f7d9bc0b1974928c6b1eefe9,'We Were All In There Together': Strangers Share Compassion In The Flood Of '93 : NPR,"inmates, riot, prison, corrections, lee",0.804642486,Irrelevant
+307,99b991476570a6841f424d3b403867a66c36717f,MILLVALE LANDSLIDE: Homes in danger of collapsing after landslide to be demolished | WPXI,"s, saying, n't, states, county",1.550630454,
+308,d7ac7613fb6be01c44064fcddaf9c5692557ad6d,Rattlesnake Ridge still moving but landslide predictions have stopped | Free Article | yakimaherald.com,"s, saying, n't, states, county",0.650121155,
+309,2466e59df09590108ef9248adebc05224777f1bf,The London Beer Flood - HISTORY,"s, city, t, people, time",1.408844936,
+310,c89f62412b0b24b806afaab353b90c96873efbb2,Lance Canales & the Flood makes Music on the Green debut | Sierra Star,"s, saying, n't, states, county",1.560945315,
+311,8877a2f0ad6e2128ff4748e07d83dca16c96d87f,Flood committee chairman says RISE investigation winding down | State Journal News | wvnews.com,"s, city, t, people, time",0.682484803,
+312,a6da8ba86b40bd5c6e88a9a29117bd007a5f4af7,Accused gunman in Annapolis newsroom shootings pleads not guilty - AOL News,"playing, players, sports, football, years",1.93181279,Irrelevant
+313,4e7cc8d0879c0523fd72f067d43856d986dd59a8,Alaska Airlines: Gay couple separated seats given to straight couple - CBS News,"s, saying, n't, states, county",1.617870573,
+314,88e8db0c9ed1edd24e51caa0dde27901841f4283,San Pablo Bay quake rattles East Bay S.F. residents – The Mercury News,"s, saying, n't, states, county",1.68473597,
+315,55f15ce5af97b7bb79323c274702db2075a58e24,States seek to block instructions for making plastic guns,"s, saying, n't, states, county",1.038811927,
+316,f1716d27328bd1d7464b82f07f9be06b11dfc587,Columbus Chipotle closes after reports of customers getting sick - News - The Columbus Dispatch - Columbus OH,"s, saying, n't, states, county",1.20113915,
+317,87f5795a94a3818f7a75c1c438685b69859d811c,A medical mystery reveals the dangers of eating raw centipedes | Science News,"health, s, study, hospital, patients",1.452611283,Irrelevant
+318,75c7e0fae6f9c2cd3c78155bc247302a267caa4b,'Stranger Things' won't return for new season until 2019 | Fox News,"s, city, t, people, time",2.070062778,
+319,733a1a39e62711ded60cb7f99e1f35b8ed417e03,Busy Young Bucks news day as LAX match added to Jericho cruise - Cageside Seats,"s, city, t, people, time",2.684487803,
+320,c11c41757d05bf805a62050bdb020a9488e8d9d1,Newport News PD: You ‘can’t touch’ our lip sync video! | WTKR.com,"s, city, t, people, time",1.606414304,
+321,780af3502293efaedd4fcd51d509be9175d63845,Homeless man photographed handing out resumes lands job offers - AOL News,"s, saying, n't, states, county",1.048467815,
+322,d60051c01dae40e94e9661943634343c60bc3b8c,Utah's favorite Tom Cruise movie is ... | Deseret News,"s, city, t, people, time",2.271585872,
+323,1279a236a51c90b84803852bdc5b2dd9804ee07d,How do you get hookworms? Teen's infection raises questions - CBS News,"health, s, study, hospital, patients",1.902251355,Irrelevant
+324,186c21541146e29e7df760509264da1973593071,Late summer travel means bargains abound - Trending & Viral News - 13 WTHR Indianapolis,"s, saying, n't, states, county",1.482467486,
+325,08d7b36f0c115cc4a80c1df01fcf4a9a0b49e77b,Ancient Roundworms Allegedly Resurrected From Russian Permafrost | Smart News | Smithsonian,"health, s, study, hospital, patients",0.936302161,Irrelevant
+326,6dc5640aaa058e2df78075ef3442302f0a5fbb05,Nick Jonas Steps Out After Priyanka Chopra Engagement News,"s, city, t, people, time",1.371814593,
+327,586300af629f19007d540a7952c96070269c3f0a,Art Industry News: A Talented Prankster Replaced Donald Trump's Presidential Portrait With a Painting of Putin + Other Stories,"s, city, t, people, time",0.941299809,
+328,207bab213910c4e2a0dee3c12ae98100513dd459,Royals Rumblings - News for July 30 2018 - Royals Review,"playing, players, sports, football, years",1.507640492,Irrelevant
+329,c4391d08075a33369946ac8a11d9548bb47ff632,Car incinerated when charging fidget spinner caught fire: Authorities - ABC News,"s, saying, n't, states, county",1.564466219,
+330,ae38f0a92959afcd22d675729d848bcd189c2b1d,U.S. firms seeking Trump's steel tariff waiver face backlash - CBS News,"s, saying, n't, states, county",1.633830824,
+331,6e0876f8b8b94440f7e6870c5f7639dd90856a14,Big Whiskey News: All New Jack Daniel's Hits Shelves Worldwide,"s, saying, n't, states, county",1.324387135,
+332,45fca29def00801c75e84eb6356bfb6ebd94259f,Arsenal Transfer News: Gunners Rumoured in Two-Horse Race to Sign Steven Nzonzi | Bleacher Report | Latest News Videos and Highlights,"playing, players, sports, football, years",1.015277486,Irrelevant
+333,3b4b8a07a77f76ae6c6affa9b8162691afa141af,"Brian Christopher Lawler former WWE star known as ""Grandmaster Sexay"" dead at age 46 - CBS News","playing, players, sports, football, years",1.283036477,Irrelevant
+334,2475930ebfcae3e5d0bf89d78bae518c495180a4,GoLocalProv | GoLocal Adds Five — Expands News Coverage GoLocal LIVE and Commentary,"s, saying, n't, states, county",0.800815316,
+335,8a1bdfa9581e528cac75d861802ccf37f93f7444,Clean Eatz opens new location today | Local News | scnow.com,"s, saying, n't, states, county",1.525605153,
+336,a5b821cf090bbd15ab1acef93ea89d11edb793e9,Families of Buffalo homicide victims celebrate life at picnic – The Buffalo News,"s, city, t, people, time",1.141126369,
+337,9ea576c868937364a2bf93efd85849c90a1c974b,Chelsea Transfer News: Blues Consider Sales of Willian Thibaut Courtois to Real | Bleacher Report | Latest News Videos and Highlights,"playing, players, sports, football, years",1.457528243,Irrelevant
+338,d51a1e52dd0064147358ca22af1b65455ad0d5ff,'Mission: Impossible — Fallout' cruises to No. 1 at the box office,"playing, players, sports, football, years",1.859523574,Irrelevant
+339,bdcec90fd9d80e262cd5699558942057cb8a618f,Carnival pitch for Riley Plaza brings 1970 ban to forefront | Local News | salemnews.com,"s, city, t, people, time",0.747586079,
+340,f7553b3642ac2eedb88497d12561d121a9dfdf80,Paris Hilton Clarifies Her Lindsay Lohan Pathological Liar Comment | E! News,"playing, players, sports, football, years",1.26831375,Irrelevant
+341,1d5c2f1d39c9972828d14cf016fc18ef8dc9dd6f,Netflix focused on building faith and family-based shows exec says | Fox News,"s, city, t, people, time",1.871798346,
+342,ef09a35df3f0a6052f4c353550bec600e5a64798,Computer creativity: When AI turns its gaze to art - CBS News,"s, saying, n't, states, county",0.994089674,
+343,71976b51d9f24fe7ffec89dbe68058677d110cc0,Lawsuit asks: Where is the ginger in ginger ale? – The Buffalo News,"s, saying, n't, states, county",1.369439055,
+344,dd34fb61820b5467753444522bfe9b8b1d9bd1b4,35000 fill LoveLoud's second annual festival to support LGBT youth | Deseret News,"s, city, t, people, time",1.220755113,
+345,ef8d230e9da6b05be10457a484df93abd0307941,R.I. dispensaries begin selling to out-of-state customers - News - providencejournal.com - Providence RI,"health, s, study, hospital, patients",0.834593371,Irrelevant
+346,c61334dcb8ad11eb982bd1588959712c9ed8e5d0,Can a pharmacist legally deny a patient a prescription? It depends.,"health, s, study, hospital, patients",1.704659225,Irrelevant
+347,47699a17136c7f4d1d66ce546b272170ab95c81d,Legionnaires' disease bacteria found at Jacobi Medical Center: officials - NY Daily News,"health, s, study, hospital, patients",1.600669401,Irrelevant
+348,f0ac13a7446cc34c6addd05ce50c7cdfdbd72088,Police change 71-year-old woman's tire help escort her home - News 5 Cleveland,"s, saying, n't, states, county",1.443306409,
+349,1261d2a0ddfe06b2c66fee0c9e2675dc231e6951,California Students Flocking to Universities in Arizona | California News | US News,"s, saying, n't, states, county",1.79523863,
+350,cff5131550938d0dbd9e1d5ffdd47d306a5b8bf4,Brady walks out of news conference when questioned about trainer,"playing, players, sports, football, years",1.094454979,Irrelevant
+351,0661ce1949b5ed055232a005f6a0b28f62224970,The gang just as vicious as MS-13 but without the notoriety: Savage Trinitarios return to the spotlight after years in the shadows | Fox News,"murder, killer, case, s, investigates",0.93912983,Irrelevant
+352,f029dc863cbcf18d21af3ecc856ade18720ef71a,5 Amazon obscure settings you should change now | Fox News,"s, saying, n't, states, county",1.459731669,
+353,87c451154632171f8ad968c93f4c06b3d367e5dd,Cardinal Theodore McCarrick resigns from College of Cardinals amid sexual abuse scandal,"murder, killer, case, s, investigates",1.972625818,Irrelevant
+354,5ebff61a53bc1234719c6cc7ccde3be7b3ef829c,12 News searches for owner of 1941 Binghamton North class ring - WBNG.com: Binghamton-area News Weather Sports,"s, saying, n't, states, county",1.603766297,
+355,9bc3eb41e12bdf60e50e0037189354abfedce6d0,News site in hot water over racially charged email - News - The St. Augustine Record - St. Augustine FL,"s, saying, n't, states, county",1.463477181,
+356,208749c9dc6094b073fbbdeec7db8227972b94fd,City report on Confederate monuments raises idea of renaming Austin,"s, city, t, people, time",1.483921081,
+357,aaee3c94c3b73417503d491737dde312f4324b53,Gas leak forced residents to evacuate neighborhood in Calvert Ci - KFVS12 News & Weather Cape Girardeau Carbondale Poplar Bluff,"gmt, edt, july, monday, pm",0.06627845,GasLeak
+358,c9ad3468d90ee34b13de9dc2a88459d56b507ab0,Local Law Enforcement Responds To Series Of Thefts Gas Leak | KPCW,"s, saying, n't, states, county",1.185013104,
+359,1fbc5268c5e8dda2def0846cf53834701efb3c87,Fitness studio destroyed in Sun Prairie gas explosion reopens in - WKOW 27: Madison WI Breaking News Weather and Sports,"s, saying, n't, states, county",0.782119874,
+360,0e19352dec3f2be5ce3d18410a19c1992fb17524,Utility pole down natural gas leak in Gulfport - WXXV 25,"s, saying, n't, states, county",1.662022843,
+361,dbadd295de500cc993b3c612a18c94b038debd03,Gas Leak Prompts Evacuation of Store Motel in Pierre | South Dakota News | US News,"s, saying, n't, states, county",1.508599611,
+362,82cc2bd0e1373050805c5b34004753b0aeec4b78,The foundation of Jose Mourinho's frustrations at Man Utd | Football News | Sky Sports,"playing, players, sports, football, years",1.869319242,Irrelevant
+363,8d07e2bf51b04376db40bb7ae9024f39f25911b4,Lights camera action? Pay up to the Forest Service | Deseret News,"s, saying, n't, states, county",1.516660689,
+364,143baed0992ea37a55cc74a86d103d75b4ca0220,Former FEMA executive investigated for sexual misconduct - AOL News,"s, saying, n't, states, county",1.517863053,
+365,a573230a66fc00cdee0734c9e0b6fbdbda66f06c,Is it safe for breastfeeding moms to drink alcohol? - CBS News,"health, s, study, hospital, patients",1.406599585,Irrelevant
+366,cdf065f3d55de4192f6e96b30706b68d4fb85e0b,11 things to know in Houston food: Openings closings Shepherd news - CultureMap Houston,"s, city, t, people, time",0.995064974,
+367,87ac30f4514fd1133bb7bf01d18e725ccfae7b5a,Chelsea Transfer News: Willian Plays Down Barcelona Manchester United Rumours | Bleacher Report | Latest News Videos and Highlights,"playing, players, sports, football, years",1.239830323,Irrelevant
+368,7f1b12980df93d166c4990ea416a71e0f0582f6b,How to take advantage of Cleveland's Burger Week - News 5 Cleveland,"s, city, t, people, time",2.575774024,
+369,e758916c942a55ca59a64420fe6c6aa49e45362d,FEMA official being investigated for sexual misconduct - CBS News,"s, saying, n't, states, county",1.078893017,
+370,4d1bc80f596f4b5e96a856f31b7558c07e3c4404,Nancy Cox delays return to WLEX TV news after back surgery | Lexington Herald Leader,"s, city, t, people, time",0.907059758,
+371,dff1c5f81dcb0bf0e1027c77649a93c8cd19df7e,Canada Dry sued over lack of ginger in ginger ale - CBS News,"s, saying, n't, states, county",1.680443089,
+372,f4b82066722c5f149faa089f20089ba769163d72,Roundup: News for Japanese cocktail and bagel fans plus news for Gastonia Davidson | Charlotte Observer,"s, city, t, people, time",1.164123781,
+373,977292dd1d6480c0d766b8a920b8df0c01d64ec5,WWE News: Huge debut announced for this week's SmackDown Live,"playing, players, sports, football, years",1.785806351,Irrelevant
+374,9a6a5dbf8cf2ae38fb49cd74d3eae113df339d72,New Orleans' TV news slugfest continues in July ratings period | NOLA.com,"playing, players, sports, football, years",1.171480672,Irrelevant
+375,b0e233053d35100c0a7d36d5aeb9cbdbf1297234,Foot odor causes emergency landing on Spirit Airlines flight - AOL News,"s, saying, n't, states, county",1.583067537,
+376,61e47d74de271be108bb9ff0bb010b2410b0b55e,Man citing obscure law wins $8.8 million from wife's boyfriend - CBS News,"s, saying, n't, states, county",1.537374745,
+377,9f0b39a9270b55172d5ca3914be7ba5ea547c8d1,Brian Christopher Lawler: WWE star 'Grandmaster Sexy' found dead - News 5 Cleveland,"playing, players, sports, football, years",1.115082831,Irrelevant
+378,b257cd0853756bfac7e38858e139f1c5e492835a,"Animal lovers decry ""pet leasing"" contracts - CBS News","s, saying, n't, states, county",1.602950708,
+379,9c87fbfadff493d29e570719d879ae8efcdd9ba3,This tick may play a part in heart disease | Science News,"health, s, study, hospital, patients",1.340434776,Irrelevant
+380,6fd2d7221813006535db5edb356328508ed48441,Braves News: Chipper gets the call - Talking Chop,"s, city, t, people, time",2.273444814,
+381,836baa8e38fc3b7475be266173afa15ecfdda704,Main Street makeover makes navigating Williamsville even gnarlier – The Buffalo News,"s, saying, n't, states, county",0.961534317,
+382,76c9561eed90e492c4928bea7dec253ce3782bd8,America's black radicals – a timeline in pictures | US news | The Guardian,"s, saying, n't, states, county",1.593040812,
+383,e7202d2c8c106e006883b47a8e712277ed6e3937,Rep. John Lewis civil right icon released from hospital following scare - ABC News,"s, saying, n't, states, county",1.223165613,
+384,3c59a6a3c358909f158e5088559d37e48b3de1cc,'Golden Girls' facts that may surprise even the biggest fans - ABC News,"playing, players, sports, football, years",1.192479194,Irrelevant
+385,bc24585f1afec93a1825e55f1b5cb07e3ef59d92,Valley News - Two Injured After Plane Crashes in Conn. River Near Haverhill,"s, saying, n't, states, county",1.259206899,
+386,b2d7806c14daff99cbbb6e2735adf0aaa7574ffb,Fire breaks out in Van Nuys apartment building – Daily News,"s, saying, n't, states, county",1.5242654,
+387,dacc9812159468a9119571ab27b3125a5fbe0dc3,Natick shows 'strength' at vigil for Julia Harmon - News - MetroWest Daily News Framingham MA - Framingham MA,"s, saying, n't, states, county",1.041678234,
+388,e863761c0f9a390cb67af5f4523323eafbd1b83f,Klamath Falls man attacks three people with hammer | Local News | heraldandnews.com,"s, saying, n't, states, county",1.667324839,
+389,183744282e41b61650788e05efa511e82eacfe94,Inside al Qaeda: Living and working with terrorists - CBS News,"s, saying, n't, states, county",0.728628984,
+390,72393b7bb7606e768fc1dfa6f0ac22a70d295b48,Google Doodle honors civil rights activist María Rebecca Latigo de Hernández - CNET,"s, saying, n't, states, county",1.66385388,
+391,bbbae8087011e55705f1b00a2b848a8166850292,Endometriosis drug approved by the FDA to reduce pain,"health, s, study, hospital, patients",1.964249369,Irrelevant
+392,75ba6bb75ceb045f99d43bc8c2954b8b5fd784c9,Fox News Reporter Britt McHenry bashes Dolphins QB Ryan Tannehill - The Phinsider,"playing, players, sports, football, years",1.038653183,Irrelevant
+393,9ee4ed126899cbe5e101ba80c0fc3be30ce7364c,Chicago's gun violence is intolerable -- Trump should provide help | Fox News,"murder, killer, case, s, investigates",1.769923537,Irrelevant
+394,f2fbabeb891b6c2b43112c76c0227391df0f2dff,5th District Court News | Southern Idaho Crime and Courts | magicvalley.com,"s, saying, n't, states, county",1.452278364,
+395,7c0ad0fdd4deb0118002e151edf3d1b19b31ca9c,McNeil Island costly solution for state’s worst sex offenders | The News Tribune,"health, s, study, hospital, patients",0.304661945,Irrelevant
+396,d268d5a115ef9e699eba3dfe3a25e9f264e60e7f,Weekend Rumblings - News for July 28 2018 - Royals Review,"playing, players, sports, football, years",1.581431182,Irrelevant
+397,dac18e8fc51f79d641bfc87eafb9ad99f891f41c,VIP News: What's the latest with 4-star CB Jeffery Carter,"s, saying, n't, states, county",1.767739424,
+398,ac2d3f170e30d0441c6928e385c8e79c68cdae08,Lackawanna County seals time capsule; Cummings calls newspaper 'fake news' - News - The Times-Tribune,"s, city, t, people, time",1.000702008,
+399,be112c85cf42aeb6df64f0f17960e36c458a34b5,Jilted husband awarded $8.8M after suing wife's lover | Fox News,"s, saying, n't, states, county",1.720160084,
+400,a0188db4fca1f1dccc4a604f194bf6ad6ea6d45b,Man enters Jacksonville store and chases people with live alligator | firstcoastnews.com,"s, saying, n't, states, county",1.069162658,
+401,f80fc77755fb90066a4495e66aa63aa08184bf4c,Usually rainy Southwest Washington is now in severe drought | The News Tribune,"s, saying, n't, states, county",1.428855189,
+402,09bc94b6bf337c99e909d4342964b91e4ec5a709,DeRozan wants leadership role with Spurs - San Antonio Express-News,"playing, players, sports, football, years",1.144106808,Irrelevant
+403,5646d4db97b23769878ee7417588185c746925e6,SR 261 Oak Grove Rd. back open after gas leak - Tri-State News Weather & Sports,"gmt, edt, july, monday, pm",0.657812707,Irrelevant
+404,351e9df8f8a7b75dcbbc14a54bf1479a64e08d14,Cary couple concerned about gas leak in apartment | abc11.com,"s, saying, n't, states, county",1.394728524,
+405,3eb1158fb13d4859eacfeea06b829d17821530ba,Gas leak forces evacuations in Lipsey Addition | WCMessenger.com,"s, saying, n't, states, county",1.538501434,
+406,3de62baa2803642e59d825a4f584ab02798869af,Gas leak prompts evacuation at Harker Heights Sam's Club - KXXV Central Texas News Now,"gmt, edt, july, monday, pm",0.506193201,GasLeak
+407,66927ca7f35af9acc8e2e25d1717ed5d9e45708d,New law could punish offending party in gas explosion - The Star: News,"s, saying, n't, states, county",1.578994572,
+408,34ab280fc6c972c442fad03c3921338df629ad54,UPDATE: Gas leak under control in east Lawton road back open - KSWO 7News | Breaking News Weather and Sports,"gmt, edt, july, monday, pm",0.496019557,Irrelevant
+409,01dd24801e5e440920ac7e4083fc29543307ac60,LPC sends Morris Adjmi's proposal for East Village gas explosion site back to the drawing board | 6sqft,"s, saying, n't, states, county",1.390992665,
+410,a7fc63571024d08aff00fc8716ec4a695af9bd83,Nebraska woman gets 'shotski' back from Kenny Chesney after it survived hurricane | Music | omaha.com,"s, city, t, people, time",0.54493957,
+411,8e5c04f93c963730b2878791fa98488657688a7f,Dee Crosby former WCIV news anchor passes away | WCIV,"s, saying, n't, states, county",1.626824856,
+412,78c56ea87a8d9e883e992a69f515e6817894a84e,Research: Solar flares disrupted radio communications during September 2017 Atlantic hurricanes — | Tunis Daily News,"health, s, study, hospital, patients",1.006027939,Irrelevant
+413,0a7d3e05c1686bb3ecd14c11ddc36252964e53b5,Big crowd enjoys Oswego's Beats & Eats festival | Kendall County Record,"s, saying, n't, states, county",1.536561134,
+414,c27a706192a03f3646ccfdf90fb513ee6d3625a8,Plan ahead for bumps during hurricane season | Travel | postbulletin.com,"s, saying, n't, states, county",0.328020084,
+415,39db773566d65c70fb9684070da1d32b3b72620f,Blind carpenter makes his crafts from wood from Hurricane Harvey - KZTV10.com | Continuous News Coverage | Corpus Christi,"gmt, edt, july, monday, pm",1.872919506,Irrelevant
+416,cbc7cab2f38ad4a9d40f5af92c2276305ac8f2e1,Tyler TenBrink part of 'III%' group promised 'Hurricane Spencer' at Richard Spencer's Gainesville appearance | Southern Poverty Law Center,"s, city, t, people, time",1.021685577,
+417,180f454b52943af44db785e8eb5e67d7f32156a8,More than a half million dollars paid for incomplete hurricane repairs,"s, city, t, people, time",0.910213334,
+418,113deecff0ffc10ce70b1786045694b08ebaf6c7,A.G. says Norristown man scammed Hurricane Sandy victims - Philly,"s, saying, n't, states, county",1.489596094,
+419,e1b6b3a8b264f40998f94296536eee050bbb3fe2,Aid worker took bribes from Hurricane Sandy victims AG says | NJ.com,"s, saying, n't, states, county",1.533135081,
+420,8c8d6d2ca57281871ea3eecc0654dd6ac8f6d594,See Trailer for RZA-Directed Post-Hurricane Katrina Heist Film ‘Cut Throat City’ – Rolling Stone,"s, city, t, people, time",1.854328499,
+421,6d6e498de3af572a6c7ded5872d9ce8fbd3fc4d6,On 100th birthday Hurricane man recalls participation in World War II | Life | wvgazettemail.com,"s, city, t, people, time",0.438752783,
+422,039f7a2f608c316b6fa9787dad92b738852a12ca,Long after hurricane unearthed bodies remain unidentified - ABC News,"s, city, t, people, time",1.328225195,
+423,511eec93843f03b93d4345b0e521ef5d50f538f3,Abandoned America: An amusement park devastated by Hurricane Katrina,"s, saying, n't, states, county",1.670793789,
+424,0a959a920b309a02c2952b58e9bb6fc9cf7bd3fd,Helping families get ready for the next hurricane,"s, saying, n't, states, county",1.360506785,
+425,8016999f0100181aac51ddb4c3dcac8749a06ab7,Tropical Storm Chris expected to become a hurricane,"s, saying, n't, states, county",0.92320621,
+426,2a09565632a3f9cd50e75c1957498069f2fec9f3,KC-135 Stratotankers Damaged as Tropical Storm Maria Hits Guam | Military.com,"s, saying, n't, states, county",1.589654466,
+427,61499de5fa1a6e12e8e14f9cdda44ee90fa22c61,Thousands of families displaced by Hurricane Maria are living in hotels. The FEMA program that pays for that is about to end,"s, saying, n't, states, county",1.20877146,
+428,c3bb0f3c301e64e9ebcdfce4a83c8af9a913da87,Family blames Brooklyn apartment complex power outage for mother's death | abc7ny.com,"s, saying, n't, states, county",1.139069723,
+429,dcab95d46b5413b8703432b613b674d25f401b38,911 | St. Mark’s greenbelt rescue overnight power outage hits swath of Hill | CHS Capitol Hill Seattle,"s, saying, n't, states, county",1.64920201,
+430,f08b6e84f7477fef371c294627b25cf0371e2316,Santee Cooper customers experiencing power outage - WMBFNews.com Myrtle Beach/Florence SC Weather,"gmt, edt, july, monday, pm",3.674321358,PowerOutage
+431,9fb57e18cf7f1e404a098db2d756b249592a6d60,Maryvale Residents Endure Power Outage In 116 Degree Heat | KJZZ,"s, saying, n't, states, county",1.79911052,
+432,784165f25dda7bddebb6ecbc38c4baf33e02ce0c,Powerline down sparks small fire large power outage in Spokane - Spokane North Idaho News & Weather KHQ.com,"gmt, edt, july, monday, pm",1.597809673,PowerOutage
+433,96c5b67a9fd6d47efdbf52d9d560dc46295eebb7,Hurricane Harvey: The Devastation and What Comes Next - The New York Times,"s, saying, n't, states, county",1.347302757,
+434,6f9a33d76c432d1bd8e35e78d18014769d064ccb,Solar flares disrupted radio communications during September 2017 Atlantic hurricanes -- ScienceDaily,"health, s, study, hospital, patients",1.305153311,Irrelevant
+435,a445e5a3a530ce76affef8486ea14ceff52ba04c,Latest power outage numbers in Delaware Valley for PECO PPL PSE&G Delmarva Power Atlantic City Electric customers | 6abc.com,"s, saying, n't, states, county",1.795084433,
+436,b198ba5f0d33e0595c18c3f52cd13af3b8b5453c,MTA’s Power Outage Fib Is Just the Tip of the Iceberg | Village Voice,"s, city, t, people, time",1.176299835,
+437,743925d6e353cb975fab9f1f9b773562480e7b79,Here’s how to keep food safe during a power outage - The Boston Globe,"s, city, t, people, time",1.193191499,
+438,9abc2e0d1576ea22f0f317ef8cbd27fae5b2f82a,5-year-old boy's lemonade stand raises $6000 for firefighters - WBRC FOX6 News - Birmingham AL,"gmt, edt, july, monday, pm",1.05537906,Irrelevant
+439,6bafb51d20d541b4f5dc4e4f74f256cd6487b28d,Utility blames power outage on squirrel nibbling wires,"playing, players, sports, football, years",1.635831278,Irrelevant
+440,72742b1997d150299c166143fc10040b91a37c89,Large power outage reported from Gladewater to White Oak - KLTV.com - Tyler Longview Jacksonville |ETX News,"gmt, edt, july, monday, pm",0.553186805,PowerOutage
+441,e95d3c1ccce267d9dce954f96f60ad34f2c6c027,Power outage at Fayette County jail led to issues for inmates | WREG.com,"inmates, riot, prison, corrections, lee",1.200455742,Irrelevant
+442,1d8e67bf2e22eab53fb3dcc1d29aa60399ed8c04,"South Carolina prison riot was ""all about territory"" officials say - CBS News","inmates, riot, prison, corrections, lee",1.180214861,Irrelevant
+443,e16fd0dbbff2eac6bac1f69de914b26a3f872d5a,Freed Pussy Riot members say prison was time of 'endless humiliations' | World news | The Guardian,"inmates, riot, prison, corrections, lee",1.091165874,Irrelevant
+444,116dba5761576481e003ef3a3f0eacfb354e400f,Uber Drivers in New York City Protest Fare Cuts - The New York Times,"s, city, t, people, time",1.494385164,
+445,3bdbbe3d7a55a6117808a1bfee16b822d4202dcd,Shailene Woodley: I Was Arrested Fighting Dakota Pipeline | Time,"s, city, t, people, time",0.661868296,
+446,d28ffb8a713e3309cd030908ce1c3ac5e95d78bf,LDS Church responds to man engaged in hunger strike to protest bishop's interviews | Deseret News,"s, city, t, people, time",2.40832176,
+447,7a2d1b12e2f400e3b474010e81b44eeb81a4eab3,Riot Fest in Douglas Park brings noise crowds traffic: Move it elsewhere in Chicago,"s, city, t, people, time",0.327637788,
+448,e3b973e88d2c1ee46891464060ee111aad479771,Bombs in Austin look a lot like terrorism and they require us to be Texas Tough | Editorials | Dallas News,"s, saying, n't, states, county",1.134805341,
+449,d42319a33be61fb5529a362bf5abebfd8ef13afd,The FBI Accused Him of Terrorism. He Couldn't Tie His Shoes.,"murder, killer, case, s, investigates",0.326094346,Irrelevant
+450,63ce15b99b793e7406c36a12940a947d57bdfcec,A Witness to Terrorism in Charlottesville | The New Yorker,"s, city, t, people, time",0.313883856,
+451,577617fb7de892fda481fb88ca272b9b57d679f6,Terrorism no longer the military's top priority Mattis says - CBS News,"s, saying, n't, states, county",1.662172586,
+452,26efa6668c283293c045626945a3c9bdfb4861cd,How Anti-Terrorism Design Can Also Make Cities More Livable | FiveThirtyEight,"s, city, t, people, time",1.077914294,
+453,07f5721a1bfce1f68052ad9781f8a4c75294967b,Terrorism That’s Personal - The New York Times,"s, city, t, people, time",1.13521017,
+454,03f6cb803f9c0bd6d5bca95f9356e28d5ed39d82,Why Google search suggests “Muslims support terrorism” — Quartz,"s, city, t, people, time",2.559502787,
+455,072fa970293b70685ab57253a457bc0f48c1db4a,'Terrorism' Flyer Targeting Sikh Mayoral Candidate Being Investigated as Possible Bias Crime,"s, city, t, people, time",1.156546482,
+456,34df760ae3fde29995bc1fdda94d36a11717ddc8,Classifying Attacks: Mental Illness Or Terrorism? : NPR,"health, s, study, hospital, patients",1.686827992,Irrelevant
+457,b21021ef9dd0d0daba195dbe69c2db218b25fce0,California Air Force base attack being treated as an act of terrorism - NY Daily News,"s, saying, n't, states, county",1.707237926,
+458,9d2c12f76f5ef3dc59e087537af3642bfba16050,Standing Together Against Terrorism: That’s How the Light Gets In — FBI,"s, city, t, people, time",0.109538117,
+459,c7c0d5e2bad3845f1477a4641f8dab50a81c440b,At Bloomington mosque Dayton calls blast an 'act of terrorism' - StarTribune.com,"s, city, t, people, time",0.840822426,
+460,dfabf3a4e108a0eaaecd69a8415f8eb73080e0e0,Refugees and Terrorism or Refugees and Lost Opportunity? - The New York Times,"s, city, t, people, time",0.254000336,
+461,b60653bb13fe366e4ff82040348f173440d378a5,Education alone doesn’t prevent terrorism. Here’s what else you need. - The Washington Post,"health, s, study, hospital, patients",1.259788354,Irrelevant
+462,2a16c159ff5c5a736c429c3f64a8c64d30627d51,Defense rests in Boston terrorism trial,"s, saying, n't, states, county",1.488466985,
+463,d7ccfe7e436d75027fbd4afc54e3aec5e100ca41,When Smoke From Wildfires Dirties Indoor Air Who Should Pay To Purify It? : Shots - Health News : NPR,"health, s, study, hospital, patients",1.26596965,Irrelevant
+464,fa5897c4674edd3150cdf9a017674dc94607b84d,Smoke From Western Wildfires Can Make It Hard To Breathe : Shots - Health News : NPR,"health, s, study, hospital, patients",1.185767113,Irrelevant
+465,511499a3e9844e8b1d1c4ab83afde2d358271104,Amid The Horrors Of Wildfire A Tale Of Survival And Singed Whiskers : The Two-Way : NPR,"s, saying, n't, states, county",0.751490354,
+466,9161674faef24fa240aa955ad5ad78f9b3cb815b,Official: Water complaints could be 'act of terrorism',"s, saying, n't, states, county",1.214813847,
+467,7a834b8f51df0b463203c2c3411ae965249349f7,How Terrorism Impacts Starbucks Pizza Fashion Gun Sales | Money,"s, city, t, people, time",1.343226256,
+468,a38f8d51e5c3546659b099843405c3273f9f5eaf,Lessons for first responders on the front lines of terrorism,"health, s, study, hospital, patients",0.527773114,Irrelevant
+469,e582651f9c41a64ebb1fa1093a454dbe4b5a663c,Wappingers man secretly recorded nude subjects sentenced to prison,"murder, killer, case, s, investigates",1.407679139,Irrelevant
+470,1b53ad4e97e7cbead3677834bad0670fcbb0b611,How Southern California’s homeless people are faring in the heat wave – Daily News,"s, city, t, people, time",1.112706463,
+471,98ccf53cd49e46445f009129df435029b053f6fb,California fires: Sudden firestorm forces deadly stampede at Bonsall training center - The San Diego Union-Tribune,"s, saying, n't, states, county",1.565127862,
+472,24e031b05a36df7b93d994cb5c55f8ed43700dbb,Don't Fly Your Drone Near a Wildfire - The Atlantic,"s, saying, n't, states, county",1.129805251,
+473,bebc5f823b07b30cb04c31e6998991b7bd5be718,Great-grandfather details emotional last phone call before family killed in wildfire,"s, saying, n't, states, county",1.462213129,
+474,5fdd78e0524c81c690903b15fe3f9dbebacb77d6,State issues report on flaws in Sonoma County wildfire alerts,"s, saying, n't, states, county",0.437347883,
+475,80be24dd4d26f6c739e6a6205e7d59501552d5b5,Forensic Search Dogs Sniff Out Human Ashes In Wildfire Wreckage : NPR,"s, saying, n't, states, county",1.605399935,
+476,5e0d6e329979357a6fb8ed5f34341fbdec3b31d2,California's Getty museum survives wildfire ready for quakes | Reuters,"s, saying, n't, states, county",1.313442751,
+477,9be2159785ffe0441f929f0c312a1466e0f1676b,Concert to Benefit Bastrop Wildfire Victims - NBC 5 Dallas-Fort Worth,"s, saying, n't, states, county",1.729336614,
+478,785d39d21688fc2fea7dfb6b45d2b0e0d7eb18a6,Retired Marine rescues horses from raging California wildfire | Reuters,"s, saying, n't, states, county",1.204603856,
+479,a318d7c5106c9ed4ee66837a7b610b8ddb06b42b,White Nationalists Salute the President-Elect: 'Hail Trump!' - The Atlantic,"s, saying, n't, states, county",1.656877457,
+480,8e7c14d04d58bf73ff48ea98fe87e5191189edf1,The Coen Brothers’ Marvellous “Hail Caesar!” | The New Yorker,"s, city, t, people, time",1.485303303,
+481,87d14e1c9c310c7b2f655cccfed269576cec874e,Hail Storm Damages Airplane Nose and Windshield | PEOPLE.com,"s, saying, n't, states, county",1.572674801,
+482,3c594d063b219b1e10b5d8d8898ccbf004c8da1b,After Tornado Families In New Orleans Begin Rebuilding Once Again : NPR,"s, saying, n't, states, county",0.892742858,
+483,8f0d032d381f5d05f33a31d1b087de0b6fd56d13,Storm chaser writes his own obituary wants ashes shot into tornado,"s, saying, n't, states, county",1.614973693,
+484,e5d25a242390d8310d5f1167964fdece517dd7e3,Infant among 3 injured in trailer home during tornado-warned storm | WBMA,"s, saying, n't, states, county",1.446352079,
+485,709a70acbdf9d837ec40a67dadb9c62b09740bb9,VIDEO: Tornado touches down near Marana - KVOA | KVOA.com | Tucson Arizona,"gmt, edt, july, monday, pm",1.230541936,LocalHazard
+486,738358414bacc59d320a79e399b6f87e526103c4,Florida school shooting suspect wants to give inheritance to vic - KPTV - FOX 12,"murder, killer, case, s, investigates",1.395113883,Irrelevant
+487,5293ab44bbd524a3e52e6f546fcd7c1aa28c5d9a,Jesse Osborne accused Townville school shooter heads to adult court,"s, saying, n't, states, county",1.715467496,
+488,3d3c142cf86eeb15bc8d1103482998b6e41577e0,Girl who witnessed Townville school shooting gets letter from President Trump,"s, city, t, people, time",1.669677306,
+489,23b8d82371a8e96010461ee37e32137c6f2569b2,Possible motive revealed in Madison High School shooting,"murder, killer, case, s, investigates",1.6997998,Irrelevant
+490,fab3856b7de073a636a19e4aa64cb5332c25ba5b,Parkland Florida School Shooting Comfort Dogs from Lutheran Church Charities K-9s | PEOPLE.com,"s, saying, n't, states, county",1.403454959,
+491,ea2bbc28a1681c369f8ad1fed60550b25f93ad89,Mental competency hearing postponed for alleged Seminole Heights serial killer | wtsp.com,"murder, killer, case, s, investigates",2.069259895,Irrelevant
+492,5514e64c33cb5326e10770fe2715be95198c4af4,OSHA Investigating Industrial Accident in South Lake Tahoe | kkoh-am,"s, saying, n't, states, county",1.548624917,
+493,dc87fc68b11ffe1ddb3d201821b6d0669d3fd8ef,Coast Guard responding to oil spill - KATC.com | Continuous News Coverage | Acadiana-Lafayette,"s, saying, n't, states, county",1.715589603,
+494,23bbb124f8b0d099ec56134de38110cad242760e,After Earthquake Climbers Seek Safer Ground | | oleantimesherald.com,"s, saying, n't, states, county",1.66607318,
+495,06537eb0b83b7e130372354eaa1ea0334f21b550,Fifth earthquake in three days detected near Arnold | KHGI,"playing, players, sports, football, years",2.093646472,Irrelevant
+496,ea9fdda0ede76aa66ff2b12bc3802c208bcceba3,California Today: Making Earthquake Safety More Intelligible - The New York Times,"s, city, t, people, time",0.830767127,
+497,c6e0b9b6bac1cefefbeea872f5f7362f0f9242e0,Small earthquake strikes Southampton Township,"s, saying, n't, states, county",1.534393525,
+498,cfc7b97fa27f6a236af08ec6b411e4ea8ba2db31,NYC Steam Pipe Explosion-What Do You Need to Know? | GlobeSt.com,"s, saying, n't, states, county",1.335544527,
+499,b06bb1ea3bacd7b4b6711750631482cc8c572af1,An explosion as lava meets the sea sends rocks flying into the a - Hawaii News Now - KGMB and KHNL,"gmt, edt, july, monday, pm",3.398454724,Explosion
+500,4f5ef143360a12cd4f72885dc5ebd14167de5da4,Fate of Rockland man who allegedly talked about school shooting rests with doctors - Portland Press Herald,"health, s, study, hospital, patients",0.635370159,Irrelevant
+501,caa57fd8e6232f98beca1c6c3a38b75820184d3a,Russia’s Nuclear Tsunami Apocalypse Torpedo is Named 'Poseidon',"s, saying, n't, states, county",1.524776592,
+502,3b30846d4763f327f64ffcda28f50b21bfc86678,Planning ahead: Kingsley trains with C-130s for earthquake event | News | heraldandnews.com,"s, saying, n't, states, county",1.190028672,
+503,da64743a1f9eb5668d861dcc5b3dd99b8569595f,Sam Zell's Real Estate Outlook: 'A Tsunami Of Supply' | Seeking Alpha,"s, saying, n't, states, county",1.414940142,
+504,922e16d64b1305e963475993d326dff94abcb97a,3.0 earthquake jostles Sonoma County,"s, saying, n't, states, county",1.524077497,
+505,86c98ce56f433214e5c82ba847a2b4a2d1abedeb,13-year-old Washington girl injured by plastic bottle explosion,"s, saying, n't, states, county",1.605935047,
+506,8e5f3fd61e8f43d97dcd74fe629e5b3aef91decc,Why Canada’s striped bass explosion isn’t a concern on the Penobscot — Outdoors — Bangor Daily News — BDN Maine,"s, saying, n't, states, county",1.027206572,
+507,89430ae6b43c8acadcd7801659ee01ec8969a1d0,FACT CHECK: Was a New Jersey Couple Killed in an Explosion 'Set to Testify' Against Hillary Clinton?,"s, saying, n't, states, county",1.207680327,
+508,13da38880e8ae16c29b0607f29da6eabe07135fb,Former TSU grad killed in Bahamas boat explosion remembered | WTVC,"s, saying, n't, states, county",1.516608747,
+509,74250762a56802d01d0b45d60e8f9f4e2ba6864f,Authorities level bevy of charges on East Boston man hurt in explosion | Boston Herald,"s, saying, n't, states, county",1.836017539,
+510,9b7d7d5aebe51453c2075b2807f69334b907c493,What a meth: Cartels flood Ohio to urge switch from heroin to ice,"health, s, study, hospital, patients",0.917400069,Irrelevant
+511,014e8682660a0ff05b03b8d6c90de89d631d36a3,West Wilmette flood control plan needs park district cooperation village says - Wilmette Life,"s, saying, n't, states, county",1.513630807,
+512,17cff8b06f56c2d38624824474310dcd9045d982,Ohio State wrestlers describe abuse by Dr. Strauss in wrenching video,"health, s, study, hospital, patients",1.690283537,Irrelevant
+513,c2a305eb6ee6a59773a4bfbbe324b39c530eef5a,Plane crew comes to rescue of dog with oxygen mask for flight - ABC News,"s, saying, n't, states, county",1.430495292,
+514,0fa48560f88b3218dd6325aa189508586477a4b1,Sound waves reveal diamond cache deep in Earth’s interior | MIT News,"health, s, study, hospital, patients",1.309350472,Irrelevant
+515,1bf1f4a245c8f8c5f5c31589172318511ba6a072,The News IQ Quiz | Pew Research Center,"playing, players, sports, football, years",1.529563237,Irrelevant
+516,8919561179d1be2482979b51930bc8ad8ba20004,Can jerky affect mental illness? Study suggests it can,"health, s, study, hospital, patients",1.229323571,Irrelevant
+517,29592b3c01b94c1a516ae020a70cbf20ffbdccce,Longest total lunar eclipse of 21st century wows star-gazers around the world for over 100 minutes - ABC News,"s, saying, n't, states, county",1.710194407,
+518,ad049c14b2b39ccd6d7c802e2250266188b919aa,Proposed ‘buddy dive’ plan to rescue boys trapped in Thai cave could launch this weekend: EXCLUSIVE - ABC News,"s, saying, n't, states, county",0.538372344,
+519,ff3827ba9e1baf78d28725c10d61280abe60a9d9,Bowey visits Winnipeg birthplace with Stanley Cup | NHL.com,"s, city, t, people, time",2.059481101,
+520,5ca6857707abd43265821991aaaa046f168d2019,Doctor suspended for berating basketball player suffering from anxiety attack - ABC News,"health, s, study, hospital, patients",1.314926851,Irrelevant
+521,19123e04fa8c51158f719dca58f721819b0bf75d,Oklahoma mother offers to be stand-in parent at gay weddings,"s, city, t, people, time",1.672559087,
+522,12792fa6bbfc995a4f19fae5f5e8b277bb98de08,Iowans search for 20-year-old student who went missing while jogging - ABC News,"s, saying, n't, states, county",1.557210015,
+523,318ee22072bcf18494be1bc9ccc9541ff5ae6125,Putting Your Life Back Together After A School Shooting : NPR,"s, saying, n't, states, county",0.740057269,
+524,078a1327209496f9aa88e50c1bee9832392d3347,Serial killer? Cops think several cold cases will be solved in 1 spot,"murder, killer, case, s, investigates",1.789610235,Irrelevant
+525,bcf84cebb9f1da88e9b9035ac37337712deac8fa,Use of DNA in serial killer probe sparks privacy concerns,"murder, killer, case, s, investigates",0.872729003,Irrelevant
+526,f3a76023bd8a0b66295634bb7b617deac0b7bd27,Potential serial killer targeting homeless people in Las Vegas,"murder, killer, case, s, investigates",0.936083308,Irrelevant
+527,ec88e286bcb6dddce37f47ff03544fea2ac6dfeb,Suspected serial killer Arthur Ream wants an apology,"murder, killer, case, s, investigates",0.173353539,Irrelevant
+528,8fdca1e3a8944815d51da29458db329963621e37,James Cameron’s Oil-Spill Brainstorming Session: “It Was Time to Sound the Horn” | Vanity Fair,"s, city, t, people, time",1.091254611,
+529,8b90e64e60c8773cf6579d8e59b913c152dadd97,Fishermen Flout Ban In Gulf Despite Oil Spill : NPR,"s, saying, n't, states, county",1.536336858,
+530,1d27564f912026e950138c250469d2def49bfdfd,Alabama taps its oil-spill fund to close Medicaid gap,"health, s, study, hospital, patients",1.023594627,Irrelevant
+531,add6ae33d030f49bddedd1cd684e7ae6bb89e148,The Largest Harvey-Related Gasoline Spill Went Unknown for Weeks – Texas Monthly,"s, saying, n't, states, county",1.708227332,
+532,6e9cc10a9d8ea39f7d158d2311a2bf49f7316b0b,"Police: Viral Facebook post about ""Mill Creek"" serial killer is - Cincinnati News Weather Sports from FOX19 NOW-WXIX","gmt, edt, july, monday, pm",1.111089139,Irrelevant
+533,4d2d6928d888ff0367c8266b814a088736db4692,Bad Henry: Charlotte serial killer profiled in true crime show | wcnc.com,"murder, killer, case, s, investigates",0.631920639,Irrelevant
+534,97c3a8bff635e3d57e90b4effa431aa7e863ce68,Alleged Australian serial killer denies 3 slayings in 1990s,"murder, killer, case, s, investigates",1.582050825,Irrelevant
+535,a20fa771b114ac316cb47bb3429e58205772b1b5,Piers Morgan on 'Serial Killer' Interviews: 'I Had to Control Myself Not to Punch Them',"murder, killer, case, s, investigates",0.584163763,Irrelevant
+536,3f33c33a1241c46cc34375a68806deef38ca4376,Serial killer Henry Louis Wallace in ‘Bad Henry’ | News & Observer,"murder, killer, case, s, investigates",2.353677188,Irrelevant
+537,46a78dc28e5d055f36bdb64227c8e963924cf7f2,NC serial killer Henry Louis Wallace documentary | News & Observer,"murder, killer, case, s, investigates",1.492485404,Irrelevant
+538,d009776897efb873890ce408f90d07b97468886c,Large fight caused fear of active shooter at Myrtle Beach - NBC12 - WWBT - Richmond VA News On Your Side,"gmt, edt, july, monday, pm",0.471619821,Irrelevant
+539,0e944f4d8d914179bcbc62249eff4423a957e661,Sheriff: Suicide note serial killer book jacket at murder suspect's home | News | Palo Alto Online |,"murder, killer, case, s, investigates",1.37553854,Irrelevant
+540,2c1d1898756392f8016e048bd639dadd916ebc52,TV series to recount tale of infamous Indiana serial killer,"murder, killer, case, s, investigates",1.721375782,Irrelevant
+541,9704f758f9ba68e6d5e3076b3ee380d675708fb3,Monday’s letters: College instructors need classes in active shooter training,"s, saying, n't, states, county",1.525199244,
+542,803f0bafa97c610cde0f860dee2dd2c68f820c1e,Alleged serial killer from Michigan may have served victim's remains at BBQ | MLive.com,"murder, killer, case, s, investigates",2.253467598,Irrelevant
+543,631221d7505d80f3052cec410f94eb49d28499ef,Alleged serial killer tied to Michigan may have killed 9 served lover's remains at BBQ - Story | WJBK,"murder, killer, case, s, investigates",0.476985582,Irrelevant
+544,e2d8ce3cc54ebfea815abb90ffcfd0a10349c89d,Active shooter at Tumwater Walmart shot killed after carjacking police say | The Olympian,"s, saying, n't, states, county",1.358653479,
+545,d72b41a1a8298f7bad6f2d98e50f6dd721465568,Active Shooter | The New Yorker,"s, city, t, people, time",0.203508504,
+546,442350fbe6586886a03a978308633a1d283b522f,Active shooter drill takes place at Paramount Pictures Studio | abc7.com,"s, saying, n't, states, county",1.605663682,
+547,4885fe8df8a74b8778e8227e0c531f02f10b5ef5,Mom searching for doctor who can help immunocompromised son after oil spill | KOKH,"s, saying, n't, states, county",1.622612413,
+548,e336f4436b1f942e7c87a792812c714177d97a67,NW OKC Homeowners Concerned About Clean Up After Oil Spill - News9.com - Oklahoma City OK - News Weather Video and Sports |,"s, saying, n't, states, county",1.090056827,
+549,e257179b97505d1662c56b50dbe64dccc5eac935,Chadux expands oil spill response hubs -The Cordova Times,"s, saying, n't, states, county",1.742005594,
+550,a101eb7433fd461fbde4fa66339d9c483bb819c1,Oil spill on I-680 causes major traffic delays for early commute - SFChronicle.com,"s, saying, n't, states, county",1.709922823,
+551,ad7aff7423651b117b78f48c13d4846d7c96cfd4,Hydraulic oil spill expected to impact traffic in Decorah - KWWL - Eastern Iowa Breaking News Weather Closings,"gmt, edt, july, monday, pm",0.955535441,ChemicalSpill
+552,801884fcc3bfbd7d610a6a308ff0c2a8c3ca354e,Coroner Identifies Nampa Man Killed in Industrial Accident | Idaho News | US News,"s, saying, n't, states, county",1.702269188,
+553,b22f911dcdb2c83ade14531315d68b2d317dbcc9,Omaha native safe after getting trapped on Indonesian mountain following earthquake,"s, saying, n't, states, county",1.602203813,
+554,f249e7f7833e5b4c1a92c0dee0efabe36afd35b1,Earthquake info : M5.3 earthquake on Sun 29 Jul 22:10:25 UTC / Volcanic Eruption - 5km WSW of Volcano Hawaii - 8 experience reports / VolcanoDiscovery,"s, saying, n't, states, county",1.769174014,
+555,f5bb4dbdba1fe8444381ec1d7d8c0a00d11945ee,Post-Earthquake Prototype – Rural Dwelling / AL BORDE + El Sindicato Arquitectura | ArchDaily,"s, saying, n't, states, county",1.546045432,
+556,bfbef9253eab5de9fbbe3b01f81682e83756afc9,3.5 magnitude earthquake shakes residents near Tahoe City,"s, city, t, people, time",2.409893538,
+557,e02671f5977848dacd31a960fa064d60149737de,California wine may be linked to Fukushima earthquake radioactivity,"s, saying, n't, states, county",1.541044335,
+558,a9e7934745484d065f98a6de45a3f9e80fc50778,Mexico Earthquake: Frida the Hero Military Dog Honored With Statue for Rescues | Inside Edition,"s, saying, n't, states, county",1.493404496,
+559,09151f1b1b50ab13dd21558136b1d2c522eed2ce,Awash in a tsunami of trivia - Washington Times,"s, city, t, people, time",0.966536378,
+560,50da16384a482a0da90651c816e58561486388c9,One Letterkenny employee has succumbed to explosion injuries | Free Announcements | shipnc.com,"s, saying, n't, states, county",1.542709541,
+561,d3c38f6cd39d21645246742e2dfcc472cd7532c2,Explosion fire at plant rock South Akron; no injuries reported,"s, saying, n't, states, county",1.640668167,
+562,1d71828ab966588c4af1b821c08782b4d1c17795,Fixing a flood-damaged Tesla Model S ... how hard could it be? | Autoweek,"s, saying, n't, states, county",1.274702217,
+563,bf3811832474e9ff6d5c16a916958c1489787710,Cooperstown Column: Jones Guerrero fans flood Hall of Fame - Sports - Uticaod - Utica NY,"playing, players, sports, football, years",1.171841265,Irrelevant
+564,45f450b07e9ab4cb2ab702088fa1c5c8ceee8716,Community Fights Flood for Fair | WNEP.com,"s, saying, n't, states, county",1.109243894,
+565,4c84cf8dacde91d244f6f1473ead57bddefd2967,Earthquake Reveals 12th-Century Temple Hidden Within Aztec Pyramid | Smart News | Smithsonian,"s, city, t, people, time",1.620129678,
+566,cad4adeda9a0ad90009f42984d51642126b0465d,What if this outage had been an earthquake? | An Alternative View | Diana Diamond | Palo Alto Online |,"s, city, t, people, time",0.919287804,
+567,4808af240c53b74ba00cdafe7b418c58ea253811,Sammamish Utility first to install earthquake early warning technology | KIRO-TV,"s, saying, n't, states, county",1.564128908,
+568,4bf598196f57b7424715b78fa0b5c89dcbc33551,San Francisco building that survived historic 1906 earthquake catches fire,"s, saying, n't, states, county",1.582382118,
+569,f30433f278f11c1743209131112711c2c2116d37,No tsunami threat to Hawaii after strong quake near New Zealand - Hawaii News Now - KGMB and KHNL,"gmt, edt, july, monday, pm",1.63274758,Irrelevant
+570,5480d11434fc79dd99a2a83631b80e0fd4e20429,AI Will Thrash the Economy Like a ‘Tsunami’ Allstate CEO Says | Fortune,"s, saying, n't, states, county",1.653723307,
+571,8314076ec579a098ff7cb82f1b350bffa3046ec6,Juneau Empire report finds state tsunami response system has critical flaws,"s, saying, n't, states, county",1.576057809,
+572,b45cd8c1110f825e255d7a144152cae441d99d41,Report finds 5K MV homes at risk of collapse in an earthquake | News | Mountain View Online |,"health, s, study, hospital, patients",0.830971713,Irrelevant
+573,f2933d76ddab6129d879442de1257c13a216c45f,Surfing the 'silver tsunami' | News | aikenstandard.com,"s, city, t, people, time",0.913277716,
+574,40e0e24a56b2c8799334c3ae5bf2aa4935b40d38,Opinion | Earthquake Risk in San Francisco - The New York Times,"s, saying, n't, states, county",1.556484967,
+575,dd372f544b364efd297fbe769a039bd5ffe29126,Artificial 'earthquake' in Mexico City during World Cup | The Kansas City Star,"s, city, t, people, time",2.169216584,
+576,c36e4714e824298c084e18a717dd5d2c3265190c,Fact or fiction: Did Mexico's soccer fans cause earthquake when winning goal was scored? - Baltimore Sun,"s, city, t, people, time",2.24220417,
+577,8d24662dd3f50f9f854cb321d23e9da9664d83cc,Did Mexico’s Revelry in World Cup Win Over Germany Cause an Earthquake? - The New York Times,"s, city, t, people, time",1.387482599,
+578,267ae00df232de66c562fa3f23962cfa9dacccf7,Mexico's World Cup goal celebrations was so strong they caused earthquake,"s, city, t, people, time",2.55088872,
+579,255fa5fc3a3f58f99759409435ccb5afc2693eea,Histories & Mysteries: Pittsburgh’s hidden tunnel and an Aliquippa explosion - News - The Times - Beaver PA,"s, saying, n't, states, county",0.627688283,
+580,2d46bf83317328858337454ccc682dd62a354894,ADM reports second quarter earnings of $566 million | Local | herald-review.com,"playing, players, sports, football, years",1.599953662,Irrelevant
+581,7571c17eb28765462fd4a35ce290023c6c5af3a9,Sawkill Fire Department Kingston NY Firefighter Battery Explosion,"s, saying, n't, states, county",1.630480127,
+582,953f227a19b058687d58424e195e85fa5e08afdd,Justice recognizes woman who helped family before vehicle explosion - Dominion Post,"s, saying, n't, states, county",1.526315723,
+583,203ec6c724de883476a1e6d9faf4e9abcf6829f9,USGS: Possible Outcomes at K?lauea Caldera | Big Island Now,"s, saying, n't, states, county",1.360113853,
+584,77dfeb7150de33dad79ec28ca87497ea61ecfc1c,Texas A&M football recruiting: Jeffery Carter's explosion at corner makes him a deterrent to offenses,"playing, players, sports, football, years",0.870632552,Irrelevant
+585,f20681c999d2840ef4db651f6265a1f2b0741355,LDWF investigating early morning boat explosion on Calcasieu Riv - KPLC 7 News Lake Charles Louisiana,"gmt, edt, july, monday, pm",1.988515612,Irrelevant
+586,b9354ac97a3aa4bfaeb88a49d3a219b301f44aef,Madison man sentenced to life in prison for wife’s death explosion,"murder, killer, case, s, investigates",1.677367469,Irrelevant
+587,a8faa47cc82053e1f4a3683f35577613199a60cf,Broken Bat Brewery reopens after steam pipe explosion,"s, saying, n't, states, county",1.514072762,
+588,fee99e1419571b58b8cd0386552b2038d9bef91a,Lochridge-Priest provides update about victims of hospital explosion | kcentv.com,"s, saying, n't, states, county",1.059337921,
+589,ce6ba4187133f7ebeb8c383ed574c78617c13278,Gatesville explosion victim becomes organ donor - KXXV Central Texas News Now,"gmt, edt, july, monday, pm",0.730523441,Irrelevant
+590,32c1fceb45e9c91a1029f8fa21e896350b778b52,Judge rules the public press can attend PG&E explosion trial | The Fresno Bee,"inmates, riot, prison, corrections, lee",1.33363259,Irrelevant
+591,5b69684ed8161724783427a513cc668ae3076d12,‘It just doesn’t make sense:’ State senator questions explosion in tax incentives during real estate boom | FOX6Now.com,"s, saying, n't, states, county",1.180429402,
+592,cb6ddbb82008e8ca95911783c423e8d66d46bddf,Police say explosion outside US Embassy caused by small device wielded by 26-year-old man who was injured,"playing, players, sports, football, years",1.196888576,Irrelevant
+593,6fb2089e4ca2020cab751b425db8509cca516365,NYC Steam Pipe Explosion-What Do You Need to Know? | GlobeSt.com,"s, saying, n't, states, county",1.335543983,
+594,b38f5393ad309de3e7a7498e1a5aa4f122f5855c,Montgomery Co. apt. explosion survivors still struggling 2 years later | WTOP,"s, saying, n't, states, county",1.086540034,
+595,653c029edfa615d6421207d3cfb7824c8b68b0d1,Silver Spring explosion survivors demand better treatment from Montgomery County - Story | WTTG,"s, saying, n't, states, county",1.262908852,
+596,09e82c53fd73752ab5afe704dccb3da389b20803,Restaurants Near the Steam Pipe Explosion Are Losing Tens of Thousands of Dollars - Eater NY,"s, city, t, people, time",0.851528162,
+597,9bd650aeb6224ea8bd62960f6f911f187880e8c5,Electrical Explosion Ignites Gas Line Saturday In Tredyffrin | Tredyffrin PA Patch,"s, saying, n't, states, county",1.678862271,
+598,6c1f03dee4316426f1b6de57cfe6b89fe088693d,Pitchfork Music Festival: Tame Impala & Courtney Barnett’s Aussie Rock Explosion - Stereogum,"s, city, t, people, time",0.91219343,
+599,caff2cd38ac93fde12e8a686807c24f479a303bb,Another explosion collapse reported at Halemaumau Crater - Hawaii News Now - KGMB and KHNL,"gmt, edt, july, monday, pm",1.527378076,Irrelevant
+600,058b2247b97bf4c83c410c52231a79a45fe93b8f,STEAM PIPE EXPLOSION & FUTURE OF SCHOOL SPEED CAMS - MetroFocus,"s, city, t, people, time",0.504885273,
+601,35a6e9b9f5d15d5cd082940584053e79de3c0d7c,Hundreds displaced following steam pipe explosion in Flatiron District Manhattan | abc7ny.com,"s, saying, n't, states, county",1.177475108,
+602,23f93a5b39aa7ef12a31de1ec1459321e720df5f,Pipeline explosion in W.Va. cited by opponents of Mountain Valley Pipeline | Local News | roanoke.com,"s, saying, n't, states, county",1.30357094,
+603,8cc66dbafe0528e44c924cfdc936b104187df06c,Coast Guard opens hearing into fatal Bouchard barge explosion | WorkBoat,"s, saying, n't, states, county",1.331298464,
+604,0cf81a7e4873f5a6ae3b0d56ec07eae710c77cf7,Gas plant explosion prompts evacuations in Austin County,"s, saying, n't, states, county",1.552706833,
+605,663eb27b39ee83d13df722d19bfa45348f38fe59,Pay it 4ward: Man helps Belen recover after flood | KOB 4,"s, city, t, people, time",1.539354836,
+606,f5b4cc7cfa495bd48c5e29dd758fbd327321ea1f,They lost cars in the flood. Now Enston Homes residents are losing affordable housing too. | News | postandcourier.com,"s, saying, n't, states, county",0.291290502,
+607,7be4a129ff68b04956f8e21f558b028c781120a6,Nick Jonas Priyanka Chopra and the recent flood of lightning-fast young celebrity engagements.,"s, city, t, people, time",1.922801463,
+608,6ee8a6642e9cb55dd3c51b57eddc10f034b4dddf,How an ancient stone money system works like cryptocurrency | Science News,"s, saying, n't, states, county",1.184186352,
+609,cd39969e55e833d755636bf665930bf7ab87c70f,Young man walked miles for first day of work gets car from CEO - ABC News,"s, saying, n't, states, county",1.05815636,
+610,f05e940c611262ab367c743e357eb37ede3bb512,Artificial intelligence senses people through walls | MIT News,"health, s, study, hospital, patients",0.991988838,Irrelevant
+611,0ad2eaa5a3ccc9f86f912c0c061950c350a7785b,Cellphones in classrooms contribute to failing grades: Study - ABC News,"health, s, study, hospital, patients",2.071330285,Irrelevant
+612,0565d1de2c57f303e6f415b40dbc5831bef52325,NHL Hockey News | NHL.com,"playing, players, sports, football, years",2.032570142,Irrelevant
+613,ec320c5873924bd3e980752a1f46af618d4fea09,Sign language interpreter slays at heavy metal concert - ABC News,"s, city, t, people, time",1.48757071,
+614,edfd946ecfd9acfdc73a7db7e6dcea20ebcfe96a,Gay couple claims Alaska Airlines separated them so a straight couple could sit together | Fox News,"s, saying, n't, states, county",1.645660816,
+615,6692242f239e65e928b8aa59ebab443f57df3c34,'Black-ish' star Anthony Anderson accused of assault: Police - ABC News,"s, saying, n't, states, county",1.622473894,
+616,4295cac6c7902c55f2ea489031ab32265ec5e506,Anxiety in monkeys is linked to hereditary brain traits | Science News,"health, s, study, hospital, patients",1.311266261,Irrelevant
+617,51ff56c51531611cb45697478068f4d331f434b8,2018-19 Golden Knights Promo Teams To Bring New Excitement | NHL.com,"playing, players, sports, football, years",0.917839256,Irrelevant
+618,76fd00933754161dfdf0d5edfa2e907bcc4269d0,U.S. citizen's family was denied visas under Trump's travel ban. Then he died by suicide.,"s, city, t, people, time",0.665275759,
+619,67f1984bf91f1e928a0c3d7919d5313ec627b7cf,News | Beatrice News Channel,"s, saying, n't, states, county",1.568580672,
+620,0f68c30b1cb294fab6c7bea1968657121810b45d,Oregon woman finds mountain lion napping in her home: 'This is wild' | Fox News,"s, saying, n't, states, county",1.564629097,
+621,a4306045933191f250db4cedc5e7fa81dcb0f7ad,Navy SEALs who rescued Thai soccer team from cave almost didn't make it out military officials say - ABC News,"s, saying, n't, states, county",1.524536593,
+622,6aa43377e5f18ee52749ff651e370b3be852cb63,Roseanne Barr reacts to spin-off show 'The Conners' - ABC News,"s, saying, n't, states, county",1.37219892,
+623,c7db5a2b19e974930a0ee44dcc4304808e1dfd30,Florida's 'stand your ground' law under scrutiny after father killed over parking spot,"murder, killer, case, s, investigates",0.45145973,Irrelevant
+624,dee0caac9e71cded9342058b1d2bd0ea6f693ccb,Why do restaurants charge extra for avocado?,"s, saying, n't, states, county",1.135655693,
+625,9eade50806077bc4f10bea75ccb3f921f7cf91aa,California city OKs jail time for defying plastic straw ban | Fox News,"s, city, t, people, time",2.089435876,
+626,a202a8f2a7f22b4ce9f2f501799a46c33c281f3f,The Audubon Zoo in New Orleans closed after jaguar escapes and kills six animals,"s, saying, n't, states, county",1.234046455,
+627,53e45e687ca5cf32470faacf9cc071e00b925884,Richard 'Old Man' Harrison of 'Pawn Stars' dead at 77 | Fox News,"s, city, t, people, time",2.035264403,
+628,cd0cb5a2375a8dd14018173987d53fc8057865a6,WWE confirms Grandmaster Sexay and Nikolai Volkoff have died,"playing, players, sports, football, years",1.921362195,Irrelevant
+629,add336ed1daa4276cc99e409956a2fa9b4bd9880,Physician burnout depression can lead to major medical errors: Study - ABC News,"health, s, study, hospital, patients",1.477637936,Irrelevant
+630,8834f555f16e270836becb8c26792ffb33ef35db,New Alzheimer's drug may slow decline researchers report,"health, s, study, hospital, patients",0.616289047,Irrelevant
+631,7b5e7e9e509ac0bc74bcfc65be3cf9c487dcc3d1,Venmo Privacy Ransomware Attacks and More Security News This Week | WIRED,"s, city, t, people, time",0.564051145,
+632,54d31fe0becc983e40db6d9ab66889154ba831c1,Anthony Bourdain dies at 61 in apparent suicide - ABC News,"s, city, t, people, time",1.383672042,
+633,d68b4938935558fa7947356f15a8982cdf85981c,Hive: Latest News In-Depth Articles & Opinion | Vanity Fair,"s, city, t, people, time",2.234897732,
+634,7a18280d3d15ea49b22cb5124e5cb68604f6622a,Are we truly alone in the cosmos? New study casts doubt on rise of alien life in our galaxy,"health, s, study, hospital, patients",1.23787192,Irrelevant
+635,cf451856fa142af187abf7e6b7f832439337b901,Could a blood test lead to new treatments for depression? - ABC News,"health, s, study, hospital, patients",1.858017915,Irrelevant
+636,33ddfb7673da5c3aeb95b7ad7218a1a14849e126,Romaine lettuce E. coli outbreak kills 4 more people,"health, s, study, hospital, patients",1.228644654,Irrelevant
+637,30ef1aafde84530d7a42a2bf2b56e1e56a49684d,Amazing Amazon sighting: 'World's loneliest man' spotted in remarkable video footage | Fox News,"s, city, t, people, time",1.137296864,
+638,236a50cdbe57528fee4ce8c44c53849c6112b5b8,Orca whale carries dead calf for days as imperiled habitat makes newborns rare experts say - ABC News,"health, s, study, hospital, patients",0.687413288,Irrelevant
+639,b77d778d048eb9e225a181c5fb008766e069889c,'Papa John' Schnatter evicted from company headquarters in Louisville | Fox News,"s, city, t, people, time",1.214649533,
+640,732f7db059714f6f62d348a1b69f6d2886203d42,A new Ebola species has been found in bats in Sierra Leone | Science News,"health, s, study, hospital, patients",1.42009408,Irrelevant
+641,7b14c1804d5f08126ea32780c6b7b242e753d98c,'She's gonna be fighting her best to get back home': Brothers speak out FBI joins search for missing Iowa jogger - ABC News,"s, saying, n't, states, county",0.77774377,
+642,7bcbdf5e857681faf1c2f318c15cb3a89f997da8,Tony Podesta offered immunity to testify against Paul Manafort | Fox News,"s, saying, n't, states, county",1.613389906,
+643,d9931ee2132dd16ca81b04bfb847923e3e76c513,Earth Overshoot Day: Humans are using Earth's resources faster than ever group warns,"s, city, t, people, time",0.988414424,
+644,beb2ff35c398ce3329a10a9be7b1bb153c28d977,Hot Water Challenge' reportedly leaves teen with second-degree burns | Fox News,"health, s, study, hospital, patients",1.410986322,Irrelevant
+645,e746d470d1b61ff76c6feb719c1c547ade9a9182,Ohio restaurant cancels Sunday church discount after outrage from secular organization | Fox News,"s, saying, n't, states, county",1.034086243,
+646,119a3ef15cec6a02bdba204d2bfe1b9beba9bbba,Zoox vs. San Francisco Good News for Tesla and More Car News This Week | WIRED,"s, city, t, people, time",1.111882032,
+647,e249c33361b311ae33b37e98bdac1e23827adb98,Ohio State says more than 100 ex-students reported sexual misconduct by doctor,"health, s, study, hospital, patients",1.860326923,Irrelevant
+648,09c9554609c1b4abad6ee18446650ee18d7161a1,Woman claims crude Southwest passenger masturbated during entire flight: 'I'm so disgusted' | Fox News,"s, saying, n't, states, county",0.65445886,
+649,f76ce7726ee4bea1db9152ecf8c6aa5677618a78,Delta pilot 'ridiculed' singer Tamar Braxton on flight sister claims | Fox News,"s, saying, n't, states, county",1.515723135,
+650,c55f7e5c600387840526f084a0b1dd4cde5f978f,Flight attendants' 'gut feeling' about passengers sparks human trafficking investigation: reports | Fox News,"s, saying, n't, states, county",1.639952195,
+651,2403ad7f0a3836987f2864d515559eac9ad43133,4 boys safely pulled from Thailand cave as second leg of rescue mission to begin in hours - ABC News,"s, saying, n't, states, county",1.070692299,
+652,2fd746303138fc10a34338fb9bf9ddb59c8b41e7,Teen on Alaska Airlines flight helps blind and deaf passenger traveling alone goes viral | Fox News,"s, saying, n't, states, county",1.552778068,
+653,e2677a8f45f18c0c5886a815bf961ebf1e7516d3,Top-Paying States for Millennials | Best States | US News,"s, saying, n't, states, county",1.612228997,
+654,18c720ce070b01999c9c3eb429ddc90c20b046c3,Morning News Brief : NPR,"s, saying, n't, states, county",0.763152429,
+655,1f284c928b807bc9c74290f35a927ac03e28d24b,Trump supporter attacked at Cheesecake Factory over MAGA hat: report | Fox News,"s, saying, n't, states, county",1.325445805,
+656,07cb801e2f363c732f4ac54cfc3e25f91cf64119,Disgraced former congressman Blake Farenthold won’t repay $84K sexual harassment settlement - ABC News,"s, saying, n't, states, county",1.021265493,
+657,9a99b959287c75165de6e490478e5ce0e9e8259c,Cancer cells destroyed with two antipsychotic drugs,"health, s, study, hospital, patients",1.659644764,Irrelevant
+658,c8566d182a1033c6786c5ad628bb5a279340f9c0,'Star Trek' 'Star Wars' & More: The Biggest Sci-Fi News from San Diego Comic-Con 2018,"playing, players, sports, football, years",0.854187781,Irrelevant
+659,5def3e89b65b8697fb1b5792cfca590895305f05,The biggest news from San Diego Comic-Con 2018 - The Verge,"s, city, t, people, time",1.273047886,
+660,b8626305efca4bfbca012d4616d417358fc7bd70,NHL Hockey News | NHL.com,"playing, players, sports, football, years",1.185551517,Irrelevant
+661,70cbbb17cc0a840c7d49224a27754dcdf6cfdc25,Chick-fil-A's Canadian expansion sparks pro-LGBTQ protests | Fox News,"s, city, t, people, time",1.830327287,
+662,64370dff5514b34d3421eb9606b6e495014f95d2,Georgia waitress takes down man who appears to grope her epic video shows | Fox News,"s, saying, n't, states, county",1.50869957,
+663,9b39dd8ec24f46f324e78271a7af9c3a35951151,North Carolina toddler’s belly flop goes viral | Fox News,"playing, players, sports, football, years",1.144029505,Irrelevant
+664,a9649af1438ffbfaf9fc6384132fb1bfbb55c0fd,Roseanne Barr disputes racist claims: 'I'm not that person' | Fox News,"s, saying, n't, states, county",1.503992368,
+665,145bac19ae6c38ba0c8c8823511d8d044d883b85,NHL Hockey News | NHL.com,"playing, players, sports, football, years",1.468739442,Irrelevant
+666,2a7906474c4603a6576eee4becc83bf3489f0b75,Demi Lovato 'awake' and 'stable' after apparent overdose in Hollywood mansion | Fox News,"s, city, t, people, time",1.033372842,
+667,2d220de582a5ae8b96f6b9f7a5913f085ed44e2c,Man accused of tossing drink at pro-Trump teen inside Whataburger arrested | Fox News,"s, city, t, people, time",1.759180703,
+668,54c6db613fc5cc74296a9b20f35fc21c6b58e5dc,Vegan activists protest North Carolina fishing tournament | Fox News,"s, saying, n't, states, county",1.518454705,
+669,380246e63bb2c72d77283e0f82526b42ec7870d7,British Airways kicks 20 passengers off flight because heat wave made plane too heavy | Fox News,"s, saying, n't, states, county",1.250759845,
+670,9978c23f581ffdbadfba00ef170b0e714c70f97c,'Huge' rattlesnake's loud warning to Mississippi man goes viral | Fox News,"s, saying, n't, states, county",1.265422738,
+671,7a4d66f6adf7a6ab81c373616a514da646c9fb55,Pittsburgh dad works 3 jobs to gift daughter her dream dress - ABC News,"s, city, t, people, time",1.529176373,
+672,8084e7109671b3e5802356023713610188471cb9,Report: US Therapists See Increase in Patients With 'Trump Anxiety Disorder' | Fox News Insider,"health, s, study, hospital, patients",1.735218146,Irrelevant
+673,12c1c59047ade7dfef5cea999571e698191d5dd7,Actor Alan Alda says he has Parkinson's disease - ABC News,"health, s, study, hospital, patients",1.521522618,Irrelevant
+674,eb864820b840d53d791758add0a345bcd120192e,Raleigh taxi driver with Christmas lights has died | News & Observer,"s, city, t, people, time",1.716189717,
+675,982abfeea182ea9e77d375b1acd795f50df5571f,Mourning orca mother carries dead calf for fifth day | Fox News,"health, s, study, hospital, patients",1.4169623,Irrelevant
+676,ae005a8e8436e62e1f79500c76c6e2c1b9ecb8e4,Missing University of Iowa student may have returned to home after jog: report | Fox News,"s, saying, n't, states, county",1.285092964,
+677,f59fcf2384c4f952b253b6b21399e184ddab43fe,Did cruise ship guards have to kill polar bear? Experts say maybe — but blame climate change,"s, saying, n't, states, county",1.635668894,
+678,edc35b73747622c3f92f86b0ae85bec5c7536157,Exquisite ancient mosaic uncovered in Israel | Fox News,"s, city, t, people, time",2.408842824,
+679,ff37de642d1091d266e42c2383482bd224a30423,Linda Tripp defends whistleblowing against Bill Clinton - ABC News,"s, saying, n't, states, county",1.325231052,
+680,a0ddce67ab9cd7255425512b17f6dea5766da797,Jimmy Hoffa investigation: Frank Sheeran and the blood evidence we found in the case | Fox News,"murder, killer, case, s, investigates",1.268519521,Irrelevant
+681,8e7730e311ff71a9c99ba638db85dd2a275a72b5,Nick Jonas Steps Out for First Time Following Engagement News | PEOPLE.com,"s, city, t, people, time",1.479418527,
+682,eff2482939a95d5a0a6abd0e85d3d3b760a00dc1,Judge awards ex-husband millions in jilted lover lawsuit | The Herald Sun,"s, saying, n't, states, county",1.296490173,
+683,a841e49ed3d041cd032ba0fa2025492a11c9a97c,Special Report: Porter Ranch Gas Leak: What Happens Next? | KCET,"s, saying, n't, states, county",1.574264771,
+684,fe0f176cab55579768dc941fa6e8e7e86778b91f,Gas leak prompts evacuations in Solvang - KSBY.com | San Luis Obispo and Santa Barbara Area News,"gmt, edt, july, monday, pm",1.201907136,GasLeak
+685,08c2045c236e2e29faf80392f2777cb555118364,Major gas leak prompts evacuations in Anaheim – Orange County Register,"s, saying, n't, states, county",1.556493239,
+686,d856621f40dc5982e9ca3f5300c5c1c456c3ef65,‘Significant’ gas leak under control in SE Portland after evacua - KPTV - FOX 12,"gmt, edt, july, monday, pm",0.350803779,Irrelevant
+687,780ac84b791d69fcd9b3228acc6619417ebd5ea2,Gas leak in DeKalb subdivision impacts homeowners | WSB-TV,"s, saying, n't, states, county",1.520314461,
+688,22c5a2d2c4c9772b1d0f89da439acf84ec4ae739,Gas leak prompts brief evacuation in SF’s Western Addition - SFGate,"s, saying, n't, states, county",1.66894863,
+689,52017381818320cb6f4ad18b3be948eb2beb2b5b,SR 261 Oak Grove Rd. back open after gas leak - Tri-State News Weather & Sports,"gmt, edt, july, monday, pm",0.467137532,Irrelevant
+690,cae6a15272c572db7bd8e4bcadf02092032db26c,Passengers Hospitalized After Mysterious 'Dirty Socks' Odor Stinks Up Plane - VICE,"s, saying, n't, states, county",1.399484814,
+691,f02eec8b33131c114e4c627a0f8fd2782ff134bb,$1.4 billion in Tennessee exports could be targeted in trade war MTSU professor says | WZTV,"s, saying, n't, states, county",1.584099105,
+692,b7ea270a9f1e86ac63f3b67e0ffd3aec1f8aa2cc,Floating protest on the Erie Canal | News | fltimes.com,"s, saying, n't, states, county",0.721087794,
+693,d304ac2f293aef370d3a4951ea6c1efcbc3626e1,Hawaiians protest Midwestern poke restaurant claiming dibs on “aloha” name,"s, saying, n't, states, county",1.550704271,
+694,1ce5d241333c98be33a294a995d12cdfba931b19,Jane Fonda says she regrets her 'horrible' Vietnam War protest - Business Insider,"s, saying, n't, states, county",1.451826664,
+695,4d1a5efee96bcc86eb320fc12b9321d5776e6af8,Activists protest against D.C. General demolition outside Mayor Bowser’s home - Curbed DC,"s, saying, n't, states, county",1.153857823,
+696,1cc6c0c1fd19a5e45df9cd1f622ed778142f32d0,Inmates riot at Great Falls jail - KPAX.com | Continuous News | Missoula & Western Montana,"inmates, riot, prison, corrections, lee",1.920040147,Irrelevant
+697,a83ce7db948a2bfcf0395d0f80069e5e148593e9,Yuval Noah Harari rebuffs Israeli consulate event in protest of new Israeli laws - Israel News - Haaretz.com,"s, saying, n't, states, county",1.62064142,
+698,03534309c885280fd400e2beea30662b698519c9,Inmates riot at Cascade County Detention Center - KTVQ.com | Q2 | Continuous News Coverage | Billings MT,"inmates, riot, prison, corrections, lee",1.665657697,Irrelevant
+699,d8d9cb18562053c7aa1658d1d609819bb5f58f6c,Church Replaces Caged Holy Family with Mirror to Protest GOP Immigration Policy – Friendly Atheist,"s, city, t, people, time",2.08643362,
+700,9c5cbd14535cc2b177ddea9a2976f980fb97042a,'OITNB' Season 6 Exposes Abusive Prison System With Riot Fallout | Hollywood Reporter,"inmates, riot, prison, corrections, lee",1.302699454,Irrelevant
+701,80d832bffb5e327cae91d93169b1d903c0cd51d0,For me heroine Elin Ersson can’t protest too much | Rebecca Nicholson | Opinion | The Guardian,"s, city, t, people, time",0.463510143,
+702,4f6f36a15c66de82124eb91d0f166e55626313c2,Activists plan protest of Cheshire Fair pig scramble | Local News | sentinelsource.com,"s, city, t, people, time",1.721682641,
+703,8dccf89eb31d0c719e944734ce679d524884b7cf,Virtual Reality Project On The Tulsa Race Riot Underway - NewsOn6.com - Tulsa OK - News Weather Video and Sports - KOTV.com |,"s, saying, n't, states, county",1.574121853,
+704,9619cd696e5a4a2ee802bdb5785bcaeeeea9c748,Willie Nile: The Power of Protest :: Music :: Features :: Willie Nile :: Paste,"s, city, t, people, time",0.375805787,
+705,09bccb1c008cf24860797b994ea10bcf620cfdf6,Federal employees protest Trump's executive orders in Detroit,"s, saying, n't, states, county",1.270098044,
+706,3215643e53afb4c8130568592383460dd2b4afae,Local nurses protest staffing concerns at Bay Area Hospital - KRISTV.com | Continuous News Coverage | Corpus Christi,"health, s, study, hospital, patients",1.603486462,Irrelevant
+707,c7ccbf06816c79321cfca3ae4548c9d0ce894387,Who Is Riot? Venom Movie Villain & Comic Backstory Explained,"inmates, riot, prison, corrections, lee",1.81756655,Irrelevant
+708,196c3367f810c9822516d4b034643243bc58bfae,Delicacy or cruelty? Local animal rights groups protest controversial dish Foie Gras | KSNV,"playing, players, sports, football, years",1.52949313,Irrelevant
+709,da32af3d283a79eb9ff19110ddc33ece17fb78c4,Glenville riot through the terrified eyes of 14-year-old boys: Phillip Morris | cleveland.com,"inmates, riot, prison, corrections, lee",0.703985693,Irrelevant
+710,f509083a9c195d8b0d4e7655e3691f2e0b907183,Evanston residents protest Dempster Street housing project Evanston residents protest Housing Opportunities for Women housing project,"s, city, t, people, time",1.205369583,
+711,f0e4187eff5430541feecc56e058979a1a512fc7,Sacha Baron Cohen's latest prank involved using a fake pedophile detector on Roy Moore - Chicago Tribune,"s, saying, n't, states, county",1.724505869,
+712,4762124a3604d20e67cfe9cadca38328431661d4,Georgia Politician Fights Terrorism by Mooning Sacha Baron Cohen - Hit & Run : Reason.com,"s, saying, n't, states, county",1.670820827,
+713,b36c89cce64b16c640ff9d6656ce4b6902b2e22c,U.S. Continues To Face Counter-Terrorism Challenges | KJZZ,"s, saying, n't, states, county",1.797306501,
+714,b023231a8d7042e289613be94fa0942c51901821,Ariana Grande agrees Pete Davidson's terrorism joke wasn't funny,"s, city, t, people, time",0.518183012,
+715,1a6c8dc42c66d878118fe363f41608e5236f1f43,Great-grandfather details emotional last phone call before family killed in wildfire,"s, saying, n't, states, county",1.523337842,
+716,389691f01fd9eb6c4bc3854371424a1e425c8fb1,North Bay wildfire survivor seeks to help animals displaced by Carr Fire in Northern California | abc7news.com,"s, saying, n't, states, county",1.636505913,
+717,2c90eac650c0f2bb743a02779a021c064ffefa97,David Karki: Cover crop options for hail damaged fields | Farm Forum | farmforum.net,"health, s, study, hospital, patients",1.730464836,Irrelevant
+718,c1da967510d456289e8d6195b7fd8142f81630a2,NE SD corn looks good; soy recovers from hail | INFORUM,"s, saying, n't, states, county",1.222114199,
+719,a4b841e30692880b23fea18513f45bb73715c8bd,Hail to the chief: Norma Hardy highest-ranking woman in PAPD to retire - NY Daily News,"s, city, t, people, time",1.230293956,
+720,a683dccac1d8d864381c366252f4c682c64367d9,Severe weather warnings issued for parts of southern Colorado - KOAA.com | Continuous News | Colorado Springs and Pueblo,"gmt, edt, july, monday, pm",0.873647948,LocalHazard
+721,536778bcede400484e4d386f6cca5352443f1a1b,Herman overcomes fall Dixon hail to win Power of Four mountain bike races | AspenTimes.com,"playing, players, sports, football, years",1.21812328,Irrelevant
+722,086dbfa91008dad1eeffd8e92a8808ec88199480,Marshalltown Auction House Sees Hundreds of Thousands in Tornado Damage Owner Says Family Will Overcome | whotv.com,"s, saying, n't, states, county",1.556935678,
+723,01320e285b97a4ef4f4e63b4c1eba7fc1b4340dd,RAGBRAI Day 4: A teen band and a tornado fundraiser | The Gazette,"s, city, t, people, time",0.841975293,
+724,29473cc88ac13953c07e220ea8630222331b83c3,Tarrant man has no power nearly one month after severe weather knocks a tree onto his home,"s, saying, n't, states, county",0.986516097,
+725,d677407c6735297de0dc89b1ec7257b959a0078c,National Weather Service: Survey indicates no tornado lots of d - FOX Carolina 21,"gmt, edt, july, monday, pm",0.463254473,Irrelevant
+726,be90e463d53e616fe2af605c7d5a350918be523e,Wynwood mural depicting MSD victim brings social reform to...,"s, saying, n't, states, county",1.660444576,
+727,2277b9772b0f8064655857e8963353397571d3bf,Many still displaced after power outage continues in Marshalltown,"s, saying, n't, states, county",0.714411512,
+728,f16b491d6a67364b60db47241dc76a48dc2cc65b,Power outage in Salt Lake City impacts nearly 5000 | KJZZ,"s, saying, n't, states, county",1.555860361,
+729,a872d99aadb3e562ed523eeb550760af558d924f,City of Frederick warns residents of temporary power outage - KSWO 7News | Breaking News Weather and Sports,"gmt, edt, july, monday, pm",0.556735498,Irrelevant
+730,6ec4ca02be4598dadcea05507e955be32fba1196,Residents protest demolition of pool - News - Pontiac Daily Leader - Pontiac IL - Pontiac IL,"s, city, t, people, time",0.926246552,
+731,7834776cea140574f7ad798f7fed31cf6de97e84,A well-yarned militia: Local artist needlepoints to protest Trump policies - The Boston Globe,"s, city, t, people, time",0.614872413,
+732,eeefb8618d9e30570f5718443a741fe5e37515b8,Groups protest treatment of OPS workers at UF - News - Gainesville Sun - Gainesville FL,"s, saying, n't, states, county",1.251036161,
+733,ef34c310e1febd8fc73d9412e71f911a7b9e4a8c,SF coffee shop rejects $40K Salesforce deal in immigration protest,"s, saying, n't, states, county",1.59256817,
+734,cc337805ba65d7cf6d79bb09bbc301292221b933,Kennedy Space Center firefighters protest over contract,"s, saying, n't, states, county",1.500257072,
+735,c8762a3fa4d80534c2e8da20c2751d4ad8696aad,Kennedy Space Center firefighters picket to protest contract,"s, saying, n't, states, county",0.817886436,
+736,20f7f1c32adba6285491907cfc4d33379de48d2a,Dozens of Palestinians riot at Temple Mount following Friday prayers - Arab-Israeli Conflict - Jerusalem Post,"s, city, t, people, time",1.79193066,
+737,a614ce7f5f73cf33b4c43be57c9c11312a5b3b6e,Riot Fest announces full-album performances,"inmates, riot, prison, corrections, lee",1.834059618,Irrelevant
+738,deef73eccf04418e9828b76cd246e168dfe2f647,Moms stage 'nurse-in' protest after cops were called on breast-feeding women | TheHill,"s, saying, n't, states, county",1.373882106,
+739,a920beacbf3c2673868a3a0a013d357464dbbcc5,RV Dwellers Rally in Protest of City's Overnight Parking Laws - NBC 7 San Diego,"s, city, t, people, time",1.614083269,
+740,0b595c9b796e8a442848c70ef708e86234b322ea,Venom: Riot and the Life Foundation Symbiotes Explained | Den of Geek,"s, city, t, people, time",0.643648862,
+741,f9120a7e7d7cb243b1cf5051f8d421114566c8a4,Anger boils over in London’s Chinatown as chefs and waiters protest against immigration ‘fishing raids’ | South China Morning Post,"s, city, t, people, time",1.196744024,
+742,12693bc40b6417b41b3978be3fe9bc292dc03688,Courthouse protest focuses on handling of Victoria Martens case,"murder, killer, case, s, investigates",1.271878602,Irrelevant
+743,6f48da011f2f48dff360427d864fdb4afb9470cb,Quiet Skies TSA program monitors thousands of airline passengers,"s, saying, n't, states, county",1.510019289,
+744,76973429f84892090c1f9c5c0e977e154ed64156,Janet Jackson Spotlights Racism and Terrorism at Panorama Music Festival | TMZ.com,"s, saying, n't, states, county",1.69899687,
+745,4e57f11b7962b5a21573e838957e6c0250648942,Terrorism concerns force race shift on Golden Gate Bridge,"s, saying, n't, states, county",1.222666543,
+746,89f23a543db1beeb2338904536651ce19eabe6c3,Pakistan’s economic woes terrorism and complex foreign relations remain. Is a former cricket player up to the task? | South China Morning Post,"playing, players, sports, football, years",1.918090156,Irrelevant
+747,ba7dd2f5d93afac773cbb9a09942d2f35efc0bea,Should anti-terrorism barricades look pretty?,"s, saying, n't, states, county",1.582956714,
+748,3a1fe0a9da641155f8628546784b1b0d42c6867c,Regional dive team training ran mock terrorism situation at a South Haven beach | WWMT,"s, saying, n't, states, county",1.511340573,
+749,464830792463d653594f613ffcba82dea57d75f6,Jack Ryan Battles Terrorism in New 'Presidents' Trailer (Video),"playing, players, sports, football, years",1.363263471,Irrelevant
+750,59a204b3a2ced842370d23d403e1e060b2b0c4ab,Audio: LA officials torn over whether to take 'anti-terrorism' money from Trump administration | 89.3 KPCC,"s, city, t, people, time",1.269294301,
+751,1b67fbd2f1610ae7179b4011589b589ce76ec90f,Training To Tackle Terrorism,"s, saying, n't, states, county",1.372461693,
+752,cfba5b9d5c70f977df024a627b1fcbeb4475d505,New Minneapolis FBI head Jill Sanborn says terrorism still a concern | MPR News,"s, saying, n't, states, county",1.126197851,
+753,96d4b49553ce931bc707cbfc2c0ec6db9be61ba1,Suicide attack in Afghanistan's Nangarhar kills at least 18 | News | Al Jazeera,"s, saying, n't, states, county",1.527878364,
+754,28bcf49a512094b39cba7a878e0f0c82d225d230,Local Celebrity Chef Guy Fieri Feeds Wildfire Evacuees in Redding Announces Launch of New Disney World Restaurant in Same Week | Lost Coast Outpost | Humboldt County,"s, city, t, people, time",2.01642446,
+755,52e25bd4b59c30c24481fef94db66108d05970d9,Wildfire updates: I-70 reopens in Millard County after fire forces closure | KSL.com,"s, saying, n't, states, county",1.565610038,
+756,1ca9f6bd6badbe76479faa678888dfb3bce782a4,California wildfire update: A look at the state's major blazes,"s, saying, n't, states, county",1.799203789,
+757,05b8a7cadc588f871ec57c32fa1a5a33e551d899,Gardner Just Misses Driving Through Tornado and Helps Clear Debris,"s, saying, n't, states, county",1.417658635,
+758,a53d6e574050b15900ebfff97ae8644d432d4596,This Dad And His Family Barely Escaped A Terrifying Fire Tornado In Northern California,"s, saying, n't, states, county",1.092080826,
+759,cdceb54f611386822f2f86346089b64e22b3db7c,Justin Bieber's Next Priority? 'Getting Married' to Fiancee Hail - CBS News 8 - San Diego CA News Station - KFMB Channel 8,"gmt, edt, july, monday, pm",0.890309463,Irrelevant
+760,fa951065cf2af6bf54df61c29c74599042dc3e13,Rain hail don’t dampen Carbondale Mountain Fair spirit | PostIndependent.com,"playing, players, sports, football, years",1.106148688,Irrelevant
+761,14f51f5837b7853d32f51b2026933a8530a7f1ad,Treat Yourself to a Blizzard® for Children | AM 1100 The Flag WZFG,"s, city, t, people, time",2.111242769,
+762,3cf1296edc9dcc3756ff95e41c26395ad6c8a414,Mayor briefs Pachyderm Herd on tornado recovery | News Sports Jobs - Times Republican,"s, city, t, people, time",1.429970014,
+763,cc2b48926187858965556fbe3f2eea24e9d26587,Body identified as missing Ashtabula mother; severe weather causes roof collapse in Sandusky: Overnight News Links | cleveland.com,"s, saying, n't, states, county",0.853209801,
+764,71974be5a891cad8cd68fa24e6d9a3ba80eab6d7,Severe weather threat winds down Thursday chances remain in the - KOAA.com | Continuous News | Colorado Springs and Pueblo,"gmt, edt, july, monday, pm",1.003649168,Irrelevant
+765,98a5001f074e8e38feb6127b6ca2875608716ceb,Pamplin Media Group - 'Free Blizzard' legal fight swirls around DQ smartphone app,"s, saying, n't, states, county",1.683397677,
+766,a4c8ac714dcc078efe1a65263cb61e1d7b5c2fab,Hail and flooding force closure of Fountain Creek Nature Center - KOAA.com | Continuous News | Colorado Springs and Pueblo,"gmt, edt, july, monday, pm",1.492363115,Flood
+767,181f3833edc9485fde21c173a4259d7a36586833,Marshalltown Day Care Back Open after Tornado Destroys Home | whotv.com,"s, saying, n't, states, county",1.145162895,
+768,cf83a9eadd8be24cc041dbc6b3aaf07b95597092,Vermeer Provides Update as Work Resumes Following Tornado | KNIA / KRLS | The One to Count on,"s, saying, n't, states, county",1.363940924,
+769,4fade34edea39368c21bd5bb05ce1c1b2a8490e9,Harrison County discusses funding emergency alerts after tornado,"s, saying, n't, states, county",0.7912685,
+770,d49fb9acfb9103d631426e52dd7ed7e800411d2f,Insurance agencies respond to surge of claims in tornado's wake,"s, saying, n't, states, county",1.318295889,
+771,59c9f236dc6d827b406493a136cc0d2fe5b9f658,Cotton Electric working to fix large power outage - KSWO 7News | Breaking News Weather and Sports,"gmt, edt, july, monday, pm",1.044927192,PowerOutage
+772,8060c2f46ca6ccbd3e9cb58de8f167e8008fd557,Protest calls for end to horse racing | WRGB,"s, saying, n't, states, county",1.615387538,
+773,c186d5bb5abc62dae33475622935fce8b258fcae,MLW Battle Riot Airing Tonight ROH And Former WWE Stars In Comedy Short Impact ONO MLW Fury Road - WrestlingInc.com,"playing, players, sports, football, years",1.728239785,Irrelevant
+774,27fb054bc4b3b253d4c02563c165d07f009f0fa0,Disneyland Workers Call Off 'Shantyland' Protest But The Fight Isn't Over | HuffPost,"s, city, t, people, time",1.237088899,
+775,b612017e7d4c936a2724b541f4b9f50e7ab353cc,DAPL protest defendant’s case highlights civil asset forfeiture in North Dakota | Courts & Crime | bismarcktribune.com,"s, city, t, people, time",0.684384879,
+776,2f4dea83e09b9b0bac5b7498733e5d61ed0aaaad,Durango homeless camp protest extends to fourth day,"s, city, t, people, time",2.150587432,
+777,4af7b7849a75f6bd1cf9fd2728e53163dff9b9f4,Disney Actor Asks To Be Removed From Parks To Protest Gunn’s Firing,"s, saying, n't, states, county",1.679309254,
+778,47b5b9e753387ea466175e59d0ae32ce06dc167d,Louisville residents protest liquor licenses for Family Dollar,"s, saying, n't, states, county",0.95031067,
+779,9e180e66ccf75d9cbc9b575e0b34e9840528b1f6,Amid K2 overdose spike retired DEA agent says synthetic drugs fund terrorism | WTOP,"health, s, study, hospital, patients",1.137173703,Irrelevant
+780,d5913461bf3d8754cd1fde3958235c109c7c07a8,Terrorism inevitably fills Northern Ireland’s power vacuum,"s, city, t, people, time",1.402951412,
+781,bb69993ad9b2ef0b9f98be5ccd7e2f68e4058365,Polk County law enforcement group helps fight terrorism - KTRE.com | Lufkin and Nacogdoches Texas,"s, saying, n't, states, county",0.95967556,
+782,68fa9ad4e56e99655bbff94c6d93981ac10e14be,Tuesday July 3 2018: A theory about LePage’s obstruction terrorism against Native Americans Ringelstein a game changer — Letters — Bangor Daily News — BDN Maine,"s, city, t, people, time",0.41678359,
+783,b32c72c82ad0cf9efc33cdf3e17ffb429ccd9b51,Cleveland Fourth of July terrorism suspect did reconnaissance downtown planned to pack van with explosives: Recap,"s, saying, n't, states, county",1.363890005,
+784,8b02333fb4568059ecc2a8a7b4fc2bdccb87e034,Prosecutor files terrorism charges against teen accused of gradu,"gmt, edt, july, monday, pm",1.511072565,Irrelevant
+785,6731309ff0357bf8f119f3e260a63795cb62fbae,Aurora Naperville continue joint anti-terrorism work - Aurora Beacon-News,"s, saying, n't, states, county",1.470482309,
+786,f3310237d479e17c9cc946fa285f5f3f5b948167,Bollywood star Priyanka Chopra apologises for Hindu terrorism storyline featured in her US series Quantico | South China Morning Post,"s, city, t, people, time",2.476518696,
+787,75873c2fba46dd413805be9343721d230985e83d,Priyanka Chopra is Sorry about the India Terrorism Plot - Today's News: Our Take | TV Guide,"s, saying, n't, states, county",1.640360108,
+788,4ceff3209300e95fa2a4e072818edeb5ee4b1aeb,Grandfather remembers heartbreaking phone call before wildfire kills wife grandchildren | fox13now.com,"s, saying, n't, states, county",1.46899973,
+789,7138e08bc465342920072ebaf8230949c7cb1b0d,‘I love you Grandpa’: Man Loses Wife Great-Grandchildren in California Wildfire | WNEP.com,"s, saying, n't, states, county",1.353668063,
+790,d0889c930a164db13bb1b546243e0db612ee7899,Pieces of Southern California's Wildfire-Ravaged Landscape Have Become Haunting Sculptures,"s, city, t, people, time",0.936851842,
+791,30acaead5c0d401dfcc288a004d16cecd0960c41,Wildfire updates: I-70 reopens in Millard County after fire forces closure | KSL.com,"s, saying, n't, states, county",1.632432386,
+792,4dd3abf7ff3e974b1c2235d7a3ca1548bfb62881,All Hail The God of Prog: Steven Wilson is Coming to Alamo City This December | SA Sound,"s, saying, n't, states, county",1.730579569,
+793,8cb92778b12fc412c8ca1787642e6e86788439a8,Craft beer lovers assist autism organization after tornado - News - Citizens' Voice,"s, city, t, people, time",0.994845153,
+794,6aa93a46275a750ed00307d2fef6f69f43e0b98d,Colorado farmer loses entire crop to hail storm | FOX31 Denver,"s, city, t, people, time",1.370856425,
+795,3bdb487e45ffba27bddb251902faa6471e2663f8,Marshalltown business owners say it will take years to recover from tornado,"s, city, t, people, time",1.171048138,
+796,4c0fa0e79c6a64d831a2ad488451f6c9e0bcf14c,Le Grand Man Among Those Injured During Marshalltown Tornado Recovery | whotv.com,"s, saying, n't, states, county",1.678758439,
+797,1a0164a90ca3fffef110f977ce435b1049f1dab5,Hail to the...cat? - Trending & Viral News - 13 WTHR Indianapolis,"s, saying, n't, states, county",1.668112834,
+798,1bf855c1815d3932d6628ddc3d69fd0137e15cf2,Family thanks Mishawaka firefighters who cared for bedridden man during power outage | WSBT,"s, saying, n't, states, county",1.163592297,
+799,eeb448196f9ecaf53fbdbba04a6d487a0735842b,Carbondale nursing home evacuated due to power outage - KFVS12 News & Weather Cape Girardeau Carbondale Poplar Bluff,"gmt, edt, july, monday, pm",0.208771496,PowerOutage
+800,b83b62954d82cf0c37ff405e2c25305ce05ddb6e,Keeping your food safe after a power outage - KFVS12 News & Weather Cape Girardeau Carbondale Poplar Bluff,"gmt, edt, july, monday, pm",0.170901087,Irrelevant
+801,49d1a8032b0c2bfdfd0a478823c6047b13505d2b,MLGW faces fourth major power outage this week - WMC Action News 5 - Memphis Tennessee,"gmt, edt, july, monday, pm",0.320622565,PowerOutage
+802,13cac215e4eea9c18ec93f70311ef73e53b1a5a1,God's Pantry helping restock refrigerators after power outage - ABC 36 News,"s, city, t, people, time",1.771650979,
+803,5b4f3d8a967e405992dff228942294a335242acb,2018 World Series of Poker main event - Power outage brings premature end to Day 5 with 109 players remaining,"playing, players, sports, football, years",0.968015446,Irrelevant
+804,80baf4b9a337bb5c9e3607e1b5682387566a22fc,Heroic Gymnasts Continue Routine In Absolute Darkness During Sudden Power Outage,"playing, players, sports, football, years",1.94622932,Irrelevant
+805,b048a22724aa972b4f8001bd182afa00f327fdb4,Lock reopens after power outage that trapped boaters,"s, saying, n't, states, county",1.567308652,
+806,0d9fe5db1ed4f879fb294874ba0cdd0d063fa2be,Investigation continues into Saturday's riot at the Cascade Coun - KBZK.com | Continuous News | Bozeman Montana,"inmates, riot, prison, corrections, lee",1.65068072,Irrelevant
+807,8e41bd33971ee0e8cb211e2e7603bf6b54e795d0,Groups protest Family Dollar liquor sales | whas11.com,"s, saying, n't, states, county",1.0493164,
+808,6452e0a482e7f917d84e51ad724ae1edba5f3f15,Citizens protest ‘abuse of cows’ for art at Kosovo gallery - Prishtina Insight,"s, city, t, people, time",2.44970859,
+809,9ea87b25175fec97bc31c64e9d58682ec079fea7,Riot Blockchain: Why I'm Bullish On Bitcoin And Getting Involved. - Bitcoin USD (Cryptocurrency:BTC-USD) | Seeking Alpha,"inmates, riot, prison, corrections, lee",1.425165447,Irrelevant
+810,bddccdf24ba72c283c5a9a91eb6a1c62a0c458d6,Beltline housing prices spur downtown Atlanta protest - Curbed Atlanta,"s, city, t, people, time",1.433158291,
+811,4013297b74beb474f39bbf525729571081340b8b,Australians Protest Five Years of Offshore Detention Policy - The New York Times,"s, saying, n't, states, county",1.501565743,
+812,8549481f0cc595424e4500ab7ab77630264e63a3,City Officials Attended a Conference on Controversial Anti-Terrorism Surveillance Strategy - Blogtown - Portland Mercury,"s, city, t, people, time",1.239718699,
+813,1c726b0af4070b469e5db5844ab28de3d4f191b8,Chefs from Portsmouth feed appetites spirits at site of wildfire in California | 13newsnow.com,"s, city, t, people, time",1.177265197,
+814,0a5e85b31d5403dbd044ed7179ef2ec55a21b329,KRCR viewers pay tribute to individual men and women battling the wildfire | KRCR,"s, saying, n't, states, county",1.644181115,
+815,2903a4b90fb7728ef236d406095baeecd3afb61a,Wildfire Defensible Space Inspections Underway in Santa Barbara County Fire Department Territory | Local News - Noozhawk.com,"s, saying, n't, states, county",1.0527594,
+816,e023167ddce06f8a7829e4d3e5f9dd33ae018575,Organizers give campers one of a kind experience despite wildfire proximity | abc30.com,"s, saying, n't, states, county",1.307072198,
+817,07ba01f0f4304d8e7facf359bfe10f2a8fe69cfe,Neil Diamond thanks firefighters battling wildfire with surprise performance - ABC News,"s, saying, n't, states, county",1.15393544,
+818,48d823c6cdba5c0c9a1741c2631c3791824a1953,You may hear tornado sirens this week even when the sky is clear | The Wichita Eagle,"s, saying, n't, states, county",1.599115696,
+819,79ba0fa64249a64a84dae4b9677ec1ecb2f007ec,3 reasons why Windsor and Greeley don’t have tornado sirens | GreeleyTribune.com,"s, saying, n't, states, county",0.800059919,
+820,02cc9ea653810b6da7d0836588ab9531843b89a3,UPDATE: I-10 eastbound is back open at US 191 - Tucson News Now,"s, saying, n't, states, county",1.517887489,
+821,a19893872f4a5fda9ebca6a52af1301c40cf6f93,DQ® Blizzard® treat sales help WVU Medicine Children's | WVU Medicine,"health, s, study, hospital, patients",1.182858082,Irrelevant
+822,3919e49b4ac30bec1f2453f386388ac0774dcbe0,Severe weather warnings issued for parts of southern Colorado - KOAA.com | Continuous News | Colorado Springs and Pueblo,"gmt, edt, july, monday, pm",1.002302603,LocalHazard
+823,f9cca8a79f89c27e470979504abe4acf9c959f6f,Amazon's 'Lord of the Rings' showrunners hail from 'Star Trek',"playing, players, sports, football, years",1.288295129,Irrelevant
+824,6c645071d6f022d015c9dc06005f6abf7663180e,Video extra: Hail pounds Billings floods streets - KTVQ.com | Q2 | Continuous News Coverage | Billings MT,"gmt, edt, july, monday, pm",5.364484079,Flood
+825,ae8e41eba3a43b6e481a09aee1bd80bd90b95186,Whitney: All hail nostalgia rock the source of middle-aged mayhem,"s, city, t, people, time",0.980423822,
+826,33d035a10c2eefd88023986967a55ac186d92a2d,Local church hosts summer concerts to raise money for Elon tornado victims | WSET,"s, saying, n't, states, county",1.605438682,
+827,c1212ecde55e6b29cebf83752de88c036c66af78,Goo Goo Survives a Blizzard of Oz — Ozzy Osbourne That Is,"s, city, t, people, time",1.83701115,
+828,20b2848a6ef17dae8d0f25f06e06780f6f375d8d,Lennox International hit hard by EF-3 tornado - KWWL - Eastern Iowa Breaking News Weather Closings,"gmt, edt, july, monday, pm",0.719010044,LocalHazard
+829,51056ffb5b33d59a586883f6821a739196a859a7,Grants buy rescuers safety gear for shootings | Local News Stories | nogalesinternational.com,"health, s, study, hospital, patients",0.742363981,Irrelevant
+830,075fc727e750a0eca634f35ffa0797b5f587d367,Houston Restaurant Weeks kicks off flood talks target Little Cypress Creek: top stories in Cy-Fair this week | Community Impact Newspaper,"s, saying, n't, states, county",1.141712677,
+831,ce53b9e822b2792edd34b31808f53c1dd619232e,Flood victim remembered one year later | WTOV,"s, city, t, people, time",1.891223368,
+832,fe41d5ffaa5443aec549146937a1c19655163e60,The Day - Hundreds flood downtown Norwich for city's first Peruvian Festival - News from southeastern Connecticut,"playing, players, sports, football, years",1.20285631,Irrelevant
+833,cd1e2030ecf64bec8bec5778e9526ae1e544d0db,Portion of Gray Mule Farm Rd in Emanuel County remains closed fo - WTOC-TV: Savannah Beaufort SC News Weather & Sports,"gmt, edt, july, monday, pm",0.45180641,Irrelevant
+834,b196a9ea4f2d8d768f7f33fe8215a59cc6ea4006,Flood-damaged La Farge library closes for repairs | Local News | santafenewmexican.com,"s, saying, n't, states, county",1.481829148,
+835,5d8cc718f91f8dc8a6fe7257de2b58b5edb55225,Floaters flood Elkhorn River as water drops to safe levels,"s, saying, n't, states, county",1.023271554,
+836,9d968ed74da452eda492b81f629ed758ee61582b,Owners of Flood-Damaged Homes Accept Buyout Offers From City of Des Moines | whotv.com,"s, city, t, people, time",0.891339351,
+837,2b8746ac27a01f8722ec50018a97304772b8d4dc,Lake Linden: $130K in direct flood expenses so far | News Sports Jobs - The Mining Gazette,"s, saying, n't, states, county",1.330973297,
+838,4ea138cb877b74509fef7f9d6757a04a521e0d12,A look at flood patrol with the Teller County Sheriff's Office - KOAA.com | Continuous News | Colorado Springs and Pueblo,"gmt, edt, july, monday, pm",1.36351867,Irrelevant
+839,113d65ee677aab4c6f09eb59ce825c9468abb462,Pro-Shot Video: The String Cheese Incident Shares '100 Year Flood' From 2018 Red Rocks Run,"s, city, t, people, time",1.962274996,
+840,c107d312aa186e5c4de51ef658f0277dd3c138ef,Red Cross closes shelters for central Pa. flood victims | PennLive.com,"s, saying, n't, states, county",1.724044564,
+841,6f38034d57e2f7f4af3676f6cfb50fe9886c2499,To Wait or Act? Timing of some flood repairs will depend on fed funding decision | News Sports Jobs - The Mining Gazette,"s, city, t, people, time",1.235314741,
+842,335e42933689c9273bc5a20e667930511753b4ff,Red Cross opening flood shelter in Waverly - WBNG.com: Binghamton-area News Weather Sports,"s, saying, n't, states, county",1.693590701,
+843,d95bdea1b7271715570af7c61d37a88229772c8c,Russo Brothers mute the title of Avengers 4 in video fans flood social media with guesses | hollywood | Hindustan Times,"s, city, t, people, time",2.11644241,
+844,5b3c645fc5333554e9c37d0f0c0ffec4be360897,View of Sky 7: Flood damage in Santa Fe,"s, saying, n't, states, county",1.600393792,
+845,f95c0cd4865265319d3c28452f7c1ec166646aff,Flood damage across El Paso County - KOAA.com | Continuous News | Colorado Springs and Pueblo,"gmt, edt, july, monday, pm",1.279486989,Flood
+846,c1a36f59fc2ca3750edcfa725aba45849a874d87,Millcreek to appeal court ruling in landslide case - News - GoErie.com - Erie PA,"s, saying, n't, states, county",1.570545501,
+847,63f3b70a32cbd5bc0f154b72f98adaea59e9c3fd,Alabamians flood across state lines as Mega Millions jackpot soars | WBMA,"playing, players, sports, football, years",1.486413803,Irrelevant
+848,faab65ee25cd232e0f07dd7e07e7a684213cf27b,Trespassing teens flood Illinois restaurant with beer owner claims | Fox News,"s, saying, n't, states, county",1.580147634,
+849,54bc10876246d44cbc36dad9bde292b2c5bc3c8e,Jambo cleanup done in flood victim’s memory | WTOV,"s, saying, n't, states, county",1.121998297,
+850,c5c72507ddd9a788654810bd4926b6f1d7c4431c,News - Chicago Tribune,"s, city, t, people, time",0.654467385,
+851,1d8f69c99c86ce0f965a9977a70a10173ccc62e0,NBC News - Breaking News & Top Stories - Latest World US & Local News | NBC News,"s, saying, n't, states, county",1.800194069,
+852,6fdcf83ede9572f5736d7e0289b55c08aa456f6e,More Ohio State wrestlers say Rep. Jim Jordan knew about sexual abuse when he was coach,"health, s, study, hospital, patients",1.718004616,Irrelevant
+853,9b7a31545e97494606b261bebce49f0471281be9,Demi Lovato hospitalized after apparent drug overdose,"health, s, study, hospital, patients",1.567305077,Irrelevant
+854,1116815d3e058bc05dd28d07c507591fdd4cad3d,'Boy or girl?' Parents raising 'theybies' let kids decide,"s, city, t, people, time",0.604250443,
+855,b64e53ce3dcaf580017fcf0f2d2152777cec833e,Transcript: James Comey's interview with ABC News chief anchor George Stephanopoulos - ABC News,"s, saying, n't, states, county",0.481694294,
+856,c96ed633e271b65b0abec9e840b82105f99a61f1,Suicide rates are up 30 percent since 1999 CDC says,"health, s, study, hospital, patients",1.167574356,Irrelevant
+857,b45fcc414cce0cc38d9d1707937cfa49f9925ea2,Miss America is scrapping its swimsuit competition will no longer judge based on physical appearance - ABC News,"s, saying, n't, states, county",1.446247044,
+858,28a1bde0d3b46680ddfd8b633da9855547e7577f,Serial killer Cook's release to be determined at Aug. 9 hearing - The Blade,"murder, killer, case, s, investigates",2.526920098,Irrelevant
+859,15d802eb549a1f49ee20b945aa3a89a230b5feeb,SC woman held captive for months by serial killer & rapist seek over $360 million | WLOS,"murder, killer, case, s, investigates",2.194432714,Irrelevant
+860,f06b69bf6db74dea488950dac2b4cdd45cee5c5d,Re-entry program helping serial killer Nathaniel Cook prepare for release from prison - The Blade,"s, saying, n't, states, county",1.28765482,
+861,cfef1e9d960f454d1e2f49652f067e008d6120e0,Todd Kohlhepp Case: Victim Kala Brown Stares Down Serial Killer in Court as She Files Civil Suit | Inside Edition,"murder, killer, case, s, investigates",1.449176693,Irrelevant
+862,fabe5d979a639ade70424c401a16ae4659037410,Doctor who testified on serial killer Reinaldo Rivera's behalf arrested in drug bust - News - The Augusta Chronicle - Augusta GA,"health, s, study, hospital, patients",1.903116846,Irrelevant
+863,b55773da8af83338013fb0f7cdf57d7dfa527fec,Emmy Episode Analysis: Cameron Britton scares us in ‘Mindhunter’ - GoldDerby,"s, city, t, people, time",2.35532534,
+864,c5055412508b9545c56cad8894d6ee73b589d0ef,CHARLOTTE SERIAL KILLER: Investigation Discovery to document 1990s Charlotte serial killer | WSOC-TV,"murder, killer, case, s, investigates",1.355860634,Irrelevant
+865,689ff8d1e46dc95c9c965cb63eb78b4859e2b669,Woman held in chains by serial killer Todd Kohlhepp faces her captor in court | News | postandcourier.com,"murder, killer, case, s, investigates",1.346663384,Irrelevant
+866,f1db1c8cc331f9b32cda81bf65f6caa17c52f63a,TV series to recount tale of infamous LaPorte serial killer Belle Gunness | WSBT,"murder, killer, case, s, investigates",2.528240673,Irrelevant
+867,13cc5e092a2fb362bdc84bfc75914139e875a5ed,SKY BOUCH: MARION COUNTY SCHOOL SHOOTING | WFTV,"s, saying, n't, states, county",1.701920433,
+868,5601472f1fe28a9e114e5144e10cc878cf505207,#NewsPoet: Talking to your kids after a school shooting | KUOW News and Information,"s, saying, n't, states, county",1.741162618,
+869,25ead2ac6aa2d536dc26d4496b13465bf54bd219,30 years later: Who is highway serial killer?,"murder, killer, case, s, investigates",0.176511149,Irrelevant
+870,f17139802626baf339ec51d8c1915b5dc386861e,Ex-girlfriend: 'Very strange' behavior by suspected Seminole Heights serial killer - Story | FOX 13 Tampa Bay,"murder, killer, case, s, investigates",0.575500474,Irrelevant
+871,02201f02a5bfe700fa17c222d8ac876d264dd543,Alleged serial killer watched porn after shootings documents show,"murder, killer, case, s, investigates",0.329180466,Irrelevant
+872,aaffc37fcac104591ef5ea71f4e1291c3477f557,Recordings with accused Seminole Heights killer released,"murder, killer, case, s, investigates",0.734926843,Irrelevant
+873,e0cd8e3b5f6b269ea0a605239b5b7253945eaa58,Cub Scouts STEM camp coming to Fairfield,"s, saying, n't, states, county",1.620829646,
+874,34b5db2fc106a4ed4450088104738392a6671048,BP plc: Supplementary information (pdf 362.5 KB) - The Wall Street Transcript,"s, saying, n't, states, county",1.733423494,
+875,dcacd07424c6554a376ebbaa1352d8c5ea9c31cc,Reward For Killer Of Pregnant Dolphin Grows To $11500 | Care2 Causes,"murder, killer, case, s, investigates",0.709375179,Irrelevant
+876,ec54d0eca95b8e7c88cc4027674b483dcd19a4b7,Pool chemical spill causes closures on SR-125 in El Cajon - CBS News 8 - San Diego CA News Station - KFMB Channel 8,"gmt, edt, july, monday, pm",0.498109518,ChemicalSpill
+877,bfdab361dd44295bed5061db5c9e83fa481a3918,Report: Oil spill in the Straits of Mackinac would cost nearly $2B | News | wisconsingazette.com,"s, saying, n't, states, county",1.655233505,
+878,35caf92402ea9b11b5b8815ce634d2e3af9530a0,Top Brass Testifies in Refugio Oil Spill Trial,"s, saying, n't, states, county",1.309560349,
+879,130010d4ec1a23d787217e71da374740d337db30,Accident and oil spill causes traffic delays on U.S. 49; southbo - WLOX.com - The News for South Mississippi,"gmt, edt, july, monday, pm",0.441181902,ChemicalSpill
+880,98f6763de9c5bc7cfff0d5343e4982d0e2a63b34,Oil spill blocks lane of N. Summit Street - News Weather Sports Toledo OH,"gmt, edt, july, monday, pm",1.108272833,ChemicalSpill
+881,7a698df06a8412ad15b120bce0cec8bb43a75337,LFR Hazmat team cleans up chemical spill in 3500 block of East 4 - KCBD NewsChannel 11 Lubbock,"gmt, edt, july, monday, pm",0.62221039,ChemicalSpill
+882,c12b9211cd572e135120e503eb6a5bcd01160fa0,Oil spill not expected to disrupt water supplies downstream - KWWL - Eastern Iowa Breaking News Weather Closings,"gmt, edt, july, monday, pm",0.998764161,ChemicalSpill
+883,18204caf160093f71bf67e21e011e3a7ef2f7886,Cleanup begins after train derailment oil spill in Iowa - KOAA.com | Continuous News | Colorado Springs and Pueblo,"gmt, edt, july, monday, pm",1.308723608,ChemicalSpill
+884,ae9a7b89af8ccb60139d6b4f43eb87bf250edfe3,Supreme Court rejects Indiana barge company’s oil spill appeal | 2018-06-19 | The Indiana Lawyer,"s, saying, n't, states, county",1.528222716,
+885,cbd7eaf8037998ec2deecd9b23142a9dfa9ddeba,Boat Crash Results in Oil Spill Near Breton Sound | Louisiana News | US News,"s, saying, n't, states, county",1.158933791,
+886,33bf4639e24743620c44f111bbb8ea01c731ebd0,Man killed in industrial accident - WMC Action News 5 - Memphis Tennessee,"gmt, edt, july, monday, pm",0.31363019,Irrelevant
+887,774172670b6520d47d9be21fec5b446a355d8ec6,One Dead In Hunt Valley Industrial Accident: Officials | Hunt Valley MD Patch,"s, saying, n't, states, county",1.392347543,
+888,0da49e33d6456aa83889f0f468a026c64442262e,Roads back open after chemical spill near 44th & MLK - KCBD NewsChannel 11 Lubbock,"gmt, edt, july, monday, pm",0.778907344,Irrelevant
+889,b19064d56228838da3655c65e3a5078db802554b,Chemical Spill at High School Leads to Evacuation | New Hampshire News | US News,"s, saying, n't, states, county",1.474841329,
+890,d791fb6fc0d2203c47316d816b5088d0c760425f,Man Gets 3 Years for Filing False Oil Spill Claims | Florida News | US News,"s, saying, n't, states, county",1.731271523,
+891,f7e2834504e4db239483adb81b81245c339b5f63,Earthquake info : M3.7 earthquake on Mon 30 Jul 22:22:53 UTC / SAN PABLO BAY CALIFORNIA - 110 experience reports / VolcanoDiscovery,"s, saying, n't, states, county",1.65094708,
+892,a1d4881e7375e2abf45798f33d387e441d98794e,Earthquake shakes Petaluma,"s, saying, n't, states, county",1.645768585,
+893,ebd90ec56fd32a649336c7a306233e3f245b1bda,Healthy Aging looks to tackle ‘silver tsunami’ - The Martha's Vineyard Times,"health, s, study, hospital, patients",1.623163212,Irrelevant
+894,57fd61a6f614b093dc947bb8f2d44f79754352e6,Cascadia Subduction Zone earthquake could be worse than expected - KPTV - FOX 12,"gmt, edt, july, monday, pm",0.738514847,Irrelevant
+895,54504ec4bec0dbb426e0211f276eaf0d5aeb1c93,Building for the Big One: Coastal campus designed to withstand quake tsunami | OregonLive.com,"s, saying, n't, states, county",0.592870818,
+896,4ce1a31d3f8b8dedb0b2007682821fc888ad4eb3,AFTERSHOCK COMICS October 2018 Solicitations,"s, city, t, people, time",1.059545325,
+897,562a97928661c60282b920178196ba236886969e,Tsunami Hits Boston In Next Godzilla Movie | Boston MA Patch,"s, saying, n't, states, county",1.57583524,
+898,22d29c4214f62a41babbc2edabae9ce0eb356927,AfterShock Comics' Lost City Explorers Being Developed For TV,"s, city, t, people, time",1.947289319,
+899,152a0b7237ab6dbd237003b25d474851c99f4ae1,Could a tsunami reach Columbia City? And other Disaster Night! questions | KUOW News and Information,"s, saying, n't, states, county",1.51153918,
+900,6dba724e2a418a075b952a0918b3177a6c87c577,3.0 magnitude earthquake struck East Bay Sunday – The Mercury News,"s, saying, n't, states, county",1.388290036,
+901,52ecde29e46b40b38d251a5a5c4255be26c3d1dc,Soft robotic fish swims alongside real ones in coral reefs | MIT News,"s, saying, n't, states, county",1.37087761,
+902,31a57ae6e7df3c06554ee93e8903eea3926ec725,Georgia lawmaker resigns after dropping his pants using racial slur on television,"s, saying, n't, states, county",1.682408946,
+903,d2efc742fca173a2cee5c8a6d445486f66211701,Hearing set for oil and gas proposal in southeast Boulder County with COGCC director's approval - Boulder Daily Camera,"s, saying, n't, states, county",1.224274568,
+904,b496d8e5db8989a6f1f1e130f8c4937b43cef2ec,Lieback’s Lounge: Flex Seal AHRMA and a Multistrada,"s, city, t, people, time",1.318657539,
+905,844bcadbce3a3ea1bcfd8d787487489ee961a03f,AP-USDA-Eastern Cornbelt Hog Report | Iowa News | US News,"s, saying, n't, states, county",1.60787682,
+906,771c698db0e6e05fd9f7f36e42b0c0035bc03daa,Del Monte: 2Q Earnings Snapshot | Florida News | US News,"s, saying, n't, states, county",1.620840752,
+907,618776854c4472a57d4f4199c34c540a4bc5354c,Despite eviction reprieve Puerto Rican hurricane evacuees face uncertainty fear - The Boston Globe,"s, city, t, people, time",0.896494592,
+908,ca95c39623285f5d224cd3c3ea14cd26ccb15200,Florida Keys Cope With Suicide Spike After Hurricane Irma | WLRN,"health, s, study, hospital, patients",1.293595491,Irrelevant
+909,9c4fae40f917210b69e625e8173da2e6d5c308fb,Manalapan consultant provides 'hurricane' of training,"s, saying, n't, states, county",0.530158364,
+910,91f75d46ad2413b6f4b4dc39087e47441cb0f7d0,Solar Flares Disrupted Radio Communications During 2017 Atlantic Hurricanes - SpaceRef,"health, s, study, hospital, patients",1.066001862,Irrelevant
+911,bd47cc4bb319fd724c36da826f527eb466d96d6c,Nebraska woman gets 'shotski' back from country star Kenny Chesney after it survived Huricane Irma | Music | omaha.com,"s, city, t, people, time",0.544969347,
+912,3b18837d2c67be21b301efe866337d32ad4c74df,Hurricane woman sentenced to prison for embezzling from children's choir | Cops & Courts | wvgazettemail.com,"s, city, t, people, time",0.464595297,
+913,40520a1628d5f64d572ec0f9333bb2a64613ee5f,Fake Rumors Predicted Nationwide Power Outage : NPR,"s, saying, n't, states, county",1.301775696,
+914,d7e2fd99d4adc61ce93570e437618170bc6ae0a6,Outer Banks Power Outage Over As Ocracoke And Hatteras Regain Electricity : The Two-Way : NPR,"s, saying, n't, states, county",1.181996815,
+915,68999b792ab9576d3446093733a6d1e842665671,SNAP replacing food lost from power outage - WMC Action News 5 - Memphis Tennessee,"gmt, edt, july, monday, pm",0.566229855,Irrelevant
+916,182b51027db41c965a998ed0e281ac2e7d5469b0,LIRR nightmare continues with power outage in Penn station,"s, saying, n't, states, county",1.691458654,
+917,04b6155a62e3ab677712777788f49ddd2f4ebf4f,For blacks in Boston a power outage - The Boston Globe,"s, city, t, people, time",1.88218961,
+918,4a7a95b55cef2d0fdde21b4df6ca0d96a635331e,Planned power outage Tuesday,"s, city, t, people, time",2.306249129,
+919,7862a5b3997b80aa3c97752730aeeb8fb1598d4b,Raccoon sparks major power outage in Rio Rancho | KOB 4,"playing, players, sports, football, years",1.911006866,Irrelevant
+920,1ecb701fdc560ea30eeaafa63ba506cf633a3e8b,Conspiracy theorists think there will be a national power outage Nov. 4.,"s, city, t, people, time",0.661616695,
+921,23b336d30e39edba4313ba328e0e041a34713680,FBI joins probe into power outage at Atlanta airport,"playing, players, sports, football, years",1.12704309,Irrelevant
+922,84f216c00acaab82154e7f3b0b61bb604038cdd2,Delta Warns of Chaos After Power Outage Worldwide System Failure,"playing, players, sports, football, years",1.890354258,Irrelevant
+923,c7c116c29e88c6ac849b3f1f838e178da8351cf0,PGE says squirrel to blame for power outage in NW Portland - KPTV - FOX 12,"gmt, edt, july, monday, pm",0.572465515,Irrelevant
+924,0cb53ae2515a14e4d13034b9a42053bbf6707052,Probe Launched Into Nursing Home Deaths After Irma Power Outage : NPR,"s, saying, n't, states, county",1.373006961,
+925,b12c96b75a347d59f44e3914abf7984d5f1723b4,The Wrong Reasons to Back Pussy Riot - The New York Times,"s, city, t, people, time",1.189109145,
+926,0649102a48150f6e411d1ae0e00312228d71d804,Thousands Of Iranians Protest Falling Value Of The Rial : NPR,"s, saying, n't, states, county",1.285215152,
+927,4231451a2644db3327d447d29808acf92d452981,Hundreds Of 'Kayaktivists' In Seattle Protest Shell's Arctic Drilling : NPR,"s, saying, n't, states, county",1.602405701,
+928,c91f7448af1e2b03906696f1a4a443e1357e7ddc,Why 'Juggalos' are marching on DC | TheHill,"s, city, t, people, time",1.053516049,
+929,d8951cdaaef0df5547f1417a27c16d475bcb4966,Power outage in Iwilei/Downtown - Honolulu Hawaii news sports & weather - KITV Channel 4,"s, saying, n't, states, county",1.749304412,
+930,d7e3727672568fb207ca0270e625c4f262bf10e4,Pro-Palestinian activists protest the Philadelphia Orchestra's Israel tour - Philly,"s, city, t, people, time",2.016975223,
+931,bd83a59524f980f5da9db0ac4ad90c0ab59f7974,Hundreds of bikers protest at McLennan County courthouse | Twin Peaks Biker Shootout | wacotrib.com,"s, city, t, people, time",0.187051841,
+932,dbe43e04a2bb7f501bd6889c6ac8faba58f67e60,Prison riot carnage led to bodies stacked in ‘macabre woodpile’,"inmates, riot, prison, corrections, lee",1.324388033,Irrelevant
+933,ca60ca1b90cea0d4fbcad42dc0eacff45827e6ad,White nationalist Richard Spencer leads torch-bearing protesters defending Lee statue - The Washington Post,"s, city, t, people, time",2.346439807,
+934,6be0d5972d4bb6be91a9f725317cd7fb0fe5f6a5,Guards Waited Hours to Stop a Prison Riot That Left 7 Inmates Dead - The New York Times,"inmates, riot, prison, corrections, lee",0.624004362,Irrelevant
+935,86823d384b81c4aabd7b2fe2248641213c5dcadd,Prominent gay rights lawyer self-immolates in environmental protest,"health, s, study, hospital, patients",1.447612121,Irrelevant
+936,7eda4f5e0da5c13528187190e7fea7e37270dcd5,Coroner: Inmates in South Carolina prison riot bled to death,"inmates, riot, prison, corrections, lee",2.086075863,Irrelevant
+937,81c57617467f57bbbf87aff1d783800cf521017e,Jenji Kohan on the Prison Riot Driving ‘Orange Is the New Black’ - The New York Times,"s, city, t, people, time",0.305484141,
+938,eecbc9139adf0f14368d3c0a2adf7376c3ac762c,Survivor blames officials for Delaware prison riot : Community : WHYY,"inmates, riot, prison, corrections, lee",0.609290868,Irrelevant

@@ -107,6 +107,11 @@
 			<version>2.9.3</version>
 		</dependency>
 		<dependency>
+			<groupId>com.fasterxml.jackson.dataformat</groupId>
+			<artifactId>jackson-dataformat-csv</artifactId>
+			<version>2.9.3</version>
+		</dependency>
+		<dependency>
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-solrj</artifactId>
 			<version>7.2.1</version>
@@ -186,9 +191,9 @@
 				<proxy.port>8080</proxy.port>
 				<erAuto>false</erAuto>
 				<dcAuto>false</dcAuto>
-				<wsAuto>true</wsAuto>
+				<wsAuto>false</wsAuto>
 				<erInterval>3600000</erInterval>
-				<dcInterval>900000</dcInterval>
+				<dcInterval>60000</dcInterval>
 				<wsInterval>15000</wsInterval>
 			</properties>
 		</profile>

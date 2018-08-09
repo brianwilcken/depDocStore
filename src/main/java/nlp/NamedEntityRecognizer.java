@@ -29,29 +29,33 @@ public class NamedEntityRecognizer {
     }
 
     public List<String> detectNamedEntities(String content, String nerModelPath) {
-        TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, nerModelPath);
-        NameFinderME nameFinder = new NameFinderME(model);
+        try {
+            TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, nerModelPath);
+            NameFinderME nameFinder = new NameFinderME(model);
 
-        SentenceModel sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
-        String[] sentences = NLPTools.detectSentences(sentModel, content);
+            SentenceModel sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
+            String[] sentences = NLPTools.detectSentences(sentModel, content);
 
-        TokenizerModel tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
+            TokenizerModel tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
 
-        List<String> namedEntities = new ArrayList<>();
+            List<String> namedEntities = new ArrayList<>();
 
-        for (String sentence : sentences) {
-            String[] tokens = NLPTools.detectTokens(tokenizerModel, sentence);
-            Span[] nameSpans = nameFinder.find(tokens);
-            for (Span span : nameSpans) {
-                int start = span.getStart();
-                int end = span.getEnd();
-                String[] entityParts = Arrays.copyOfRange(tokens, start, end);
-                String entity = String.join(" ", entityParts);
-                namedEntities.add(entity);
+            for (String sentence : sentences) {
+                String[] tokens = NLPTools.detectTokens(tokenizerModel, sentence);
+                Span[] nameSpans = nameFinder.find(tokens);
+                for (Span span : nameSpans) {
+                    int start = span.getStart();
+                    int end = span.getEnd();
+                    String[] entityParts = Arrays.copyOfRange(tokens, start, end);
+                    String entity = String.join(" ", entityParts);
+                    namedEntities.add(entity);
+                }
             }
-        }
 
-        return namedEntities;
+            return namedEntities;
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     public void trainNERModel(String trainingFilePath, String type, String modelPath) {
@@ -64,12 +68,12 @@ public class NamedEntityRecognizer {
                 //Optimize iterations/cutoff using 5-fold cross validation
                 NLPTools.TrainingParameterTracker tracker = new NLPTools.TrainingParameterTracker();
                 while (tracker.hasNext()) {
-                    NLPTools.TrainingParameterTracker.Tuple tuple = tracker.getNext();
-                    tuple.P = crossValidateNERModel(sampleStream, NLPTools.getTrainingParameters(tuple.i, tuple.c));
+                    OptimizationTuple optimizationTuple = tracker.getNext();
+                    optimizationTuple.P = crossValidateNERModel(sampleStream, NLPTools.getTrainingParameters(optimizationTuple.i, optimizationTuple.c));
                 }
 
                 //Use optimized iterations/cutoff to train model on full dataset
-                NLPTools.TrainingParameterTracker.Tuple best = tracker.getBest();
+                OptimizationTuple best = tracker.getBest();
                 sampleStream.reset();
                 model = NameFinderME.train("en", type, sampleStream, NLPTools.getTrainingParameters(best.i, best.c), new TokenNameFinderFactory());
             }

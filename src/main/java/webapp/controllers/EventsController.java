@@ -78,7 +78,7 @@ public class EventsController {
 		dataCapableClient = new DataCapableClient();
 		webClient = new WebClient();
 		solrClient = new SolrClient(Tools.getProperty("solr.url"));
-		categorizer = new EventCategorizer();
+		categorizer = new EventCategorizer(solrClient);
 		gson = new Gson();
 		exceptions = new ArrayList<>();
 	}
@@ -354,7 +354,7 @@ public class EventsController {
 	}
 	
 	private void updateIndexedEventsByFile(String filePath) throws SolrServerException {
-		solrClient.UpdateIndexedEventsFromFile(filePath);
+		solrClient.UpdateIndexedEventsFromJsonFile(filePath);
 	}
 
 	public List<IndexedEvent> getModelTrainingDataFromEventRegistry() {
@@ -378,17 +378,19 @@ public class EventsController {
 		return events;
 	}
 	
-	private List<IndexedEvent> queryEvents(String conceptUri, List<String> subConcepts) throws SolrServerException {
+	private List<IndexedEvent> queryEvents(String conceptUri, List<String> subConcepts) throws SolrServerException, IOException {
 		EventsRegistryEventsResponse response = eventRegistryClient.QueryEvents(conceptUri, subConcepts);
 		return eventRegistryClient.PipelineProcessEvents(response, conceptUri, subConcepts);
 	}
 
 	private void dumpEventCategorizationTrainingDataToFile() {
-		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"), solrClient::getDoccatDataQuery, solrClient::formatForEventCategorization);
+		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"), solrClient::getDoccatDataQuery,
+				solrClient::formatForEventCategorization, new SolrClient.EventCategorizationThrottle(SolrConstants.Events.CATEGORY_IRRELEVANT, 0.2));
 	}
 
 	private void dumpEventClusteringTrainingDataToFile() {
-		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.clusteringTrainingFile"), solrClient::getClusteringDataQuery, solrClient::formatForLDAClustering);
+		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.clusteringTrainingFile"), solrClient::getClusteringDataQuery,
+				solrClient::formatForClustering, new SolrClient.ClusteringThrottle("", 0));
 	}
 	
 	private void dumpEventDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
@@ -397,11 +399,6 @@ public class EventsController {
 
 	private void dumpSourceDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
 		solrClient.WriteSourceDataToFile(filename, query, numRows, filterQueries);
-	}
-
-	private double processTrainingData() {
-		double accuracy = categorizer.trainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
-		return accuracy;
 	}
 
 	public List<IndexedEvent> refreshEventsFromEventRegistry() {
@@ -416,8 +413,7 @@ public class EventsController {
 	}
 
 	public double initiateModelTraining() {
-		dumpEventCategorizationTrainingDataToFile();
-		double accuracy = processTrainingData();
+		double accuracy = categorizer.trainEventCategorizationModel();
 
 		return accuracy;
 	}
