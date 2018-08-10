@@ -38,12 +38,12 @@ public class NLPTools {
     }
 
     public static final class TrainingParameterTracker {
-        private int iStart = 300; //Starting iterations
-        private int iStep = 50; //Iteration step size
-        private int iStop = 1000; //Max iterations
+        private int iStart = 25; //Starting iterations
+        private int iStep = 5; //Iteration step size
+        private int iStop = 100; //Max iterations
         private int iSize = (iStop - iStart)/iStep + 1;
 
-        private int cStart = 3; //Starting cutoff
+        private int cStart = 1; //Starting cutoff
         private int cStep = 1; //Cutoff step size
         private int cStop = 9; //Max cutoff
         private int cSize = (cStop - cStart)/cStep + 1;

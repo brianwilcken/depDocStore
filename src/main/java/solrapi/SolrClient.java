@@ -54,10 +54,11 @@ public class SolrClient {
 	
 	public static void main(String[] args) {
 		SolrClient solrClient = new SolrClient("http://localhost:8983/solr");
-		//solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.analysisDataFile"), solrClient::getAnalyzedIrrelevantDataQuery, solrClient::formatForAnalysis, new ClusteringThrottle("", 0));
+		//solrClient.writeTrainingDataToFile("data/analyzed-events.csv", solrClient::getAnalyzedDataQuery, solrClient::formatForClustering, new ClusteringThrottle("", 0));
 		try {
+			solrClient.WriteEventDataToFile("data/all-model-training-events.json", "eventState:* AND concepts:*", 10000);
 			//solrClient.UpdateIndexedEventsFromJsonFile("data/solrData.json");
-			solrClient.UpdateIndexedEventsWithAnalyzedEvents("data/doc_clusters.csv");
+			//solrClient.UpdateIndexedEventsWithAnalyzedEvents("data/doc_clusters.csv");
 		} catch (SolrServerException e) {
 			e.printStackTrace();
 		}
@@ -418,6 +419,18 @@ public class SolrClient {
 	public SolrQuery getDoccatDataQuery(SolrQuery query) {
 		query.setQuery("eventState:* AND -eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
 		query.addFilterQuery("category:* AND -category:" + SolrConstants.Events.CATEGORY_UNCATEGORIZED);
+
+		return query;
+	}
+
+	public SolrQuery getNewDataQuery(SolrQuery query) {
+		query.setQuery("eventState:" + SolrConstants.Events.EVENT_STATE_NEW);
+
+		return query;
+	}
+
+	public SolrQuery getAnalyzedDataQuery(SolrQuery query) {
+		query.setQuery("eventState:" + SolrConstants.Events.EVENT_STATE_ANALYZED);
 
 		return query;
 	}

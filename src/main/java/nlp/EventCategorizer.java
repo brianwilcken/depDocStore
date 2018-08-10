@@ -1,11 +1,13 @@
 package nlp;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 import common.Tools;
 import opennlp.tools.cmdline.doccat.DoccatFineGrainedReportListener;
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -34,14 +36,14 @@ public class EventCategorizer {
 
 	public static void main(String[] args) {
 		SolrClient solrClient = new SolrClient("http://localhost:8983/solr");
-		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.analysisDataFile"), solrClient::getAnalyzedIrrelevantDataQuery, solrClient::formatForAnalysis, new SolrClient.ClusteringThrottle("", 0));
+		//solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.analysisDataFile"), solrClient::getAnalyzedIrrelevantDataQuery, solrClient::formatForAnalysis, new SolrClient.ClusteringThrottle("", 0));
 		EventCategorizer categorizer = new EventCategorizer(solrClient);
 
-		List<AnalyzedEvent> analyzedEvents = solrClient.CollectAnalyzedEventsFromCSV(Tools.getProperty("nlp.analysisDataFile"));
+		List<AnalyzedEvent> analyzedEvents = solrClient.CollectAnalyzedEventsFromCSV("data/new-events.csv");
 		try {
 			List<IndexedEvent> indexedEvents = solrClient.CollectIndexedEventsFromAnalyzedEvents(analyzedEvents);
 			categorizer.detectEventDataCategories(indexedEvents);
-
+			solrClient.indexDocuments(indexedEvents);
 		} catch (SolrServerException | IOException e) {
 			e.printStackTrace();
 		}
@@ -67,7 +69,8 @@ public class EventCategorizer {
 //		}
 	}
 
-	private final double THROTTLE_FOR_IRRELEVANT_EVENTS = 0.15;
+	private final double THROTTLE_FOR_IRRELEVANT_EVENTS = 0.25;
+	private final double STANDARD_DEVIATION_CUTOFF = 0.2;
 	private final int NUM_CROSS_VALIDATION_PARTITIONS = 5;
 	private SolrClient solrClient;
 
@@ -90,7 +93,18 @@ public class EventCategorizer {
 				//Categorize
 				double[] outcomes = categorizer.categorize(docCatTokens);
 				String category = categorizer.getBestCategory(outcomes);
-				//categorizer.getAllResults(outcomes);
+				if (category.compareTo(SolrConstants.Events.CATEGORY_IRRELEVANT) == 0) {
+					StandardDeviation standardDev = new StandardDeviation();
+					double stddev = standardDev.evaluate(outcomes);
+
+					//In this context the standard deviation indicates the degree of gravitation towards irrelevancy.
+					//If the standard deviation is high we take this as an indication of a much lower
+					//probability the event contains useful data.  Therefore, we ensure the event will
+					//not appear by default in the incidents feed by marking it as "deleted."
+					if (stddev > STANDARD_DEVIATION_CUTOFF) {
+						event.setEventState(SolrConstants.Events.EVENT_STATE_DELETED);
+					}
+				}
 				event.setCategory(category);
 			}
 

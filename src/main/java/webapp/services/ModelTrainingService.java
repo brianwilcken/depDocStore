@@ -11,9 +11,16 @@ public class ModelTrainingService {
 
     final static Logger logger = LogManager.getLogger(ModelTrainingService.class);
 
+    private static boolean trainingInProgress = false;
+
     @Async("processExecutor")
     public void process(EventsController eventsController) {
-        double accuracy = eventsController.initiateModelTraining();
-        logger.info("Model training complete.  Model accuracy: " + accuracy);
+        if (!trainingInProgress) {
+            trainingInProgress = true;
+            logger.info("Begin model training.");
+            double accuracy = eventsController.initiateModelTraining();
+            logger.info("Model training complete.  Model accuracy: " + accuracy);
+            trainingInProgress = false;
+        }
     }
 }

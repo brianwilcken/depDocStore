@@ -63,14 +63,14 @@ public class EventsController {
 
 	public static void main(String[] args) {
 		EventsController ctrl = new EventsController();
-		try {
-			//ctrl.dumpEventDataToFile("data/events.json", "eventState:*", null, 100);
-			//ctrl.dumpSourceDataToFile("data/sources.json", "eventId:*", null, 100);
-			ctrl.updateIndexedEventsByFile("data/events.json");
-			//ctrl.updateIndexedEventSourcesByFile("data/sources.json");
-		} catch (SolrServerException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			//ctrl.dumpEventDataToFile("data/events.json", "eventState:*", null, 100);
+//			//ctrl.dumpSourceDataToFile("data/sources.json", "eventId:*", null, 100);
+//			//ctrl.updateIndexedEventsByFile("data/events.json");
+//			//ctrl.updateIndexedEventSourcesByFile("data/sources.json");
+//		} catch (SolrServerException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 	public EventsController() {
@@ -174,6 +174,9 @@ public class EventsController {
 				event.updateLastUpdatedDate();
 				solrClient.indexDocuments(events);
 				logger.info(context.getRemoteAddr() + " -> " + "Deleted event with id: " + id);
+				if (event.getFeedType().compareTo(SolrConstants.Events.FEED_TYPE_MEDIA) == 0) {
+					modelTrainingService.process(this);
+				}
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event));
 			} else {
 				logger.info(context.getRemoteAddr() + " -> " + "Failed to delete event with id: " + id);
@@ -274,8 +277,10 @@ public class EventsController {
                 if (!updEvent.getConditionalUpdate()) {
                     event.setSources(updEvent.getSources());
                     indexEventSources(event);
-                    logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed... proceeding with model training");
-                    modelTrainingService.process(this);
+					logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed");
+					if (event.getFeedType().compareTo(SolrConstants.Events.FEED_TYPE_MEDIA) == 0) {
+						modelTrainingService.process(this);
+					}
                 }
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event, event.getLastUpdated()));
 			} else {
