@@ -131,6 +131,8 @@ class PortalInterface:
         else:
             simplifyBoundaryFC = "in_memory\\_wildfireBoundarySimplified_featureClass"
             arcpy.SimplifyPolygon_cartography(new_boundary_polygon, simplifyBoundaryFC, 'BEND_SIMPLIFY', '5000 Feet')
+            simplifiedWildfireBoundaryFS = arcpy.FeatureSet()
+            simplifiedWildfireBoundaryFS.load(simplifyBoundaryFC)
         if self.portalInfo['useNegotiateAuth'] == True:
             temp=requests.get(self.wildfireBoundariesUrl + wildfireQuery,verify=False,auth=HttpNegotiateAuth())
         else:
