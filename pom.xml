@@ -186,7 +186,7 @@
 				<proxy.port>8080</proxy.port>
 				<erAuto>false</erAuto>
 				<dcAuto>false</dcAuto>
-				<wsAuto>true</wsAuto>
+				<wsAuto>false</wsAuto>
 				<erInterval>3600000</erInterval>
 				<dcInterval>900000</dcInterval>
 				<wsInterval>15000</wsInterval>
