@@ -264,9 +264,9 @@ public class EventsController {
 					}
 				}
 				event.setSummary(updEvent.getSummary());
+				event.setTitle(updEvent.getTitle());
                 if (!updEvent.getConditionalUpdate()) {
                     event.setCategory(updEvent.getCategory());
-                    event.setTitle(updEvent.getTitle());
                     event.setDashboard(updEvent.getDashboard());
                     event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
                     event.setFeatureIds(updEvent.getFeatureIds());
