@@ -13,8 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import common.Tools;
 
@@ -327,12 +325,12 @@ public class NLPExperiments {
 				//Optimize iterations/cutoff using 5-fold cross validation
 				NLPTools.TrainingParameterTracker tracker = new NLPTools.TrainingParameterTracker();
 				while (tracker.hasNext()) {
-					NLPTools.TrainingParameterTracker.Tuple tuple = tracker.getNext();
-					tuple.P = CrossValidateNERModel(sampleStream, NLPTools.getTrainingParameters(tuple.i, tuple.c));
+					OptimizationTuple optimizationTuple = tracker.getNext();
+					optimizationTuple.P = CrossValidateNERModel(sampleStream, NLPTools.getTrainingParameters(optimizationTuple.i, optimizationTuple.c));
 				}
 
 				//Use optimized iterations/cutoff to train model on full dataset
-				NLPTools.TrainingParameterTracker.Tuple best = tracker.getBest();
+				OptimizationTuple best = tracker.getBest();
 				sampleStream.reset();
 				model = NameFinderME.train("en", "hazard", sampleStream, NLPTools.getTrainingParameters(best.i, best.c), new TokenNameFinderFactory());
 			}

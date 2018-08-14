@@ -6,6 +6,7 @@ import nlp.EventCategorizer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServerException;
+import solrapi.SolrConstants;
 import solrapi.model.IndexedEvent;
 import solrapi.model.IndexedEventSource;
 import geoparsing.LocationResolver;
@@ -70,8 +71,9 @@ public class WebClient {
     private final SolrClient solrClient;
     private final EventCategorizer categorizer;
 
-    private static final int REQUEST_DELAY = 0;
+    private static final int REQUEST_DELAY = 30000;
 
+    public static final String QUERY_TIMEFRAME_RECENT = "";
     public static final String QUERY_TIMEFRAME_LAST_HOUR = "qdr:h";
     public static final String QUERY_TIMEFRAME_ALL_ARCHIVED = "ar:1";
 
@@ -88,10 +90,10 @@ public class WebClient {
         articleExtractor = new ArticleExtractor();
         ner = new NamedEntityRecognizer();
         stemmer = new PorterStemmer();
-        categorizer = new EventCategorizer();
         sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
         locationResolver = new LocationResolver();
         solrClient = new SolrClient(Tools.getProperty("solr.url"));
+        categorizer = new EventCategorizer(solrClient);
     }
 
     public int queryGoogle(String timeFrameSelector, BiConsumer<Document, Element> action) {
@@ -120,7 +122,7 @@ public class WebClient {
                                 logger.error(e.getMessage(), e);
                             }
                         }
-                        if (resultsSize >= 10 && start <= 200) {
+                        if (resultsSize >= 10) {
                             start += resultsSize;
                             Thread.sleep(REQUEST_DELAY);
                             logger.info("Getting next page of Google results for: " + category);
@@ -232,12 +234,13 @@ public class WebClient {
                         IndexedEvent updEvent = updEvents.get(0);
                         event.updateForDynamicFields(updEvent);
                     } else {
+                        //event.setCategory(SolrConstants.Events.CATEGORY_UNCATEGORIZED);
                         categorizer.detectEventDataCategories(events);
                     }
 
                     solrClient.indexDocuments(events);
                     solrClient.indexDocuments(sources);
-                } catch (SolrServerException e) {
+                } catch (SolrServerException | IOException e) {
                     e.printStackTrace();
                 }
             }
@@ -282,9 +285,13 @@ public class WebClient {
     private Elements getGoogleSearchResults(String queryTerm, String timeFrameSelector, int start) {
         Document doc = null;
         try {
-            doc = Jsoup.connect("https://www.google.com/search?q=" + queryTerm + "&cr=countryUS&lr=lang_en&tbas=0&tbs=sbd:1," + timeFrameSelector + ",lr:lang_1en,ctr:countryUS&tbm=nws&start=" + start)
-                    .userAgent(USER_AGENT)
-                    .get();
+            if (!queryTerm.startsWith("#")) {
+                doc = Jsoup.connect("https://www.google.com/search?q=" + queryTerm + "&cr=countryUS&lr=lang_en&tbas=0&tbs=sbd:1," + timeFrameSelector + ",lr:lang_1en,ctr:countryUS&tbm=nws&start=" + start)
+                        .userAgent(USER_AGENT)
+                        .get();
+            } else {
+                return null;
+            }
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
             return null;

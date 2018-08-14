@@ -10,6 +10,8 @@ import opennlp.tools.util.InputStreamFactory;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.PlainTextByLineStream;
 import opennlp.tools.util.TrainingParameters;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -23,6 +25,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 
 public class NLPTools {
+    final static Logger logger = LogManager.getLogger(NLPTools.class);
+
     public static TrainingParameters getTrainingParameters(int iterations, int cutoff) {
         TrainingParameters mlParams = new TrainingParameters();
         mlParams.put(TrainingParameters.ALGORITHM_PARAM, "MAXENT");
@@ -36,40 +40,28 @@ public class NLPTools {
     public static final class TrainingParameterTracker {
         private int iStart = 25; //Starting iterations
         private int iStep = 5; //Iteration step size
-        private int iStop = 225; //Max iterations
+        private int iStop = 100; //Max iterations
         private int iSize = (iStop - iStart)/iStep + 1;
 
         private int cStart = 1; //Starting cutoff
         private int cStep = 1; //Cutoff step size
-        private int cStop = 6; //Max cutoff
+        private int cStop = 9; //Max cutoff
         private int cSize = (cStop - cStart)/cStep + 1;
 
-        private NLPTools.TrainingParameterTracker.Tuple current;
+        private OptimizationTuple current;
         private int coordI;
         private int coordC;
 
-        private NLPTools.TrainingParameterTracker.Tuple[][] grid; //keeps track of performance measures for each i/c pair
-
-        public final class Tuple {
-            int i;
-            int c;
-            double P;
-
-            public Tuple(int i, int c) {
-                this.i = i;
-                this.c = c;
-                this.P = 0;
-            }
-        }
+        private OptimizationTuple[][] grid; //keeps track of performance measures for each i/c pair
 
         private void makeGrid() {
-            grid = new NLPTools.TrainingParameterTracker.Tuple[iSize][cSize];
+            grid = new OptimizationTuple[iSize][cSize];
 
             for (int i = 0; i < iSize; i++) {
                 for (int c = 0; c < cSize; c++) {
                     int iParam = iStart + (iStep * i);
                     int cParam = cStart + (cStep * c);
-                    grid[i][c] = new NLPTools.TrainingParameterTracker.Tuple(iParam, cParam);
+                    grid[i][c] = new OptimizationTuple(iParam, cParam);
                 }
             }
         }
@@ -89,7 +81,7 @@ public class NLPTools {
         }
 
         private void testLimitForOptimization() {
-            double threshold = 0.01;
+            double threshold = 0.01; //must be at least 1% improvement since previous step in order to continue
             int prevI = coordI - 1;
             int prevI2 = coordI - 2;
             double dPdi = 0;
@@ -102,8 +94,8 @@ public class NLPTools {
 
             if (prevI >= 0 && prevI2 >= 0) {
                 //calculate the 1st derivative dP/di.
-                NLPTools.TrainingParameterTracker.Tuple prev = grid[prevI][coordC];
-                NLPTools.TrainingParameterTracker.Tuple prev2 = grid[prevI2][coordC];
+                OptimizationTuple prev = grid[prevI][coordC];
+                OptimizationTuple prev2 = grid[prevI2][coordC];
                 dPdi = (prev.P - prev2.P)/prevI;
                 iCalc = true;
 
@@ -111,8 +103,8 @@ public class NLPTools {
 
             if (prevC >= 0 && prevC2 >= 0) {
                 //calculate the 1st derivative dP/dc.
-                NLPTools.TrainingParameterTracker.Tuple prev = grid[coordI][prevC];
-                NLPTools.TrainingParameterTracker.Tuple prev2 = grid[coordI][prevC2];
+                OptimizationTuple prev = grid[coordI][prevC];
+                OptimizationTuple prev2 = grid[coordI][prevC2];
                 dPdc = (prev.P - prev2.P)/prevC;
                 cCalc = true;
             }
@@ -137,7 +129,7 @@ public class NLPTools {
             }
         }
 
-        public NLPTools.TrainingParameterTracker.Tuple getNext() {
+        public OptimizationTuple getNext() {
             testLimitForOptimization();
             if (coordI <= (iSize - 1)) {
                 current = grid[coordI++][coordC];
@@ -148,8 +140,8 @@ public class NLPTools {
             return current;
         }
 
-        public NLPTools.TrainingParameterTracker.Tuple getBest() {
-            NLPTools.TrainingParameterTracker.Tuple best = null;
+        public OptimizationTuple getBest() {
+            OptimizationTuple best = null;
 
             for (int i = 0; i < iSize; i++) {
                 for (int c = 0; c < cSize; c++) {
@@ -157,7 +149,7 @@ public class NLPTools {
                         best = grid[i][c];
                         continue;
                     }
-                    NLPTools.TrainingParameterTracker.Tuple current = grid[i][c];
+                    OptimizationTuple current = grid[i][c];
                     if (best.P < current.P) {
                         best = current;
                     }
@@ -200,7 +192,7 @@ public class NLPTools {
         return null;
     }
 
-    public static <T> T getModel(Class<T> clazz, String modelFilePath) {
+    public static <T> T getModel(Class<T> clazz, String modelFilePath) throws IOException {
         try (InputStream modelIn = new FileInputStream(modelFilePath)) {
 
             Constructor<?> cons = clazz.getConstructor(InputStream.class);
@@ -208,27 +200,9 @@ public class NLPTools {
             T o = (T) cons.newInstance(modelIn);
 
             return o;
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (SecurityException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IllegalArgumentException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException |
+                IllegalArgumentException | InvocationTargetException e) {
+            logger.fatal(e.getMessage(), e);
         }
         return null;
     }
@@ -317,4 +291,5 @@ public class NLPTools {
 
         return null;
     }
+
 }
