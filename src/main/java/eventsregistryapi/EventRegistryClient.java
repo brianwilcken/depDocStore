@@ -83,7 +83,7 @@ public class EventRegistryClient {
 		//Filter out events that are outside the United States or that have fewer than 10 articles or are missing a summary/title
 		engEventData = engEventData.entrySet().stream()
 			.filter(p -> p.getValue().getLocation().getCountry().getLabel().getEng().compareTo("United States") == 0)
-			.filter(p -> p.getValue().getTotalArticleCount() >= 10)
+			//.filter(p -> p.getValue().getTotalArticleCount() >= 10)
 			.filter(p -> p.getValue().getTitle().getEng() != null)
 			.filter(p -> p.getValue().getSummary().getEng() != null)
 			.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
@@ -111,17 +111,20 @@ public class EventRegistryClient {
 		for (IndexedEvent event : categorizedEvents) {
 			//Indicate that this event was categorized by the openNLP document categorizer 
 			event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_MACHINE);
-			
-			//Get specifics about the event details.  This includes the medoid article URL.
-			EventRegistryEventDetailsResponse eventDetailsResponse = QueryEvent(event.getUri());
-			if (eventDetailsResponse != null) {
-				Info eventInfo = eventDetailsResponse.getEventDetails().get(event.getUri()).getInfo();
-				readyToIndexEvents.add(event.updateWithEventDetails(eventInfo));
 
-				//Index each of the sources contained within the stories collection
-				for (Story story : eventInfo.getStories()) {
-					if (story.getMedoidArticle().getLang().equalsIgnoreCase("eng")) {
-						readyToIndexEventSources.add(story.getMedoidArticle().getIndexedEventSource(event.getId()));
+			//Accessing event details is expensive, so we limit this to only non-deleted events
+			if (event.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_DELETED) != 0) {
+				//Get specifics about the event details.  This includes the medoid article URL.
+				EventRegistryEventDetailsResponse eventDetailsResponse = QueryEvent(event.getUri());
+				if (eventDetailsResponse != null) {
+					Info eventInfo = eventDetailsResponse.getEventDetails().get(event.getUri()).getInfo();
+					readyToIndexEvents.add(event.updateWithEventDetails(eventInfo));
+
+					//Index each of the sources contained within the stories collection
+					for (Story story : eventInfo.getStories()) {
+						if (story.getMedoidArticle().getLang().equalsIgnoreCase("eng")) {
+							readyToIndexEventSources.add(story.getMedoidArticle().getIndexedEventSource(event.getId()));
+						}
 					}
 				}
 			}
