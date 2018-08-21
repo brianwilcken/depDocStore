@@ -68,21 +68,21 @@ def main(argv):
         print 'GetAuthoritativeData.py -e <environment>'
         sys.exit(2)
     
-    logger.info('Begin Processing Wildfire Events from NPPD')
-    wildfireEventsTracker = WildfireEventsTracker.WildFireEventsTracker(eventsServiceUrl, portalInfo)
-    wildfireEventsTracker.getAuthoritativeData()
-    logger.info('Finished Processing Wildfire Events from NPPD')
+#    logger.info('Begin Processing Wildfire Events from NPPD')
+#    wildfireEventsTracker = WildfireEventsTracker.WildFireEventsTracker(eventsServiceUrl, portalInfo)
+#    wildfireEventsTracker.getAuthoritativeData()
+#    logger.info('Finished Processing Wildfire Events from NPPD')
     
-#    logger.info('Begin Processing NWS Events from NPPD')
-#    nwsEventsTracker = NWSEventsTracker.NWSEventsTracker(eventsServiceUrl, portalInfo)
-#    nwsEventsTracker.getAuthoritativeData()
-#    logger.info('Finished Processing NWS Events from NPPD')
+    logger.info('Begin Processing NWS Events from NPPD')
+    nwsEventsTracker = NWSEventsTracker.NWSEventsTracker(eventsServiceUrl, portalInfo)
+    nwsEventsTracker.getAuthoritativeData()
+    logger.info('Finished Processing NWS Events from NPPD')
 
-    logger.info('Begin Processing Hurricane Events from NPPD')
-    hurricaneEventsTracker = HurricaneEventsTracker.HurricaneEventsTracker(eventsServiceUrl, portalInfo)
-    hurricaneEventsTracker.getAuthoritativeData()
-    #hurricaneEventsTracker.getTestData('daniel')
-    logger.info('Finished Processing Hurricane Events from NPPD')
+#    logger.info('Begin Processing Hurricane Events from NPPD')
+#    hurricaneEventsTracker = HurricaneEventsTracker.HurricaneEventsTracker(eventsServiceUrl, portalInfo)
+#    hurricaneEventsTracker.getAuthoritativeData()
+#    #hurricaneEventsTracker.getTestData('daniel')
+#    logger.info('Finished Processing Hurricane Events from NPPD')
     
 if __name__ == "__main__":
    main(sys.argv[1:])

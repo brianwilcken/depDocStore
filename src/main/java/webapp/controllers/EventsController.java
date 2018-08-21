@@ -197,7 +197,12 @@ public class EventsController {
 			event.initId();
 			if (event.getUri() == null || event.getUri().isEmpty()) {
 				event.setUri("N/A");
-			} else if (solrClient.IsDocumentAlreadyIndexed(event.getUri())){
+			} else if (event.isNwsEvent() && solrClient.DocumentExistsByComplexUri(event.getUri())) {
+				String complexUriQuery = solrClient.getComplexUriSolrQuery(event.getUri());
+				List<IndexedEvent> events = solrClient.QueryIndexedDocuments(IndexedEvent.class, complexUriQuery, 1, 0, null);
+				String id = events.get(0).getId();
+				return updateEvent(id, event);
+			} else if (solrClient.DocumentExistsByURI(event.getUri())){
 				return updateEvent(event.getId(), event);
 			}
 			event.setFeedType(SolrConstants.Events.FEED_TYPE_AUTHORITATIVE);
@@ -223,12 +228,13 @@ public class EventsController {
 			//delete previous sources
 			solrClient.deleteDocuments("eventId:" + event.getId());
 
-			//index new sources
+			//initialize incoming sources
 			for (IndexedEventSource source : event.getSources()) {
 				source.setEventId(event.getId());
 				source.initId();
 				source.setUri("N/A");
 			}
+
 			solrClient.indexDocuments(event.getSources());
 			logger.info(context.getRemoteAddr() + " -> " + event.getSources().size() + " sources indexed for event with id: " + event.getId());
 		}
@@ -274,9 +280,14 @@ public class EventsController {
 				List<IndexedEvent> coll = new ArrayList<>();
 				coll.add(event);
 				solrClient.indexDocuments(coll);
+				//always want sources for NWS events to be updated
+				if (updEvent.isNwsEvent() && updEvent.getConditionalUpdate()) {
+					event.setSources(updEvent.getSources());
+					indexEventSources(event);
+				}
                 if (!updEvent.getConditionalUpdate()) {
-                    event.setSources(updEvent.getSources());
-                    indexEventSources(event);
+					event.setSources(updEvent.getSources());
+					indexEventSources(event);
 					logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed");
 					if (event.getFeedType().compareTo(SolrConstants.Events.FEED_TYPE_MEDIA) == 0) {
 						modelTrainingService.process(this);

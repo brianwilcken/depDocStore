@@ -291,7 +291,7 @@ public class EventRegistryClient {
 			List<SolrServerException> exs = new ArrayList<SolrServerException>();
 			List<IndexedEventSource> indexableArticles = usArticles.stream().filter(p -> {
 				try {
-					return !solrClient.IsDocumentAlreadyIndexed(p.getUri());
+					return !solrClient.DocumentExistsByURI(p.getUri());
 				} catch (SolrServerException e) {
 					exs.add(e);
 					return false;

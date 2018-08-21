@@ -26,6 +26,14 @@ class LandingPageEventSource:
         self.title = 'Active fire report: ' + rprt['FIRE_NAME']
         self.summary = 'Active fire report: ' + rprt['FIRE_NAME']
         
+    def consumeNWSReportGroup(self, title, summary, eventDate, url):
+        self.articleDate = eventDate
+        self.url = url
+        self.sourceName = 'NOAA'
+        self.sourceLocation = ''
+        self.title = title
+        self.summary = summary
+        
     def consumeHurricaneReport(self, rprt):
         self.articleDate = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(rprt['STARTDTG'])/1000))
         self.url = 'http://www.arcgis.com/home/item.html?id=5b84e159dace4bf8ad9e9154085ba45d'

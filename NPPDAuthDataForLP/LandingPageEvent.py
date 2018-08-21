@@ -27,6 +27,7 @@ class LandingPageEvent:
     userCreated = False
     sources = []
     conditionalUpdate = True
+    nwsEvent = False
     
     def consumeWildfireReport(self, rprt, perim):
         self.uri = rprt['INTERNALID']
@@ -47,27 +48,28 @@ class LandingPageEvent:
         self.sources = [eventSource]
         self.conditionalUpdate = True
         
-    def consumeNWSReport(self, rprt, geom):
-        self.uri = rprt['Uid']
-        self.eventDate = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(rprt['Start'])/1000))
-        self.title = rprt['Event']
-        self.summary = rprt['Summary']
-        if 'Winter Storm' in rprt['Event']:
-            self.category = 'WinterStorm'
-        elif 'Flood' in rprt['Event']:
-            self.category = 'Flood'
-        else:
-            self.category = 'LocalHazard'
-
-        self.projectLatLon(geom)
-
-        self.location = rprt['Affected']
-        self.url = rprt['Link']
+    def consumeNWSReportGroup(self, rprtGrp, geoms, category):
+#        ids = [str(attr[1]) for val in rprtGrp.values() for attr in val['attributes'].items() if attr[0] == 'OBJECTID']
+#        ids.sort()
+        Uids = [str(item[0]) for item in rprtGrp.items()]
+        self.uri = ','.join(Uids)
+        self.eventDate = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(min([attr['attributes']['Start'] for attr in rprtGrp.values()]))/1000))
+        self.category = category
+        self.projectLatLon(geoms)
+        affectedLocations = list(set([loc for val in rprtGrp.values() for loc in str(val['attributes']['Affected']).split('; ')]))
+        affectedLocations.sort()
+        self.location = ', '.join(affectedLocations)
+        self.title = 'National Weather Service: ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Severity'] + ' ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Urgency'] + ' ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Event']
+        self.summary = rprtGrp[rprtGrp.keys()[0]]['attributes']['Summary']
         self.userCreated = False
-        eventSource = LandingPageEventSource.LandingPageEventSource()
-        eventSource.consumeNWSReport(rprt)
-        self.sources = [eventSource]
+        urls = list(set([str(item[1]) for val in rprtGrp.values() for item in val['attributes'].items() if item[0] == 'Link']))
+        self.sources = []
+        for url in urls:
+            eventSource = LandingPageEventSource.LandingPageEventSource()
+            eventSource.consumeNWSReportGroup(self.title, self.summary, self.eventDate, url)
+            self.sources.append(eventSource)
         self.conditionalUpdate = True
+        self.nwsEvent = True
         
     def consumeHurricaneReport(self, rprt, forecast):
         p = inflect.engine()
@@ -109,8 +111,9 @@ class LandingPageEvent:
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
     
-    def projectLatLon(self, geom):
-        eventCenter = Polygon(geom['rings'][0]).centroid
+    def projectLatLon(self, geoms):
+        geometry = [coords for geom in geoms for coords in geom['rings'][0]]
+        eventCenter = Polygon(geometry).centroid
         
         pt = arcpy.Point()
         pt.X = eventCenter.x 
