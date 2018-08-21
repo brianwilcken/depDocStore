@@ -48,7 +48,7 @@ class WildFireEventsTracker:
                 if perimeterAttr['FIRE_NAME'] == reportAttr['FIRE_NAME']:
                     break
                 else:
-                    perimeterAttr = None
+                    perimeterAttr = None 
             
             if perimeterAttr is not None:
                 #initialize event object to be POSTed to the event service
