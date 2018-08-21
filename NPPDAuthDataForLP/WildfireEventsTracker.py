@@ -43,22 +43,23 @@ class WildFireEventsTracker:
         for report in reports:
             reportAttr = report['attributes']
             
-            for perimeter in perimeters:
-                perimeterAttr = perimeter['attributes']
-                if perimeterAttr['FIRE_NAME'] == reportAttr['FIRE_NAME']:
-                    break
-                else:
-                    perimeterAttr = None 
-            
-            if perimeterAttr is not None:
-                #initialize event object to be POSTed to the event service
-                event = LandingPageEvent.LandingPageEvent()
-                event.consumeWildfireReport(reportAttr, perimeterAttr)
+            if reportAttr['START_DATE'] is not None and reportAttr['REPORT_DATE'] is not None:
+                for perimeter in perimeters:
+                    perimeterAttr = perimeter['attributes']
+                    if perimeterAttr['FIRE_NAME'] == reportAttr['FIRE_NAME']:
+                        break
+                    else:
+                        perimeterAttr = None
                 
-                self.logger.info('POST wildfire event to backend: ' + event.title)
-                response = requests.post(self.eventsServiceUrl, data=event.toJSON(), headers=self.requestHeaders)
-                if response.ok:
-                    self.logger.info('POST successful for event: ' + event.title)
-                    self.portal.upsertWildfireEventFeatures(response.content, report, perimeter)
-                else:
-                    self.logger.warn('POST failed for event: ' + event.title)
+                if perimeterAttr is not None:
+                    #initialize event object to be POSTed to the event service
+                    event = LandingPageEvent.LandingPageEvent()
+                    event.consumeWildfireReport(reportAttr, perimeterAttr)
+                    
+                    self.logger.info('POST wildfire event to backend: ' + event.title)
+                    response = requests.post(self.eventsServiceUrl, data=event.toJSON(), headers=self.requestHeaders)
+                    if response.ok:
+                        self.logger.info('POST successful for event: ' + event.title)
+                        self.portal.upsertWildfireEventFeatures(response.content, report, perimeter)
+                    else:
+                        self.logger.warn('POST failed for event: ' + event.title)
