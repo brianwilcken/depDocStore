@@ -91,7 +91,7 @@ public class RefreshEventsService {
     private void refreshWebScraper(EventsController eventsService) {
         logger.info("Start Scraping!!!");
         WebClient client = eventsService.getWebClient();
-        int totalScraped = client.queryGoogle(WebClient.QUERY_TIMEFRAME_ALL_ARCHIVED, client::processSearchResult);
+        int totalScraped = client.queryGoogle(WebClient.QUERY_TIMEFRAME_LAST_HOUR, client::processSearchResult);
         logger.info("Number of events scraped from the web: " + totalScraped);
     }
 }

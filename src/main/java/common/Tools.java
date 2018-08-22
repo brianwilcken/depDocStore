@@ -5,10 +5,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import org.apache.commons.io.FileUtils;
 
@@ -113,6 +110,32 @@ public class Tools {
 		getExceptions().clear();
 
 		return response;
+	}
+
+	public static int[] argsort(final double[] a) {
+		return argsort(a, true);
+	}
+
+	public static int[] argsort(final double[] a, final boolean ascending) {
+		Integer[] indexes = new Integer[a.length];
+		for (int i = 0; i < indexes.length; i++) {
+			indexes[i] = i;
+		}
+		Arrays.sort(indexes, new Comparator<Integer>() {
+			@Override
+			public int compare(final Integer i1, final Integer i2) {
+				return (ascending ? 1 : -1) * Double.compare(a[i1], a[i2]);
+			}
+		});
+		return asArray(indexes);
+	}
+
+	public static <T extends Number> int[] asArray(final T... a) {
+		int[] b = new int[a.length];
+		for (int i = 0; i < b.length; i++) {
+			b[i] = a[i].intValue();
+		}
+		return b;
 	}
 
 	@FunctionalInterface

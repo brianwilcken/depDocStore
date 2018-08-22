@@ -112,6 +112,7 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 			this.setImages(eventInfo.getImages());
 			this.setLatitude(Double.toString(eventInfo.getLocation().getLat()));
 			this.setLongitude(Double.toString(eventInfo.getLocation().get_long()));
+			updateLastUpdatedDate();
 		} catch (NoSuchElementException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -140,23 +141,23 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 	}
 
 	private String getNormalizedDocCatString(Stemmer stemmer) {
-		String docCatStr = title + " " + summary + getConceptsString();
+		String summarySub;
+		int maxChars = 512;
+		int summaryLength = summary.length();
+		if (summaryLength < maxChars) {
+			summarySub = summary;
+		} else {
+			summarySub = summary.substring(0, maxChars - 1);
+		}
+
+		String docCatStr = title + " " + summarySub + getConceptsString();
 		docCatStr = docCatStr.replace("\r", " ").replace("\n", " ");
 
 		return NLPTools.normalizeText(stemmer, docCatStr);
 	}
 
-    private String getNormalizedDocCatStringNoConcepts(Stemmer stemmer) {
-        String docCatStr = title + " " + summary;
-        docCatStr = docCatStr.replace("\r", " ")
-                .replace("\n", " ")
-                .replace(",", "");
-
-        return NLPTools.normalizeText(stemmer, docCatStr);
-    }
-
 	private String getConceptsString() {
-		if (this.getConcepts() != null && !this.getConcepts().isEmpty()) {
+		if (this.getConcepts() != null && !this.getConcepts().isEmpty() && !this.getConcepts().contains("Web_Scraped")) {
 			HashMap<String,Long> conceptMap = new Gson().fromJson(this.getConcepts(), new TypeToken<HashMap<String, Long>>(){}.getType());
 			StringBuilder str = new StringBuilder();
 
@@ -181,8 +182,20 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 		return category + "\t" + getNormalizedDocCatString(new PorterStemmer());
 	}
 
-	public String GetLDAClusteringForm() {
-		return id + "," + getNormalizedDocCatStringNoConcepts(new PorterStemmer());
+	public String GetClusteringForm() {
+        String clusteringStr = id + "," + title.replace(",", "") + "," + summary.replace(",", "");
+        clusteringStr = clusteringStr.replace("\r", " ")
+                .replace("\n", " ");
+
+        return clusteringStr;
+	}
+
+	public String GetAnalysisForm() {
+		String analysisStr = "0," + id + "," + title.replace(",", "").replace("\"", "'") + ",cluster," + "0," + category;
+		analysisStr = analysisStr.replace("\r", " ")
+				.replace("\n", " ");
+
+		return analysisStr;
 	}
 
 	public String getId() {

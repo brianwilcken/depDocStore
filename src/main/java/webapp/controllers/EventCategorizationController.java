@@ -24,7 +24,7 @@ import solrapi.SolrConstants;
 public class EventCategorizationController {
 
 	private static SolrClient solrClient = new SolrClient(Tools.getProperty("solr.url"));
-	private static EventCategorizer categorizer = new EventCategorizer();
+	private static EventCategorizer categorizer = new EventCategorizer(solrClient);
 	private static EventsController svc = new EventsController();
 	
 	@GetMapping("/classify")
@@ -180,8 +180,7 @@ public class EventCategorizationController {
 	
 	@PostMapping("/classify/TrainModel")
 	public String trainModelPostHandler(Model model) {
-		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"), solrClient::getDoccatDataQuery, solrClient::formatForEventCategorization);
-		double accuracy = categorizer.trainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
+		double accuracy = categorizer.trainEventCategorizationModel();
 		model.addAttribute("accuracy", String.format("%.2f%%", 100 * accuracy));
 		model.addAttribute("mode", "N");
 		return "noMoreEvents";

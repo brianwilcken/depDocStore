@@ -13,6 +13,7 @@ import BoundaryFeature
 import WildfireBoundary
 import HurricaneBoundary
 import logging
+import urllib
 from requests_negotiate_sspi import HttpNegotiateAuth
 
 class PortalInterface:
@@ -35,6 +36,9 @@ class PortalInterface:
         self.wildfireBoundariesUrl = portalInfo['baseUrl'] + '/Wildfire_Boundaries/FeatureServer/0'
         self.hurricaneBoundariesUrl = portalInfo['baseUrl'] + '/Hurricane_Boundaries/FeatureServer/0'
         
+        #dashboard update URL
+        self.dashboardUpdateUrl = portalInfo['dashboardUrl']
+        
         #obtain an auth token for portal
         self.logger.info('get portal token')
         if portalInfo['useNegotiateAuth'] == True:
@@ -49,13 +53,14 @@ class PortalInterface:
             response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders)
         else:
             response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
-        serverToken = json.loads(response.content)
-        serverTokenParam = 'token=' + serverToken['token']
+        self.serverToken = json.loads(response.content)
+        serverTokenParam = 'token=' + self.serverToken['token']
         self.logger.info(serverTokenParam)
         
         self.portalQuery = '/query?where=eventid%3D%27{eventId}%27&&outFields=*&f=pjson&' + serverTokenParam
         self.addFeatures = '/addFeatures?' + serverTokenParam
         self.deleteFeatures = '/deleteFeatures?' + serverTokenParam
+        self.updateDashboard = '/update?' + serverTokenParam
         
     def getEventId(self, event):
         self.indexedEventJson = json.loads(event)
@@ -70,8 +75,13 @@ class PortalInterface:
         eventId = self.getEventId(event)
         appid = None
         wildfireQuery = self.getPortalQuery(eventId)
+        
+        if self.portalInfo['useNegotiateAuth'] == True:
+            temp=requests.get(self.wildfireBoundariesUrl + wildfireQuery,verify=False,auth=HttpNegotiateAuth())
+        else:
+            temp=requests.get(self.wildfireBoundariesUrl + wildfireQuery)
         wildfireBoundariesFs = arcpy.FeatureSet()
-        wildfireBoundariesFs.load(self.wildfireBoundariesUrl + wildfireQuery)
+        wildfireBoundariesFs=arcpy.AsShape(temp.content,True)
         
         if wildfireBoundariesFs.JSON is not None:
             self.logger.info('Successfully loaded boundary data from portal for wildfire event: ' + eventId)
@@ -123,7 +133,7 @@ class PortalInterface:
                     if self.portalInfo['env'] == 'D':
                         fid = boundary['attributes']['fid']
                         deleteResponse = requests.post(self.wildfireBoundariesUrl + self.deleteFeatures, data='where=fid=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
-                    elif self.portalInfo['env'] == 'S':
+                    elif self.portalInfo['env'] == 'S' or self.portalInfo['env'] == 'P':
                         fid = boundary['attributes']['objectid1']
                         deleteResponse = requests.post(self.wildfireBoundariesUrl + self.deleteFeatures, verify=False, auth=HttpNegotiateAuth(), data='where=objectid1=' + str(fid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
                     if not deleteResponse.ok:
@@ -133,7 +143,7 @@ class PortalInterface:
             arcpy.SimplifyPolygon_cartography(new_boundary_polygon, simplifyBoundaryFC, 'BEND_SIMPLIFY', '5000 Feet')
             simplifiedWildfireBoundaryFS = arcpy.FeatureSet()
             simplifiedWildfireBoundaryFS.load(simplifyBoundaryFC)
-            
+        
         boundaryJSON = json.loads(simplifiedWildfireBoundaryFS.JSON)
         boundary = boundaryJSON['features']
                     
@@ -163,8 +173,13 @@ class PortalInterface:
         eventId = self.getEventId(event)
         appid = None
         hurricaneQuery = self.getPortalQuery(eventId)
+        
+        if self.portalInfo['useNegotiateAuth'] == True:
+            temp=requests.get(self.hurricaneBoundariesUrl + hurricaneQuery,verify=False,auth=HttpNegotiateAuth())
+        else:
+            temp=requests.get(self.hurricaneBoundariesUrl + hurricaneQuery)
         hurricaneBoundariesFs = arcpy.FeatureSet()
-        hurricaneBoundariesFs.load(self.hurricaneBoundariesUrl + hurricaneQuery)
+        hurricaneBoundariesFs=arcpy.AsShape(temp.content,True)
         
         if hurricaneBoundariesFs.JSON is not None:
             self.logger.info('Successfully loaded boundary data from portal for hurricane event: ' + eventId)
@@ -191,7 +206,7 @@ class PortalInterface:
         #insert new hurricane boundaries data
         hurricaneBoundary = HurricaneBoundary.HurricaneBoundary()
         hurricaneBoundary.consume(self.indexedEventJson, appid, position, forecast, pathBuffer)
-        
+
         #POST data to portal
         if self.portalInfo['useNegotiateAuth'] == True:
             portalResponse = requests.post(self.hurricaneBoundariesUrl + self.addFeatures, data=hurricaneBoundary.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
@@ -203,6 +218,10 @@ class PortalInterface:
                 success = responseJSON['addResults'][0]['success']
                 if success == True:
                     self.logger.info('Hurricane boundary data added for event: ' + eventId)
+                    
+                    #Update the title of the associated dashboard (app) if any
+                    if appid:
+                        self.updateDashboardTitle(appid, eventId)
                 else:
                     self.logger.warn('Unable to add Hurricane boundary data for event: ' + eventId)
             elif 'error' in responseJSON:
@@ -212,6 +231,41 @@ class PortalInterface:
         else:
             self.logger.error('Server error (' + portalResponse.status_code + ') occurred while adding Hurricane boundary data for event: ' + eventId)
         return True
+    
+    def updateDashboardTitle(self, appid, eventId):
+        dashboardUrl = string.replace(self.dashboardUpdateUrl, '{dashboard}', appid) + self.updateDashboard
+        
+        #create form data for posting updated dashboard title
+        urlTuple = {
+                'title' : self.indexedEventJson['data']['title'],
+                'f' : 'json',
+                'clearEmptyFields' : True,
+                'id' : appid,
+                'token' : self.serverToken
+                }
+        formData = urllib.urlencode(urlTuple)
+        
+        #post updated dashboard title to portal
+        if self.portalInfo['useNegotiateAuth'] == True:
+            portalResponse = requests.post(dashboardUrl, data=formData, headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+        else:
+            portalResponse = requests.post(dashboardUrl, data=formData, headers=self.tokenHeaders)
+        
+        #review server POST results
+        if portalResponse.ok:
+            responseJSON = json.loads(portalResponse.content)
+            if 'success' in responseJSON:
+                success = responseJSON['success']
+                if success == True:
+                    self.logger.info('Dashboard updated for event: ' + eventId)
+                else:
+                    self.logger.warn('Unable to update dashboard for event: ' + eventId)
+            elif 'error' in responseJSON:
+                self.logger.error('Server error occurred when updating dashboard for event: ' + eventId)
+            else:
+                self.logger.error('Unknown error occurred when updating dashboard for event: ' + eventId)
+        else:
+            self.logger.error('Server error (' + portalResponse.status_code + ') occurred while updating dashboard title for event: ' + eventId)
     
     def upsertEventFeatures(self, event, report, perimeter):
         #GET location data from portal (if it exists)

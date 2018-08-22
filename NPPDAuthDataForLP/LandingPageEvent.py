@@ -73,7 +73,7 @@ class LandingPageEvent:
         p = inflect.engine()
         self.uri = rprt['STORMID']
         self.eventDate = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(rprt['STARTDTG'])/1000))
-        self.title = rprt['STORMTYPE'] + " " + rprt['STORMNAME']
+        self.title = " ".join(re.findall("[a-zA-Z]+", rprt['STORMTYPE'])) + " " + rprt['STORMNAME']
         if 'Hurricane' in rprt['STORMTYPE']:
             regex = re.search('\d', rprt['STORMTYPE'])
             hurricaneCat = regex.group(0)

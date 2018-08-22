@@ -34,6 +34,7 @@ public class EventRegistryClient {
 
 	private RestTemplate restTemplate;
 	private SolrClient solrClient;
+	private EventCategorizer categorizer;
 	private final String minuteStreamEventsUrl = Tools.getProperty("eventRegistry.minuteStreamEventsUrl");
 	private final String eventDetailsUrl = Tools.getProperty("eventRegistry.eventDetailsUrl");
 	private final String apiKey = Tools.getProperty("eventRegistry.apiKey");
@@ -48,6 +49,7 @@ public class EventRegistryClient {
 	
 	public EventRegistryClient() {
 		solrClient = new SolrClient(solrUrl);
+		categorizer = new EventCategorizer(solrClient);
 		SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
 
 		if (useProxy) {
@@ -64,7 +66,7 @@ public class EventRegistryClient {
 		return eventCategoriesList;
 	}
 	
-	public List<IndexedEvent> PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) throws SolrServerException {
+	public List<IndexedEvent> PipelineProcessEventStreamResponse(EventsRegistryEventStreamResponse response) throws SolrServerException, IOException {
 		List<String> eventCategories = GetEventRegistryValidCategories();
 		List<IndexedEvent> validEvents = new ArrayList<IndexedEvent>();
 		List<IndexedEvent> readyToIndexEvents = new ArrayList<IndexedEvent>();
@@ -81,7 +83,7 @@ public class EventRegistryClient {
 		//Filter out events that are outside the United States or that have fewer than 10 articles or are missing a summary/title
 		engEventData = engEventData.entrySet().stream()
 			.filter(p -> p.getValue().getLocation().getCountry().getLabel().getEng().compareTo("United States") == 0)
-			.filter(p -> p.getValue().getTotalArticleCount() >= 10)
+			//.filter(p -> p.getValue().getTotalArticleCount() >= 10)
 			.filter(p -> p.getValue().getTitle().getEng() != null)
 			.filter(p -> p.getValue().getSummary().getEng() != null)
 			.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
@@ -103,24 +105,26 @@ public class EventRegistryClient {
 		
 		//Perform NLP on the index-ready events.  This phase uses the NICC taxonomy to produce a PRELIMINARY category for each event.  
 		//The preliminary category may then either be updated by the user or accepted as-is within the NICC landing page UI.
-		EventCategorizer categorizer = new EventCategorizer();
 		List<IndexedEvent> categorizedEvents = categorizer.detectEventDataCategories(indexableEvents);
 
 		//Iterate through the categorized events to query Event Registry for event details
 		for (IndexedEvent event : categorizedEvents) {
 			//Indicate that this event was categorized by the openNLP document categorizer 
 			event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_MACHINE);
-			
-			//Get specifics about the event details.  This includes the medoid article URL.
-			EventRegistryEventDetailsResponse eventDetailsResponse = QueryEvent(event.getUri());
-			if (eventDetailsResponse != null) {
-				Info eventInfo = eventDetailsResponse.getEventDetails().get(event.getUri()).getInfo();
-				readyToIndexEvents.add(event.updateWithEventDetails(eventInfo));
 
-				//Index each of the sources contained within the stories collection
-				for (Story story : eventInfo.getStories()) {
-					if (story.getMedoidArticle().getLang().equalsIgnoreCase("eng")) {
-						readyToIndexEventSources.add(story.getMedoidArticle().getIndexedEventSource(event.getId()));
+			//Accessing event details is expensive, so we limit this to only non-deleted events
+			if (event.getEventState().compareTo(SolrConstants.Events.EVENT_STATE_DELETED) != 0) {
+				//Get specifics about the event details.  This includes the medoid article URL.
+				EventRegistryEventDetailsResponse eventDetailsResponse = QueryEvent(event.getUri());
+				if (eventDetailsResponse != null) {
+					Info eventInfo = eventDetailsResponse.getEventDetails().get(event.getUri()).getInfo();
+					readyToIndexEvents.add(event.updateWithEventDetails(eventInfo));
+
+					//Index each of the sources contained within the stories collection
+					for (Story story : eventInfo.getStories()) {
+						if (story.getMedoidArticle().getLang().equalsIgnoreCase("eng")) {
+							readyToIndexEventSources.add(story.getMedoidArticle().getIndexedEventSource(event.getId()));
+						}
 					}
 				}
 			}
@@ -207,7 +211,7 @@ public class EventRegistryClient {
 		return response.getBody();
 	}
 	
-	public List<IndexedEvent> PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts) throws SolrServerException {
+	public List<IndexedEvent> PipelineProcessEvents(EventsRegistryEventsResponse response, String conceptUri, List<String> subConcepts) throws SolrServerException, IOException {
 		if (response.getEvents() != null) {
 			//Filter out events that are missing a summary/title 
 			List<IndexedEvent> validEvents = Arrays.stream(response.getEvents().getResults())
@@ -220,7 +224,6 @@ public class EventRegistryClient {
 			List<IndexedEvent> indexableEvents = solrClient.GetIndexableEvents(validEvents);
 			
 			//Categorize the events
-			EventCategorizer categorizer = new EventCategorizer();
 			List<IndexedEvent> categorizedEvents = categorizer.detectEventDataCategories(indexableEvents);
 			
 			categorizedEvents.stream().forEach(p -> {
