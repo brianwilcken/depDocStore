@@ -164,6 +164,6 @@ class NWSEventsTracker:
                 response = requests.post(self.eventsServiceUrl, data=event.toJSON(), headers=self.requestHeaders)
                 if response.ok:
                     self.logger.info('POST successful for event: ' + event.title)
-                    #self.portal.upsertNWSEventFeatures(response.content, report)
+                    self.portal.upsertNWSEventFeatures(response.content, groupedEvents, geom)
                 else:
                     self.logger.warn('POST failed for event: ' + event.title)
