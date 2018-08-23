@@ -22,7 +22,7 @@ public class EventsRegistryEventsQuery {
 		return query;
 	}
 	
-	public String getEventsRegistryQuery(String concept, List<String> subConcepts) {
+	public String getEventsRegistryConceptsQuery(String concept, List<String> subConcepts) {
 		String wikiPrefix = "http://en.wikipedia.org/wiki/";
 		List<String> searchConcepts = new ArrayList<String>();
 		searchConcepts.add("\"" + wikiPrefix + concept + "\"");
@@ -32,9 +32,17 @@ public class EventsRegistryEventsQuery {
 		
 		String searchStr = String.join(",", searchConcepts);
 		
-		String eventsRegistryQuery = "{\"$query\":{\"$and\":[{\"conceptUri\":{\"$or\":[" + searchStr + "]}},{\"locationUri\":{\"$and\":[\"http://en.wikipedia.org/wiki/United_States\"]}}]}}";
+		String eventsRegistryQuery = "{\"$query\":{\"$and\":[{\"conceptUri\":{\"$or\":[" + searchStr + "]}},{\"locationUri\":{\"$and\":[\"http://en.wikipedia.org/wiki/United_States\"]}},{\"dateStart\":\"2010-01-01\",\"lang\":\"eng\"}]}}";
 		
 		return eventsRegistryQuery;
+	}
+
+	public String getEventsRegistryKeywordQuery(String keyword) {
+    	String searchStr = "\"" + keyword + "\"";
+
+    	String eventRegistryQuery = "{\"$query\":{\"$and\":[{\"keyword\":{\"$and\":[" + keyword + "]}},{\"locationUri\":{\"$and\":[\"http://en.wikipedia.org/wiki/United_States\"]}},{\"lang\":\"eng\"}]}}";
+
+    	return eventRegistryQuery;
 	}
 
 

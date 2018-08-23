@@ -10,6 +10,7 @@ import org.apache.solr.common.SolrDocument;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import solrapi.SolrConstants;
 
 public class IndexedEventSource extends IndexedObject {
 	@Field
@@ -69,6 +70,27 @@ public class IndexedEventSource extends IndexedObject {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	public IndexedEvent getIndexedEvent() {
+		IndexedEvent event = new IndexedEvent();
+		event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_MACHINE);
+		event.setEventState(SolrConstants.Events.EVENT_STATE_NEW);
+		event.setFeedType(SolrConstants.Events.FEED_TYPE_MEDIA);
+		event.setUri(sourceName + "_" + url);
+		event.setConcepts("{\"Web_Scraped\":100}");
+		event.setEventDate(articleDate);
+		event.updateLastUpdatedDate();
+		event.setTitle(title);
+		event.setSummary(summary);
+		event.setUrl(url);
+		event.setTotalArticleCount(1);
+		event.setUserCreated(false);
+		event.initId();
+
+		eventId = event.getId();
+
+		return event;
 	}
 	
 	public String getId() {

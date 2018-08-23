@@ -24,7 +24,7 @@ import solrapi.SolrConstants;
 public class EventCategorizationController {
 
 	private static SolrClient solrClient = new SolrClient(Tools.getProperty("solr.url"));
-	private static EventCategorizer categorizer = new EventCategorizer();
+	private static EventCategorizer categorizer = new EventCategorizer(solrClient);
 	private static EventsController svc = new EventsController();
 	
 	@GetMapping("/classify")
@@ -111,6 +111,13 @@ public class EventCategorizationController {
 	public String postHandler(@RequestBody MultiValueMap<String, String> form, Model model) {
 		String mode = form.get("mode").get(0);
 		model.addAttribute("mode", mode);
+
+		String title = form.get("title").get(0);
+		String summary = form.get("summary").get(0);
+		if (title.isEmpty() || summary.isEmpty()) {
+			return "error";
+		}
+
 		try {
 			if (mode.compareTo("C") == 0) {
 				//special case for creating mock event
@@ -126,6 +133,8 @@ public class EventCategorizationController {
 				} else {
 					indexedEvent.setCategory(form.get("category").get(0));
 				}
+				indexedEvent.setTitle(title);
+				indexedEvent.setSummary(summary);
 				indexedEvent.setEventState(SolrConstants.Events.EVENT_STATE_REVIEWED);
 				indexedEvent.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
 				solrClient.indexDocuments(indexedEvents);
@@ -171,8 +180,7 @@ public class EventCategorizationController {
 	
 	@PostMapping("/classify/TrainModel")
 	public String trainModelPostHandler(Model model) {
-		solrClient.writeEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
-		double accuracy = categorizer.trainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
+		double accuracy = categorizer.trainEventCategorizationModel();
 		model.addAttribute("accuracy", String.format("%.2f%%", 100 * accuracy));
 		model.addAttribute("mode", "N");
 		return "noMoreEvents";
@@ -208,9 +216,9 @@ public class EventCategorizationController {
 		String eventState = model.asMap().get("mode").toString();
 		List<IndexedEvent> indexedEvents = null;
 		if (model.asMap().containsKey("category")) {
-			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:\"" + model.asMap().get("category") + "\"");
+			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:\"" + model.asMap().get("category") + "\"", "concepts:*");
 		} else {
-			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:*");
+			indexedEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "eventState:" + eventState, 2, 0, sort, "category:*", "concepts:*");
 		}
 		if (!indexedEvents.isEmpty()) {
 			IndexedEvent indexedEvent = indexedEvents.get(0);
@@ -240,7 +248,7 @@ public class EventCategorizationController {
 	
 	private String[] getAvailableCategories() throws SolrServerException {
 		List<String> availableCategories = new ArrayList<String>();
-		SimpleOrderedMap<?> facets = solrClient.QueryFacets("{categories:{type:terms,field:category,limit:10000}}");
+		SimpleOrderedMap<?> facets = solrClient.QueryFacets("concepts:*","{categories:{type:terms,field:category,limit:10000}}");
 		SimpleOrderedMap<?> categories = (SimpleOrderedMap<?>) facets.get("categories");
 		List<?> buckets = (ArrayList<?>) categories.get("buckets");
 		for (int i = 0; i < buckets.size(); i++) {
