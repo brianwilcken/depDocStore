@@ -46,13 +46,15 @@ class PortalInterface:
         else:
             response = requests.post(self.generateTokenUrl, data=self.tokenCred, headers=self.tokenHeaders)
         portalToken = json.loads(response.content)
+        self.logger.info(portalToken)
         
         #get a portal server token
         self.logger.info('get server token')
-        if portalInfo['useNegotiateAuth'] == True:
+        if portalInfo['useNegotiateAuth'] == False:
             response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders)
         else:
             response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+        
         self.serverToken = json.loads(response.content)
         serverTokenParam = 'token=' + self.serverToken['token']
         self.logger.info(serverTokenParam)
@@ -143,7 +145,7 @@ class PortalInterface:
             arcpy.SimplifyPolygon_cartography(new_boundary_polygon, simplifyBoundaryFC, 'BEND_SIMPLIFY', '5000 Feet')
             simplifiedWildfireBoundaryFS = arcpy.FeatureSet()
             simplifiedWildfireBoundaryFS.load(simplifyBoundaryFC)
-        
+
         boundaryJSON = json.loads(simplifiedWildfireBoundaryFS.JSON)
         boundary = boundaryJSON['features']
                     
@@ -173,7 +175,7 @@ class PortalInterface:
         eventId = self.getEventId(event)
         appid = None
         hurricaneQuery = self.getPortalQuery(eventId)
-        
+
         if self.portalInfo['useNegotiateAuth'] == True:
             temp=requests.get(self.hurricaneBoundariesUrl + hurricaneQuery,verify=False,auth=HttpNegotiateAuth())
         else:
