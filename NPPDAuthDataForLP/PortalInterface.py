@@ -42,14 +42,16 @@ class PortalInterface:
         else:
             response = requests.post(self.generateTokenUrl, data=self.tokenCred, headers=self.tokenHeaders)
         portalToken = json.loads(response.content)
+        self.logger.info(portalToken)
         
         #get a portal server token
         self.logger.info('get server token')
-        if portalInfo['useNegotiateAuth'] == True:
+        if portalInfo['useNegotiateAuth'] == False:
             response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders)
         else:
             response = requests.get(self.serverTokenUrl + portalToken['token'], headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
         serverToken = json.loads(response.content)
+        self.logger.info(serverToken)
         serverTokenParam = 'token=' + serverToken['token']
         self.logger.info(serverTokenParam)
         
@@ -70,8 +72,9 @@ class PortalInterface:
         eventId = self.getEventId(event)
         appid = None
         wildfireQuery = self.getPortalQuery(eventId)
-        wildfireBoundariesFs = arcpy.FeatureSet()
-        wildfireBoundariesFs.load(self.wildfireBoundariesUrl + wildfireQuery)
+        self.logger.info(self.wildfireBoundariesUrl + wildfireQuery)
+        temp=requests.get(self.wildfireBoundariesUrl + wildfireQuery,verify=False,auth=HttpNegotiateAuth())
+        wildfireBoundariesFs=arcpy.AsShape(temp.content,True)
         
         if wildfireBoundariesFs.JSON is not None:
             self.logger.info('Successfully loaded boundary data from portal for wildfire event: ' + eventId)
@@ -131,11 +134,8 @@ class PortalInterface:
         else:
             simplifyBoundaryFC = "in_memory\\_wildfireBoundarySimplified_featureClass"
             arcpy.SimplifyPolygon_cartography(new_boundary_polygon, simplifyBoundaryFC, 'BEND_SIMPLIFY', '5000 Feet')
-        if self.portalInfo['useNegotiateAuth'] == True:
-            temp=requests.get(self.wildfireBoundariesUrl + wildfireQuery,verify=False,auth=HttpNegotiateAuth())
-        else:
-            temp=requests.get(self.wildfireBoundariesUrl + wildfireQuery)
-        wildfireBoundariesFs=arcpy.AsShape(temp.content,True)
+            simplifiedWildfireBoundaryFS = arcpy.FeatureSet()
+            simplifiedWildfireBoundaryFS.load(simplifyBoundaryFC)
             
         boundaryJSON = json.loads(simplifiedWildfireBoundaryFS.JSON)
         boundary = boundaryJSON['features']
@@ -166,8 +166,8 @@ class PortalInterface:
         eventId = self.getEventId(event)
         appid = None
         hurricaneQuery = self.getPortalQuery(eventId)
-        hurricaneBoundariesFs = arcpy.FeatureSet()
-        hurricaneBoundariesFs.load(self.hurricaneBoundariesUrl + hurricaneQuery)
+        temp=requests.get(self.hurricaneBoundariesUrl + hurricaneQuery,verify=False,auth=HttpNegotiateAuth())
+        hurricaneBoundariesFs=arcpy.AsShape(temp.content,True)
         
         if hurricaneBoundariesFs.JSON is not None:
             self.logger.info('Successfully loaded boundary data from portal for hurricane event: ' + eventId)
@@ -192,12 +192,9 @@ class PortalInterface:
                     self.logger.warn('Unable to delete old boundary data for hurricane event: ' + eventId)
                     
         #insert new hurricane boundaries data
-        if self.portalInfo['useNegotiateAuth'] == True:
-            temp=requests.get(self.hurricaneBoundariesUrl + hurricaneQuery,verify=False,auth=HttpNegotiateAuth())
-        else:
-            temp=requests.get(self.hurricaneBoundariesUrl + hurricaneQuery)
-        hurricaneBoundariesFs=arcpy.AsShape(temp.content,True)
-
+        hurricaneBoundary = HurricaneBoundary.HurricaneBoundary()
+        hurricaneBoundary.consume(self.indexedEventJson, appid, position, forecast, pathBuffer)
+        
         #POST data to portal
         if self.portalInfo['useNegotiateAuth'] == True:
             portalResponse = requests.post(self.hurricaneBoundariesUrl + self.addFeatures, data=hurricaneBoundary.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
