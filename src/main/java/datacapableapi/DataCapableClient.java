@@ -103,12 +103,30 @@ public class DataCapableClient {
                 .collect(Collectors.toList());
 
         //Project data capable events to Solr schema compatible format
-        List<IndexedEvent> indexableEvents = validTypeEvents.stream()
+        List<IndexedEvent> validEvents = validTypeEvents.stream()
                 .map(p -> p.GetIndexedEvent())
                 .collect(Collectors.toList());
 
-        //Get the list of sources from each of the events
-        List<IndexedEventSource> indexableSources = indexableEvents.stream()
+        //Get the valid events that have not yet been indexed
+        List<IndexedEvent> newEvents = solrClient.GetIndexableEvents(validEvents);
+
+        //Get the set of events that are presently indexed
+        validEvents.removeAll(newEvents);
+
+        //for the set of previously indexed events perform an update by verifying those fields that must be preserved
+        for (IndexedEvent event : validEvents) {
+            List<IndexedEvent> updEvents = solrClient.QueryIndexedDocuments(IndexedEvent.class, "id:" + event.getId(), 1, 0, null);
+            if (!updEvents.isEmpty()) {
+                IndexedEvent updEvent = updEvents.get(0);
+                event.updateForDynamicFields(updEvent);
+            }
+        }
+
+        //combine the old and new events into a common set
+        validEvents.addAll(newEvents);
+
+        //Get the list of sources from each of the valid events
+        List<IndexedEventSource> indexableSources = validEvents.stream()
                 .map(p -> p.getSources())
                 .flatMap(List::stream)
                 .collect(Collectors.toList());
@@ -117,13 +135,12 @@ public class DataCapableClient {
         //1. validate geoparsing of location data
         //2. validate event category
 
-
         //Index events to Solr
-        solrClient.indexDocuments(indexableEvents);
+        solrClient.indexDocuments(validEvents);
 
         //Index sources to Solr
         solrClient.indexDocuments(indexableSources);
 
-        return indexableEvents;
+        return validEvents;
     }
 }

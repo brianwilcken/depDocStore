@@ -19,8 +19,10 @@ public class SolrConstants {
 		public static final String EVENT_STATE_LINKED = "L";
 		public static final String EVENT_STATE_CLOSED = "C";
 		public static final String EVENT_STATE_DELETED = "D";
+		public static final String EVENT_STATE_ANALYZED = "A";
 
-		public static final String CATEGORY_UNKNOWN = "Unknown";
+		public static final String CATEGORY_UNCATEGORIZED = "Uncategorized";
+		public static final String CATEGORY_IRRELEVANT = "Irrelevant";
 		
 		public static final String FEED_TYPE_MEDIA = "Media";
 		public static final String FEED_TYPE_AUTHORITATIVE = "Authoritative";

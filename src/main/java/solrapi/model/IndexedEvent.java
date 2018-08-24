@@ -112,12 +112,25 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 			this.setImages(eventInfo.getImages());
 			this.setLatitude(Double.toString(eventInfo.getLocation().getLat()));
 			this.setLongitude(Double.toString(eventInfo.getLocation().get_long()));
+			updateLastUpdatedDate();
 		} catch (NoSuchElementException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
 		return this;
+	}
+
+	//A previously indexed copy of this event may have fields that are not
+	//communicated by the source from which this event arises (Data Capable, etc..).
+	//Ensure this event is updated with such fields before re-indexing it to Solr.
+	//updEvent is a previously indexed copy of this event.
+	public void updateForDynamicFields(IndexedEvent updEvent) {
+		this.setDashboard(updEvent.getDashboard());
+		this.setFeatureIds(updEvent.getFeatureIds());
+		this.setCategorizationState(updEvent.getCategorizationState());
+		this.setEventState(updEvent.getEventState());
+		this.setCategory(updEvent.getCategory());
 	}
 
 	public String[] GetDocCatTokens(TokenizerModel model, Stemmer stemmer) {
@@ -128,14 +141,23 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 	}
 
 	private String getNormalizedDocCatString(Stemmer stemmer) {
-		String docCatStr = title + " " + summary + getConceptsString();
+		String summarySub;
+		int maxChars = 512;
+		int summaryLength = summary.length();
+		if (summaryLength < maxChars) {
+			summarySub = summary;
+		} else {
+			summarySub = summary.substring(0, maxChars - 1);
+		}
+
+		String docCatStr = title + " " + summarySub + getConceptsString();
 		docCatStr = docCatStr.replace("\r", " ").replace("\n", " ");
 
 		return NLPTools.normalizeText(stemmer, docCatStr);
 	}
 
 	private String getConceptsString() {
-		if (this.getConcepts() != null && !this.getConcepts().isEmpty()) {
+		if (this.getConcepts() != null && !this.getConcepts().isEmpty() && !this.getConcepts().contains("Web_Scraped")) {
 			HashMap<String,Long> conceptMap = new Gson().fromJson(this.getConcepts(), new TypeToken<HashMap<String, Long>>(){}.getType());
 			StringBuilder str = new StringBuilder();
 
@@ -158,6 +180,22 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 
 	public String GetModelTrainingForm() {
 		return category + "\t" + getNormalizedDocCatString(new PorterStemmer());
+	}
+
+	public String GetClusteringForm() {
+        String clusteringStr = id + "," + title.replace(",", "") + "," + summary.replace(",", "");
+        clusteringStr = clusteringStr.replace("\r", " ")
+                .replace("\n", " ");
+
+        return clusteringStr;
+	}
+
+	public String GetAnalysisForm() {
+		String analysisStr = "0," + id + "," + title.replace(",", "").replace("\"", "'") + ",cluster," + "0," + category;
+		analysisStr = analysisStr.replace("\r", " ")
+				.replace("\n", " ");
+
+		return analysisStr;
 	}
 
 	public String getId() {

@@ -5,28 +5,15 @@
 		"School_shooting",
 		"Spree_killer",
 		"Mass_shooting",
-		"Immediate_Action_Rapid_Deployment",
 		"Mass_murder",
 		"Workplace_violence",
 		"Rampage_killing"
 	],
-	"Drought":[
-		"Surface_water",
-		"Ground_water",
-		"Pressure_system",
-		"High_pressure_area",
-		"Dry_season",
-		"El_Niño",
-		"Irrigation",
-		"Deforestation",
-		"Climate_change",
-		"Crop_yield",
-		"Hunger",
-		"Famine",
-		"Dehydration",
-		"Food_security",
-		"Topsoil",
-		"Thirst"
+	"Chemical_accident":[
+		"Toxin",
+		"Chemical_hazard",
+		"Hazardous_material",
+		"Industrial_accident"
 	],
 	"Earthquake":[
 		"Landslide",
@@ -37,122 +24,67 @@
 		"Aftershock",
 		"Earthquake_swarm"
 	],
-	"Epidemic":[
-		"Infection",
-		"Influenza",
-		"Pandemic",
-		"Common_cold",
-		"West_Nile_fever",
-		"Pathogen",
-		"Attack_rate"
+	"Explosion":[
+		"Detonation",
+		"Nuclear_explosion"
 	],
 	"Flood":[
-		"Water",
-		"Tide",
 		"Drowning",
-		"Precipitation",
 		"Flash_flood",
-		"Water_table",
-		"Floodplain",
 		"Storm_surge",
-		"Atmospheric_pressure",
-		"Extratropical_cyclone",
-		"Snowmelt",
-		"Stormwater",
 		"Outburst_flood",
 		"Lahar",
-		"Water_treatment",
-		"Flood_control",
 		"Levee",
 		"Flood_alert",
 		"Cloudburst",
 		"Mudflow"
 	],
 	"Gas_leak":[
-		"Natural_gas",
-		"Leak",
-		"Pipeline_transport",
-		"Greenhouse_gas",
-		"Methane",
-		"Odor"
+		"Natural_gas"
 	],
 	"Tropical_cyclone":[
 		"Storm",
 		"Low-pressure_area",
-		"Beaufort_scale",
 		"Thunderstorm",
 		"Gale"
 	],
-	"Oil_spill":[
-		"Petroleum",
-		"Pollution",
-		"Spill_containment"
-	],
 	"Power_outage":[
-		"Rolling_blackout",
-		"Power_station",
-		"Electrical_grid",
-		"Electrical_substation",
-		"Electric_power_transmission",
-		"Electric_power",
-		"Emergency_power_system"
+		"Rolling_blackout"
 	],
-	"Storm":[
-		"Severe_weather",
-		"Tornado",
-		"Hail",
-		"Thunder",
-		"Lightning",
-		"Precipitation",
-		"Winter_storm",
-		"Freezing_rain",
-		"Ice_storm",
-		"Dust_storm",
-		"Blizzard"
+	"Protest":[
+		"Demonstration_(protest)",
+		"Riot"
 	],
 	"Terrorism":[
-		"Non-combatant",
-		"Revolutionary",
-		"War_crime",
 		"Violence",
-		"Coercion",
-		"Fear",
-		"State-sponsored_terrorism",
-		"State_terrorism",
-		"War_on_Terror",
 		"Cyberterrorism",
 		"Islamic_extremism",
 		"Islamic_terrorism",
 		"Suicide_attack"
 	],
 	"Wildfire":[
-		"Combustion",
-		"Fire_control",
 		"Firestorm",
-		"Fire_triangle",
 		"Smouldering",
-		"Flashover",
-		"Thermal",
-		"Vertical_draft",
 		"Fire_whirl",
 		"Heat_wave",
 		"Global_warming",
 		"Fire_ecology",
 		"Firefighting",
 		"Smokejumper",
-		"Deforestation",
-		"Smoke_inhalation",
 		"Smoke",
 		"Dry_thunderstorm"
 	],
-	"Wind":[
-		"Maximum_sustained_wind",
-		"Wind_speed",
-		"Gale",
-		"Atmospheric_circulation",
-		"Wind_shear",
-		"Weather_front",
+	"Winter_storm":[
 		"Severe_weather",
-		"Gale_warning"
+		"Tornado",
+		"Hail",
+		"Thunder",
+		"Lightning",
+		"Precipitation",
+		"Storm",
+		"Freezing_rain",
+		"Ice_storm",
+		"Dust_storm",
+		"Blizzard"
 	]
 }

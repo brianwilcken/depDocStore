@@ -33,6 +33,7 @@ import solrapi.model.IndexedEventsQueryParams;
 import webapp.models.JsonResponse;
 import webapp.services.ModelTrainingService;
 import webapp.services.RefreshEventsService;
+import webscraper.WebClient;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +44,7 @@ import javax.servlet.http.HttpServletRequest;
 public class EventsController {
 	private EventRegistryClient eventRegistryClient;
 	private DataCapableClient dataCapableClient;
+	private WebClient webClient;
 	private SolrClient solrClient;
 	private EventCategorizer categorizer;
 	private Gson gson;
@@ -61,21 +63,22 @@ public class EventsController {
 
 	public static void main(String[] args) {
 		EventsController ctrl = new EventsController();
-		try {
-			//ctrl.dumpEventDataToFile("data/events.json", "eventState:*", null, 100);
-			//ctrl.dumpSourceDataToFile("data/sources.json", "eventId:*", null, 100);
-			ctrl.updateIndexedEventsByFile("data/events.json");
-			//ctrl.updateIndexedEventSourcesByFile("data/sources.json");
-		} catch (SolrServerException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			//ctrl.dumpEventDataToFile("data/events.json", "eventState:*", null, 100);
+//			//ctrl.dumpSourceDataToFile("data/sources.json", "eventId:*", null, 100);
+//			//ctrl.updateIndexedEventsByFile("data/events.json");
+//			//ctrl.updateIndexedEventSourcesByFile("data/sources.json");
+//		} catch (SolrServerException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 	public EventsController() {
 		eventRegistryClient = new EventRegistryClient();
 		dataCapableClient = new DataCapableClient();
+		webClient = new WebClient();
 		solrClient = new SolrClient(Tools.getProperty("solr.url"));
-		categorizer = new EventCategorizer();
+		categorizer = new EventCategorizer(solrClient);
 		gson = new Gson();
 		exceptions = new ArrayList<>();
 	}
@@ -87,6 +90,8 @@ public class EventsController {
 	public DataCapableClient getDataCapableClient() {
 		return dataCapableClient;
 	}
+
+	public WebClient getWebClient() { return webClient; }
 
 	@PostConstruct
 	public void initRefreshEventsProcess() {
@@ -169,6 +174,9 @@ public class EventsController {
 				event.updateLastUpdatedDate();
 				solrClient.indexDocuments(events);
 				logger.info(context.getRemoteAddr() + " -> " + "Deleted event with id: " + id);
+				if (event.getFeedType().compareTo(SolrConstants.Events.FEED_TYPE_MEDIA) == 0) {
+					modelTrainingService.process(this);
+				}
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event));
 			} else {
 				logger.info(context.getRemoteAddr() + " -> " + "Failed to delete event with id: " + id);
@@ -256,9 +264,9 @@ public class EventsController {
 					}
 				}
 				event.setSummary(updEvent.getSummary());
+				event.setTitle(updEvent.getTitle());
                 if (!updEvent.getConditionalUpdate()) {
                     event.setCategory(updEvent.getCategory());
-                    event.setTitle(updEvent.getTitle());
                     event.setDashboard(updEvent.getDashboard());
                     event.setCategorizationState(SolrConstants.Events.CATEGORIZATION_STATE_USER_UPDATED);
                     event.setFeatureIds(updEvent.getFeatureIds());
@@ -269,8 +277,10 @@ public class EventsController {
                 if (!updEvent.getConditionalUpdate()) {
                     event.setSources(updEvent.getSources());
                     indexEventSources(event);
-                    logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed... proceeding with model training");
-                    modelTrainingService.process(this);
+					logger.info(context.getRemoteAddr() + " -> " + "Updated event indexed");
+					if (event.getFeedType().compareTo(SolrConstants.Events.FEED_TYPE_MEDIA) == 0) {
+						modelTrainingService.process(this);
+					}
                 }
 				return ResponseEntity.ok().body(Tools.formJsonResponse(event, event.getLastUpdated()));
 			} else {
@@ -349,7 +359,7 @@ public class EventsController {
 	}
 	
 	private void updateIndexedEventsByFile(String filePath) throws SolrServerException {
-		solrClient.UpdateIndexedEventsFromFile(filePath);
+		solrClient.UpdateIndexedEventsFromJsonFile(filePath);
 	}
 
 	public List<IndexedEvent> getModelTrainingDataFromEventRegistry() {
@@ -373,13 +383,19 @@ public class EventsController {
 		return events;
 	}
 	
-	private List<IndexedEvent> queryEvents(String conceptUri, List<String> subConcepts) throws SolrServerException {
+	private List<IndexedEvent> queryEvents(String conceptUri, List<String> subConcepts) throws SolrServerException, IOException {
 		EventsRegistryEventsResponse response = eventRegistryClient.QueryEvents(conceptUri, subConcepts);
 		return eventRegistryClient.PipelineProcessEvents(response, conceptUri, subConcepts);
 	}
 
-	private void dumpTrainingDataToFile() {
-		solrClient.writeEventCategorizationTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"));
+	private void dumpEventCategorizationTrainingDataToFile() {
+		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.doccatTrainingFile"), solrClient::getDoccatDataQuery,
+				solrClient::formatForEventCategorization, new SolrClient.EventCategorizationThrottle(SolrConstants.Events.CATEGORY_IRRELEVANT, 0.2));
+	}
+
+	private void dumpEventClusteringTrainingDataToFile() {
+		solrClient.writeTrainingDataToFile(Tools.getProperty("nlp.clusteringTrainingFile"), solrClient::getClusteringDataQuery,
+				solrClient::formatForClustering, new SolrClient.ClusteringThrottle("", 0));
 	}
 	
 	private void dumpEventDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
@@ -388,11 +404,6 @@ public class EventsController {
 
 	private void dumpSourceDataToFile(String filename, String query, String filterQueries, int numRows) throws SolrServerException {
 		solrClient.WriteSourceDataToFile(filename, query, numRows, filterQueries);
-	}
-
-	private double processTrainingData() {
-		double accuracy = categorizer.trainEventCategorizationModel(Tools.getProperty("nlp.doccatTrainingFile"));
-		return accuracy;
 	}
 
 	public List<IndexedEvent> refreshEventsFromEventRegistry() {
@@ -407,8 +418,7 @@ public class EventsController {
 	}
 
 	public double initiateModelTraining() {
-		dumpTrainingDataToFile();
-		double accuracy = processTrainingData();
+		double accuracy = categorizer.trainEventCategorizationModel();
 
 		return accuracy;
 	}

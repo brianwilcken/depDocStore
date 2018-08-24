@@ -1,6 +1,7 @@
 package eventsregistryapi.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import solrapi.model.IndexedEventSource;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MedoidArticle {
@@ -17,6 +18,28 @@ public class MedoidArticle {
     private String body;
     private Source source;
     private String eventUri;
+
+	public IndexedEventSource getIndexedEventSource(String eventId) {
+		IndexedEventSource source = new IndexedEventSource();
+
+		source.setUri(uri);
+		source.setEventId(eventId);
+		source.setArticleDate(dateTime);
+		source.setUrl(url);
+		source.setTitle(title);
+		source.setSummary(body);
+		if (this.source != null) {
+			source.setSourceUri(this.source.getUri());
+			source.setSourceName(this.source.getTitle());
+			if (this.source.getLocation() != null) {
+				source.setSourceLocation(this.source.getLocation().getLabel().getEng());
+			}
+		}
+		source.initId();
+
+		return source;
+	}
+
 	public String getId() {
 		return id;
 	}
