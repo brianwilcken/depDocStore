@@ -67,11 +67,14 @@ def main(argv):
     if 'baseUrl' not in portalInfo:
         print 'GetAuthoritativeData.py -e <environment>'
         sys.exit(2)
-    
-    logger.info('Begin Processing Wildfire Events from NPPD')
-    wildfireEventsTracker = WildfireEventsTracker.WildFireEventsTracker(eventsServiceUrl, portalInfo)
-    wildfireEventsTracker.getAuthoritativeData()
-    logger.info('Finished Processing Wildfire Events from NPPD')
+
+    try:
+        logger.info('Begin Processing Wildfire Events from NPPD')    
+        wildfireEventsTracker = WildfireEventsTracker.WildFireEventsTracker(eventsServiceUrl, portalInfo)
+        wildfireEventsTracker.getAuthoritativeData()
+        logger.info('Finished Processing Wildfire Events from NPPD')
+    except:
+        logger.error('Wildfire events failed: ' + str(sys.exc_info()[0]))
     
 #    logger.info('Begin Processing NWS Events from NPPD')
 #    nwsEventsTracker = NWSEventsTracker.NWSEventsTracker(eventsServiceUrl, portalInfo)
