@@ -59,7 +59,7 @@ class LandingPageEvent:
         affectedLocations = list(set([loc for val in rprtGrp.values() for loc in str(val['attributes']['Affected']).split('; ')]))
         affectedLocations.sort()
         self.location = ', '.join(affectedLocations)
-        self.title = 'National Weather Service: ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Severity'] + ' ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Urgency'] + ' ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Event']
+        self.title = 'National Weather Service: ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Event'] + " (Urgency: " + rprtGrp[rprtGrp.keys()[0]]['attributes']['Urgency'] + ", Severity: " + rprtGrp[rprtGrp.keys()[0]]['attributes']['Severity'] + ")"
         self.summary = rprtGrp[rprtGrp.keys()[0]]['attributes']['Summary']
         self.userCreated = False
         urls = list(set([str(item[1]) for val in rprtGrp.values() for item in val['attributes'].items() if item[0] == 'Link']))

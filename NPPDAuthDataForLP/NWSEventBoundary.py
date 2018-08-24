@@ -5,6 +5,7 @@ Created on Wed Aug 22 13:23:32 2018
 @author: WILCBM
 """
 import urllib
+import json
 
 class NWSEventBoundary:
     features = []
@@ -75,7 +76,7 @@ class NWSEventBoundary:
         
     def urlEncode(self):
         urlTuple = {
-                'features' : self.features,
+                'features' : json.dumps(self.features),
                 'f' : 'json',
                 'rollbackOnFailure' : True,
                 'gdbVersion' : None

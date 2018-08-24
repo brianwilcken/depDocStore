@@ -55,6 +55,7 @@ def main(argv):
         logger.info('Local Development mode')
         eventsServiceUrl = 'http://localhost:8080/eventNLP/api/events'
         #eventsServiceUrl = 'http://ipgdevgis:33662/eventNLP/api/events'
+        portalInfo['env'] = 'D'
         portalInfo['generateTokenUrl'] = 'https://cloudgis.k2geomatics.io/portal/sharing/rest/generateToken'
         portalInfo['serverTokenUrl'] = 'https://cloudgis.k2geomatics.io/portal/sharing/generateToken?request=getToken&serverUrl=https%3A%2F%2Fcloudgis.k2geomatics.io%2Fserver%2Flogin%2F..%2Frest%2Fservices&referer=cloudgis.k2geomatics.io&f=json&token='
         portalInfo['baseUrl'] = 'https://cloudgis.k2geomatics.io/server/rest/services/Hosted'
