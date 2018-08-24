@@ -29,6 +29,68 @@ class LandingPageEvent:
     conditionalUpdate = True
     nwsEvent = False
     
+    usStates = {
+        'AL': 'Alabama',
+        'AK': 'Alaska',
+        'AS': 'American Samoa',
+        'AZ': 'Arizona',
+        'AR': 'Arkansas',
+        'CA': 'California',
+        'CO': 'Colorado',
+        'CT': 'Connecticut',
+        'DE': 'Delaware',
+        'DC': 'District Of Columbia',
+        'FM': 'Federated States Of Micronesia',
+        'FL': 'Florida',
+        'GA': 'Georgia',
+        'GU': 'Guam',
+        'HI': 'Hawaii',
+        'ID': 'Idaho',
+        'IL': 'Illinois',
+        'IN': 'Indiana',
+        'IA': 'Iowa',
+        'KS': 'Kansas',
+        'KY': 'Kentucky',
+        'LA': 'Louisiana',
+        'ME': 'Maine',
+        'MH': 'Marshall Islands',
+        'MD': 'Maryland',
+        'MA': 'Massachusetts',
+        'MI': 'Michigan',
+        'MN': 'Minnesota',
+        'MS': 'Mississippi',
+        'MO': 'Missouri',
+        'MT': 'Montana',
+        'NE': 'Nebraska',
+        'NV': 'Nevada',
+        'NH': 'New Hampshire',
+        'NJ': 'New Jersey',
+        'NM': 'New Mexico',
+        'NY': 'New York',
+        'NC': 'North Carolina',
+        'ND': 'North Dakota',
+        'MP': 'Northern Mariana Islands',
+        'OH': 'Ohio',
+        'OK': 'Oklahoma',
+        'OR': 'Oregon',
+        'PW': 'Palau',
+        'PA': 'Pennsylvania',
+        'PR': 'Puerto Rico',
+        'RI': 'Rhode Island',
+        'SC': 'South Carolina',
+        'SD': 'South Dakota',
+        'TN': 'Tennessee',
+        'TX': 'Texas',
+        'UT': 'Utah',
+        'VT': 'Vermont',
+        'VI': 'Virgin Islands',
+        'VA': 'Virginia',
+        'WA': 'Washington',
+        'WV': 'West Virginia',
+        'WI': 'Wisconsin',
+        'WY': 'Wyoming'
+    }
+    
     def consumeWildfireReport(self, rprt, perim):
         self.uri = rprt['INTERNALID']
         self.eventDate = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(rprt['START_DATE'])/1000))
@@ -51,6 +113,9 @@ class LandingPageEvent:
     def consumeNWSReportGroup(self, rprtGrp, geoms, category):
 #        ids = [str(attr[1]) for val in rprtGrp.values() for attr in val['attributes'].items() if attr[0] == 'OBJECTID']
 #        ids.sort()
+        areaIds = [item[1] for val in rprtGrp.values() for item in val['attributes'].items() if item[0] == 'AreaIds']
+        stateAbbrev = list(set([place[:2] for place in areaIds]))
+        states = [self.usStates[abbrev] for abbrev in stateAbbrev if self.usStates.has_key(abbrev)]
         Uids = [str(item[0]) for item in rprtGrp.items()]
         self.uri = ','.join(Uids)
         self.eventDate = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(min([attr['attributes']['Start'] for attr in rprtGrp.values()]))/1000))
@@ -59,7 +124,13 @@ class LandingPageEvent:
         affectedLocations = list(set([loc for val in rprtGrp.values() for loc in str(val['attributes']['Affected']).split('; ')]))
         affectedLocations.sort()
         self.location = ', '.join(affectedLocations)
-        self.title = 'National Weather Service: ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Event'] + " (Urgency: " + rprtGrp[rprtGrp.keys()[0]]['attributes']['Urgency'] + ", Severity: " + rprtGrp[rprtGrp.keys()[0]]['attributes']['Severity'] + ")"
+        self.title = rprtGrp[rprtGrp.keys()[0]]['attributes']['Severity'] + ' ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Event']
+        if len(states) > 0:
+            self.title = self.title + ' for ' + ','.join(states)
+        else:
+            self.title = self.title + ' for ' + affectedLocations[0]
+            if len(affectedLocations) > 1:
+                self.title = self.title + ', et al.'
         self.summary = rprtGrp[rprtGrp.keys()[0]]['attributes']['Summary']
         self.userCreated = False
         urls = list(set([str(item[1]) for val in rprtGrp.values() for item in val['attributes'].items() if item[0] == 'Link']))
