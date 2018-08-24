@@ -153,7 +153,7 @@ class HurricaneEventsTracker:
             pathBuffers = []
             for path in stormTracks[stormName]:
                 pathPolyline = arcpy.Polyline(arcpy.Array([arcpy.Point(*coords) for coords in path]), arcpy.SpatialReference(3857))
-                bufferedPath = pathPolyline.buffer(self.metersPerMile * 100) #100 mile buffer
+                bufferedPath = pathPolyline.buffer(self.metersPerMile * 250) #100 mile buffer
                 pathPolylines.append(pathPolyline)
                 pathBuffers.append(bufferedPath)
             stormPathPolylines[stormName] = pathPolylines
