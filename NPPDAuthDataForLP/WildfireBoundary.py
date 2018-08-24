@@ -22,8 +22,6 @@ class WildfireBoundary:
                 'fire': (('', perim['attributes']['FIRE'])[perim['attributes']['FIRE'] is not None]).encode('utf-8'),
                 'inciweb_id': (('', perim['attributes']['INCIWEB_ID'])[perim['attributes']['INCIWEB_ID'] is not None]).encode('utf-8'),
                 'inc_num': (('', perim['attributes']['INC_NUM'])[perim['attributes']['INC_NUM'] is not None]).encode('utf-8'),
-                'load_date': str(perim['attributes']['LOAD_DATE']),
-                'date_time': str(perim['attributes']['DATE_TIME']),
                 'latitude': rprt['LATITUDE'],
                 'longitude': rprt['LONGITUDE'],
                 'area_meas': (('', rprt['AREA_MEAS'])[rprt['AREA_MEAS'] is not None]).encode('utf-8'),
@@ -35,8 +33,6 @@ class WildfireBoundary:
                 'gacc': (('', rprt['GACC'])[rprt['GACC'] is not None]).encode('utf-8'),
                 'source': (('', rprt['SOURCE'])[rprt['SOURCE'] is not None]).encode('utf-8'),
                 'state': (('', rprt['STATE'])[rprt['STATE'] is not None]).encode('utf-8'),
-                'start_date': str(rprt['START_DATE']),
-                'cont_date': str(rprt['CONT_DATE']),
                 'condition': (('', rprt['CONDITION'])[rprt['CONDITION'] is not None]).encode('utf-8'),
                 'wfu': (('', rprt['WFU'])[rprt['WFU'] is not None]).encode('utf-8'),
                 'appid' : (('', appid)[appid is not None]).encode('utf-8'),
@@ -44,6 +40,20 @@ class WildfireBoundary:
                 }, 'geometry' : {
                         'rings' : boundary['geometry']['rings']
                         } }
+        
+        if perim['attributes']['LOAD_DATE'] is not None:
+            featureData['attributes']['load_date'] = str(perim['attributes']['LOAD_DATE'])
+            
+        if perim['attributes']['DATE_TIME'] is not None:
+            featureData['attributes']['date_time'] = str(perim['attributes']['DATE_TIME'])
+        
+        if rprt['START_DATE'] is not None:
+            featureData['attributes']['start_date'] = str(rprt['START_DATE'])
+            
+        if rprt['CONT_DATE'] is not None:
+            featureData['attributes']['cont_date'] = str(rprt['CONT_DATE'])
+        
+        
         self.features = [featureData]
         
     def urlEncode(self):
