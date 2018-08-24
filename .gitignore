@@ -12,3 +12,5 @@ etc/
 search-inferred/
 data/*.json
 /.metadata/
+
+\.idea/
