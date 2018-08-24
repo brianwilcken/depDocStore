@@ -126,7 +126,7 @@ class LandingPageEvent:
         self.location = ', '.join(affectedLocations)
         self.title = rprtGrp[rprtGrp.keys()[0]]['attributes']['Severity'] + ' ' + rprtGrp[rprtGrp.keys()[0]]['attributes']['Event']
         if len(states) > 0:
-            self.title = self.title + ' for ' + ','.join(states)
+            self.title = self.title + ' for ' + ', '.join(states)
         else:
             self.title = self.title + ' for ' + affectedLocations[0]
             if len(affectedLocations) > 1:
