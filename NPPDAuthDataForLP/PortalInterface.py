@@ -12,6 +12,7 @@ import LocationFeature
 import BoundaryFeature
 import WildfireBoundary
 import HurricaneBoundary
+import NWSEventBoundary
 import logging
 import urllib
 from requests_negotiate_sspi import HttpNegotiateAuth
@@ -35,6 +36,7 @@ class PortalInterface:
         self.eventBoundariesUrl = portalInfo['baseUrl'] + '/Event_Boundaries/FeatureServer/0'
         self.wildfireBoundariesUrl = portalInfo['baseUrl'] + '/Wildfire_Boundaries/FeatureServer/0'
         self.hurricaneBoundariesUrl = portalInfo['baseUrl'] + '/Hurricane_Boundaries/FeatureServer/0'
+        self.nwsEventsUrl = portalInfo['baseUrl'] + '/NWSIncidents/FeatureServer/0'
         
         #dashboard update URL
         self.dashboardUpdateUrl = portalInfo['dashboardUrl']
@@ -73,6 +75,107 @@ class PortalInterface:
         eventQuery = string.replace(self.portalQuery, '{eventId}', eventId)
         return eventQuery
         
+    
+    def upsertNWSEventFeatures(self, event, rprtGrp, geoms):
+        eventId = self.getEventId(event)
+        appid = None
+        nwsQuery = self.getPortalQuery(eventId)
+        
+        if self.portalInfo['useNegotiateAuth'] == True:
+            temp=requests.get(self.nwsEventsUrl + nwsQuery,verify=False,auth=HttpNegotiateAuth())
+        else:
+            temp=requests.get(self.nwsEventsUrl + nwsQuery)
+        nwsEventsFs = arcpy.FeatureSet()
+        nwsEventsFs = arcpy.AsShape(temp.content,True)
+        
+        if nwsEventsFs.JSON is not None:
+            self.logger.info('Successfully loaded boundary data from portal for NWS event: ' + eventId)
+            nwsEventsJson = json.loads(nwsEventsFs.JSON)
+        else:
+            self.logger.error('Unable to load boundary data from portal!')
+            return False
+
+        arcpy.Delete_management('in_memory')
+
+        #form a set of polygon feature classes to encompass the new boundary geometry
+        new_boundary_polygons = [arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in geom['rings'][0]]), arcpy.SpatialReference(3857)) for geom in geoms]
+
+        if len(nwsEventsJson['features']) > 0:
+            #iterate through each of the boundaries associated with the event; typically there will only be one...
+            boundaries = nwsEventsJson['features']
+            boundaryCount = 1
+            for boundary in boundaries:
+                dissolveBoundaryFC = "in_memory\\_wildfireBoundaryDissolved_featureClass_" + str(boundaryCount)
+                simplifyBoundaryFC = "in_memory\\_wildfireBoundarySimplified_featureClass_" + str(boundaryCount)
+                boundaryCount += 1
+                
+                #form a polygon feature class to encompass the old boundary geometry
+                old_geoms = boundary['geometry']
+                old_boundary_polygons = [arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in old_geom[0]]), arcpy.SpatialReference(3857)) for old_geom in old_geoms.values()]
+                
+                #concatenate the lists of old and new boundary polygons
+                boundary_polygons = new_boundary_polygons + old_boundary_polygons
+                
+                #dissolve together the old boundary with the new boundary
+                arcpy.Dissolve_management(boundary_polygons, dissolveBoundaryFC)
+                dissolveBoundaryFS = arcpy.FeatureSet()
+                dissolveBoundaryFS.load(dissolveBoundaryFC)
+                
+                #simplify the merged result
+                arcpy.SimplifyPolygon_cartography(dissolveBoundaryFS, simplifyBoundaryFC, 'BEND_SIMPLIFY', '5000 Feet')
+                simplifiedBoundaryFS = arcpy.FeatureSet()
+                simplifiedBoundaryFS.load(simplifyBoundaryFC)
+                
+                if len(boundaries) > 1:
+                    #update the new boundary polygon with the current iteration of dissolved/simplifed boundary data
+                    newBoundaryJSON = json.loads(simplifiedBoundaryFS.JSON)
+                    new_geoms = newBoundaryJSON['features'][0]['geometry']
+                    new_boundary_polygons = [arcpy.Polygon(arcpy.Array([arcpy.Point(*coords) for coords in new_geom['rings'][0]]), arcpy.SpatialReference(3857)) for new_geom in new_geoms]
+                
+                #delete any old boundary data before adding the updated boundary data
+                appid_temp = boundary['attributes']['appid']
+                if appid_temp is not None:
+                    appid = appid_temp
+                if 'env' in self.portalInfo:
+                    if self.portalInfo['env'] == 'D':
+                        objectid = boundary['attributes']['objectid']
+                        deleteResponse = requests.post(self.nwsEventsUrl + self.deleteFeatures, data='where=objectid=' + str(objectid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
+                    elif self.portalInfo['env'] == 'S' or self.portalInfo['env'] == 'P':
+                        objectid = boundary['attributes']['objectid']
+                        deleteResponse = requests.post(self.nwsEventsUrl + self.deleteFeatures, verify=False, auth=HttpNegotiateAuth(), data='where=objectid=' + str(objectid) + '&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&gdbVersion=&rollbackOnFailure=true&f=json', headers=self.tokenHeaders)
+                    if not deleteResponse.ok:
+                        self.logger.warn('Unable to delete old boundary data for wildfire event: ' + eventId)
+        else:
+            simplifyBoundaryFC = "in_memory\\_nwsEventSimplified_featureClass"
+            arcpy.SimplifyPolygon_cartography(new_boundary_polygons, simplifyBoundaryFC, 'BEND_SIMPLIFY', '5000 Feet')
+            simplifiedBoundaryFS = arcpy.FeatureSet()
+            simplifiedBoundaryFS.load(simplifyBoundaryFC)
+        
+        boundaryJSON = json.loads(simplifiedBoundaryFS.JSON)
+        boundary = boundaryJSON['features']
+                    
+        if len(boundary) > 0:
+            #insert new NWS Event boundaries data
+            nwsEventBoundary = NWSEventBoundary.NWSEventBoundary()
+            nwsEventBoundary.consume(self.indexedEventJson, appid, rprtGrp, boundary[0]['geometry'])
+            
+            #POST data to portal
+            if self.portalInfo['useNegotiateAuth'] == True:
+                portalResponse = requests.post(self.nwsEventsUrl + self.addFeatures, data=nwsEventBoundary.urlEncode(), headers=self.tokenHeaders, verify=False, auth=HttpNegotiateAuth())
+            else:
+                portalResponse = requests.post(self.nwsEventsUrl + self.addFeatures, data=nwsEventBoundary.urlEncode(), headers=self.tokenHeaders)
+            if portalResponse.ok:
+                responseJSON = json.loads(portalResponse.content)
+                success = responseJSON['addResults'][0]['success']
+                if success == True:
+                    self.logger.info('NWS Event boundary data added for event: ' + eventId)
+                else:
+                    self.logger.warn('Unable to add NWS Event boundary data for event: ' + eventId)
+            else:
+                self.logger.error('Server error (' + portalResponse.status_code + ') occurred while adding NWS Event boundary data for event: ' + eventId)
+                
+            return True
+    
     def upsertWildfireEventFeatures(self, event, report, perimeter):
         eventId = self.getEventId(event)
         appid = None

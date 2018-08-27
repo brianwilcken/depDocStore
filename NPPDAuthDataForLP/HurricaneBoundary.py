@@ -54,7 +54,7 @@ class HurricaneBoundary:
             }
         
         if fore['ADVISNUM'] is not None and fore['ADVISNUM'].strip():
-            featureData['attributes']['f_advisnum'] = fore['ADVISNUM']
+            featureData['attributes']['f_advisnum'] = fore['ADVISNUM'].encode('utf-8')
     
         if 'rings' in buff['geometry']:
             featureData['geometry'] = {

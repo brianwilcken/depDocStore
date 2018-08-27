@@ -75,6 +75,8 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 
 	private boolean conditionalUpdate;
 
+	private boolean nwsEvent;
+
 	private List<IndexedEventSource> sources;
 
 	private Map<String, Long> conceptsMap;
@@ -360,7 +362,15 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 		this.conditionalUpdate = conditionalUpdate;
 	}
 
-	@Override
+    public boolean isNwsEvent() {
+        return nwsEvent;
+    }
+
+    public void setNwsEvent(boolean nwsEvent) {
+        this.nwsEvent = nwsEvent;
+    }
+
+    @Override
 	public int compareTo(IndexedEvent o) {
 		if (o.getSummary() == null && this.getSummary() == null) {
 			return 0;
