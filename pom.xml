@@ -267,7 +267,7 @@
 				<dcAuto>true</dcAuto>
 				<wsAuto>false</wsAuto>
                 <erInterval>60000</erInterval>
-                <dcInterval>15000</dcInterval>
+                <dcInterval>60000</dcInterval>
 				<wsInterval>-1</wsInterval>
 			</properties>
 		</profile>

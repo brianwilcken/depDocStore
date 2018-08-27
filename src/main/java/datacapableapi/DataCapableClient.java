@@ -94,7 +94,7 @@ public class DataCapableClient {
         //Filter out events with fewer than 5 posts unless the event type is Active Shooter
         List<Event> wellDefinedEvents = Arrays.stream(events)
                 .filter(p -> !Strings.isNullOrEmpty(p.getLocationDetails()))
-                .filter(p -> p.getPosts().length >= 5 || p.getType() == "ACTIVE_SHOOTER")
+                .filter(p -> p.getPosts().length >= 5 || p.getType().compareTo("ACTIVE_SHOOTER") == 0)
                 .collect(Collectors.toList());
 
         //Filter out events where the event type is not contained in the mapping of valid categories
