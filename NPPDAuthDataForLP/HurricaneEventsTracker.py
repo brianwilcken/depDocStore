@@ -1,4 +1,4 @@
-
+import sys
 import arcpy
 import requests
 import json
@@ -186,8 +186,14 @@ class HurricaneEventsTracker:
                 if startDates.has_key(posAttr['STORMNAME']) and startDates[posAttr['STORMNAME']] is not None:
                     posAttr['STARTDTG'] = startDates[stormName]
                     #initialize event object to be POSTed to the event service
-                    event = LandingPageEvent.LandingPageEvent()
-                    event.consumeHurricaneReport(posAttr, foreAttr)
+                    try:
+                        self.logger.info('create event from hurricane data: ' + posAttr['STORMNAME'])
+                        event = LandingPageEvent.LandingPageEvent()
+                        event.consumeHurricaneReport(posAttr, foreAttr)
+                        self.logger.info('success creating event from hurricane data: ' + posAttr['STORMNAME'])
+                    except:
+                        self.logger.error('failed to create event from hurricane data: ' + posAttr['STORMNAME'] + ' exception: '+ str(sys.exc_info()[0]))
+                        continue
                     
                     self.logger.info('POST hurricane event to backend: ' + event.title)
                     response = requests.post(self.eventsServiceUrl, data=event.toJSON(), headers=self.requestHeaders)
@@ -196,12 +202,17 @@ class HurricaneEventsTracker:
                         bufferGeometryPolygon = stormBufferFeatures[stormName]
                         bufferGeometryJSON = json.loads(bufferGeometryPolygon.JSON)
                         bufferGeometry = bufferGeometryJSON['features'][0]
-                        self.portal.upsertHurricaneEventFeatures(response.content, posAttr, foreAttr, bufferGeometry)
+                        try:
+                            self.logger.info('send hurricane data to portal: ' + event.uri)
+                            self.portal.upsertHurricaneEventFeatures(response.content, posAttr, foreAttr, bufferGeometry)
+                            self.logger.info('Hurricane data successfully sent to portal: ' + event.uri)
+                        except:
+                            self.logger.error('failed to send hurricane data to portal: ' + event.uri + ' exception: ' + str(sys.exc_info()[0]))
                     else:
                         self.logger.warn('POST failed for event: ' + event.title)
                     
     def getMostRecentDateTime(self, mostRecentPosition):
-	self.logger.info('in getMostRecentDateTime method')
+        self.logger.info('in getMostRecentDateTime method')
         day = mostRecentPosition['DAY']
         month = mostRecentPosition['MONTH']
         try:
@@ -211,7 +222,7 @@ class HurricaneEventsTracker:
         return mostRecentDT
     
     def getForecastValidDateTime(self, forecastPosition):
-	self.logger.info('in getForecastValidDateTime method')
+        self.logger.info('in getForecastValidDateTime method')
         datetimestr = forecastPosition['FLDATELBL'][:-4]
         dt = datetime.strptime(datetimestr, '%Y-%m-%d %I:%M %p %a')
         forecastDT = str(dt.month).zfill(2) + '/' + forecastPosition['VALIDTIME']

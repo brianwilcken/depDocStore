@@ -55,6 +55,7 @@ def main(argv):
         logger.info('Local Development mode')
         eventsServiceUrl = 'http://localhost:8080/eventNLP/api/events'
         #eventsServiceUrl = 'http://ipgdevgis:33662/eventNLP/api/events'
+        portalInfo['env'] = 'D'
         portalInfo['generateTokenUrl'] = 'https://cloudgis.k2geomatics.io/portal/sharing/rest/generateToken'
         portalInfo['serverTokenUrl'] = 'https://cloudgis.k2geomatics.io/portal/sharing/generateToken?request=getToken&serverUrl=https%3A%2F%2Fcloudgis.k2geomatics.io%2Fserver%2Flogin%2F..%2Frest%2Fservices&referer=cloudgis.k2geomatics.io&f=json&token='
         portalInfo['baseUrl'] = 'https://cloudgis.k2geomatics.io/server/rest/services/Hosted'
@@ -76,16 +77,22 @@ def main(argv):
     except:
         logger.error('Wildfire events failed: ' + str(sys.exc_info()[0]))
     
-#    logger.info('Begin Processing NWS Events from NPPD')
-#    nwsEventsTracker = NWSEventsTracker.NWSEventsTracker(eventsServiceUrl, portalInfo)
-#    nwsEventsTracker.getAuthoritativeData()
-#    logger.info('Finished Processing NWS Events from NPPD')
+#    try:
+#        logger.info('Begin Processing NWS Events from NPPD')
+#        nwsEventsTracker = NWSEventsTracker.NWSEventsTracker(eventsServiceUrl, portalInfo)
+#        nwsEventsTracker.getAuthoritativeData()
+#        logger.info('Finished Processing NWS Events from NPPD')
+#    except:
+#        logger.error('NWS events failed: ' + str(sys.exc_info()[0]))
 
-    logger.info('Begin Processing Hurricane Events from NPPD')
-    hurricaneEventsTracker = HurricaneEventsTracker.HurricaneEventsTracker(eventsServiceUrl, portalInfo)
-    hurricaneEventsTracker.getAuthoritativeData()
-    #hurricaneEventsTracker.getTestData('daniel')
-    logger.info('Finished Processing Hurricane Events from NPPD')
+    try:
+        logger.info('Begin Processing Hurricane Events from NPPD')
+        hurricaneEventsTracker = HurricaneEventsTracker.HurricaneEventsTracker(eventsServiceUrl, portalInfo)
+        hurricaneEventsTracker.getAuthoritativeData()
+        #hurricaneEventsTracker.getTestData('daniel')
+        logger.info('Finished Processing Hurricane Events from NPPD')
+    except:
+        logger.error('Hurricane events failed: ' + str(sys.exc_info()[0]))
     
 if __name__ == "__main__":
    main(sys.argv[1:])
