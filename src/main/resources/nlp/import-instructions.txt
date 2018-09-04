@@ -1,0 +1,6 @@
+These instructions are only intended to be followed after deploying the latest Java backend code.
+
+1. copy "all-model-training-events.zip" and "import-training-data.bat" to <Apache Tomcat Home>\webapps\eventNLP\WEB-INF
+2. open a command prompt with admin rights
+3. run import-training-data.bat
+4. delete file: <Apache Tomcat Home>\data\event-categorization.bin

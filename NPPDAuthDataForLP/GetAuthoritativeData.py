@@ -77,16 +77,22 @@ def main(argv):
     except:
         logger.error('Wildfire events failed: ' + str(sys.exc_info()[0]))
     
-    logger.info('Begin Processing NWS Events from NPPD')
-    nwsEventsTracker = NWSEventsTracker.NWSEventsTracker(eventsServiceUrl, portalInfo)
-    nwsEventsTracker.getAuthoritativeData()
-    logger.info('Finished Processing NWS Events from NPPD')
+#    try:
+#        logger.info('Begin Processing NWS Events from NPPD')
+#        nwsEventsTracker = NWSEventsTracker.NWSEventsTracker(eventsServiceUrl, portalInfo)
+#        nwsEventsTracker.getAuthoritativeData()
+#        logger.info('Finished Processing NWS Events from NPPD')
+#    except:
+#        logger.error('NWS events failed: ' + str(sys.exc_info()[0]))
 
-    logger.info('Begin Processing Hurricane Events from NPPD')
-    hurricaneEventsTracker = HurricaneEventsTracker.HurricaneEventsTracker(eventsServiceUrl, portalInfo)
-    hurricaneEventsTracker.getAuthoritativeData()
-    #hurricaneEventsTracker.getTestData('daniel')
-    logger.info('Finished Processing Hurricane Events from NPPD')
+    try:
+        logger.info('Begin Processing Hurricane Events from NPPD')
+        hurricaneEventsTracker = HurricaneEventsTracker.HurricaneEventsTracker(eventsServiceUrl, portalInfo)
+        hurricaneEventsTracker.getAuthoritativeData()
+        #hurricaneEventsTracker.getTestData('daniel')
+        logger.info('Finished Processing Hurricane Events from NPPD')
+    except:
+        logger.error('Hurricane events failed: ' + str(sys.exc_info()[0]))
     
 if __name__ == "__main__":
    main(sys.argv[1:])
