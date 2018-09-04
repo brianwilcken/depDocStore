@@ -11,7 +11,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 //import org.apache.commons.codec.binary.Hex;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -176,7 +175,7 @@ public class SolrClient {
 		List<IndexedEvent> indexableEvents = events.stream()
 				.filter(p -> {
 					try {
-						return !IsDocumentAlreadyIndexed(p.getUri());
+						return !DocumentExistsByURI(p.getUri());
 					} catch (SolrServerException e) {
 						exs.add(e);
 						return false;
@@ -191,16 +190,47 @@ public class SolrClient {
 		return indexableEvents;
 	}
 
-	public Boolean IsDocumentAlreadyIndexed(String uri) throws SolrServerException {
+	public Boolean DocumentExists(String queryStr) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setRows(0);
-		query.setQuery("uri:\"" + uri + "\"");
+		query.setQuery(queryStr);
 		try {
 			QueryResponse response = client.query("events", query);
 			return response.getResults().getNumFound() > 0;
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
 			return false;
+		}
+	}
+
+	public Boolean DocumentExistsByURI(String uri) throws SolrServerException {
+		return DocumentExists("uri:\"" + uri + "\"");
+	}
+
+	public Boolean DocumentExistsByComplexUri(String uri) throws SolrServerException {
+		if (uri.contains(",")) {
+			return DocumentExists(getComplexUriSolrQuery(uri));
+		} else {
+			return DocumentExistsByURI(uri);
+		}
+	}
+
+	public String getComplexUriSolrQuery(String uri) {
+		if (uri.contains(",")) {
+			StringBuilder bldr = new StringBuilder();
+			String[] uris = uri.split(",");
+			for (int i = 0; i < uris.length; i++) {
+				if (i > 0) {
+					bldr.append(" ");
+				}
+				bldr.append("uri:*" + uris[i] + "*");
+				if (i < (uris.length - 1)) {
+					bldr.append(" OR");
+				}
+			}
+			return bldr.toString();
+		} else {
+			return uri;
 		}
 	}
 
