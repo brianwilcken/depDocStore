@@ -3,7 +3,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>inl.gov</groupId>
-	<artifactId>eventNLP</artifactId>
+	<artifactId>depDocStore</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
 	<packaging>war</packaging>
@@ -341,7 +341,7 @@
 			            <id>default-war</id>
 			            <phase>prepare-package</phase>
 			            <configuration>
-							<warName>eventNLP</warName>
+							<warName>depDocStore</warName>
 			                <failOnMissingWebXml>false</failOnMissingWebXml>
 			            </configuration>
 			        </execution>
@@ -354,7 +354,7 @@
 			    <configuration>
 			        <url>http://localhost:8080/manager/text</url>
 			        <server>TomcatServer</server>
-			        <path>/eventNLP</path>
+			        <path>/depDocStore</path>
 			    </configuration>
 			</plugin>
 		</plugins>
