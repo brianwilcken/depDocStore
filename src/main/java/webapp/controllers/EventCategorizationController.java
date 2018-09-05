@@ -25,7 +25,6 @@ public class EventCategorizationController {
 
 	private static SolrClient solrClient = new SolrClient(Tools.getProperty("solr.url"));
 	private static EventCategorizer categorizer = new EventCategorizer(solrClient);
-	private static EventsController svc = new EventsController();
 	
 	@GetMapping("/classify")
 	public String getHandler(Model model) {
@@ -189,7 +188,6 @@ public class EventCategorizationController {
 	@PostMapping("/classify/RefreshEvents")
 	public String refreshEventsPostHandler(Model model) {
 		model.addAttribute("mode", "N");
-		svc.refreshEventsFromEventRegistry();
 		try {
 			return getNextEvent(model);
 		} catch (SolrServerException e) {
@@ -201,7 +199,6 @@ public class EventCategorizationController {
 	@PostMapping("/classify/SearchEvents")
 	public String searchEventsPostHandler(Model model) {
 		model.addAttribute("mode", "N");
-		svc.getModelTrainingDataFromEventRegistry();
 		try {
 			return getNextEvent(model);
 		} catch (SolrServerException e) {

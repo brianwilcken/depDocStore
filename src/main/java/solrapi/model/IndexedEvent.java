@@ -11,8 +11,6 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import eventsregistryapi.model.Info;
-import eventsregistryapi.model.Story;
 import nlp.NLPTools;
 import opennlp.tools.stemmer.Stemmer;
 import org.apache.commons.codec.binary.Hex;
@@ -102,25 +100,6 @@ public class IndexedEvent extends IndexedObject implements Comparable<IndexedEve
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
-
-	public IndexedEvent updateWithEventDetails(Info eventInfo) {
-		try {
-			Story story = Arrays.stream(eventInfo.getStories())
-					.filter(p -> p.getMedoidArticle().getLang().compareTo("eng") == 0)
-					.findFirst()
-					.get();
-			this.setUrl(story.getMedoidArticle().getUrl());
-			this.setImages(eventInfo.getImages());
-			this.setLatitude(Double.toString(eventInfo.getLocation().getLat()));
-			this.setLongitude(Double.toString(eventInfo.getLocation().get_long()));
-			updateLastUpdatedDate();
-		} catch (NoSuchElementException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		return this;
 	}
 
 	//A previously indexed copy of this event may have fields that are not

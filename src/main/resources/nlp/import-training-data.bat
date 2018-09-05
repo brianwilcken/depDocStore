@@ -1,1 +1,0 @@
-java -cp "./lib/*;./classes" solrapi.SolrDataImporter

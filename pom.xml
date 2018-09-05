@@ -9,7 +9,7 @@
 	<packaging>war</packaging>
 
 	<properties>
-	      <start-class>webapp.EventsApplication</start-class>
+		<start-class>webapp.DocumentsApplication</start-class>
 		<dl4j.version>1.0.0-beta</dl4j.version>
 		<datavec.version>1.0.0-beta</datavec.version>
 	</properties>
@@ -152,6 +152,11 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+		<dependency>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongodb-driver-sync</artifactId>
+			<version>3.8.1</version>
+		</dependency>
 
 		<!--DeepLearning4j dependencies-->
 		<!--<dependency>-->
@@ -191,6 +196,8 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://localhost:8983/solr</index.url>
+                <mongo.url>mongodb://localhost:27017</mongo.url>
+				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<useProxy>false</useProxy>
 				<proxy.host>webbalance.inl.gov</proxy.host>
 				<proxy.port>8080</proxy.port>
@@ -214,6 +221,8 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://ipgdevgis:8983/solr</index.url>
+				<mongo.url>mongodb://localhost:27017</mongo.url>
+				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<useProxy>false</useProxy>
 				<proxy.host>webbalance.inl.gov</proxy.host>
 				<proxy.port>8080</proxy.port>
@@ -237,6 +246,8 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://localhost:8983/solr</index.url>
+				<mongo.url>mongodb://localhost:27017</mongo.url>
+				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<useProxy>true</useProxy>
 				<proxy.host>146.137.176.11</proxy.host>
 				<proxy.port>3128</proxy.port>
@@ -260,6 +271,8 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://localhost:8983/solr</index.url>
+				<mongo.url>mongodb://localhost:27017</mongo.url>
+				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<useProxy>true</useProxy>
 				<proxy.host>146.137.176.11</proxy.host>
 				<proxy.port>3128</proxy.port>
@@ -285,7 +298,6 @@
 				<filtering>true</filtering>
 				<excludes>
 					<exclude>eventCategorization.ftl</exclude>
-					<exclude>event-registry/**</exclude>
 					<exclude>nlp/**</exclude>
 				</excludes>
 			</resource>
@@ -294,7 +306,6 @@
 				<filtering>false</filtering>
 				<includes>
 					<include>eventCategorization.ftl</include>
-					<include>event-registry/**</include>
 					<include>nlp/**</include>
 				</includes>
 			</resource>
