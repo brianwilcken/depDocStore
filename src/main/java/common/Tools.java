@@ -1,7 +1,6 @@
 package common;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -12,6 +11,13 @@ import org.apache.commons.io.FileUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
+import org.apache.pdfbox.cos.COSDocument;
+import org.apache.pdfbox.io.IOUtils;
+import org.apache.pdfbox.io.RandomAccessFile;
+import org.apache.pdfbox.pdfparser.PDFParser;
+import org.apache.pdfbox.pdfparser.PDFStreamParser;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.core.io.ClassPathResource;
 import webapp.models.JsonResponse;
 
@@ -75,6 +81,15 @@ public class Tools {
 			e.printStackTrace();
 		}
 		return fileString;
+	}
+
+	public static File WriteFileToDisk(String path, InputStream stream) throws IOException {
+		File file = new File(path);
+		FileOutputStream fileOutputStream = new FileOutputStream(file);
+		org.apache.commons.io.IOUtils.copy(stream, fileOutputStream);
+		stream.close();
+		fileOutputStream.close();
+		return file;
 	}
 	
 	public static String GetQueryString(Object obj) {
@@ -146,5 +161,28 @@ public class Tools {
 	@FunctionalInterface
 	public interface CheckedBiConsumer<T, U> {
 		void apply(T t, U u) throws Exception;
+	}
+
+	public static String extractPDFText(File pdfFile) {
+		PDFTextStripper pdfStripper = null;
+		PDDocument pdDoc = null;
+		COSDocument cosDoc = null;
+		try {
+			RandomAccessFile randomAccessFile = new RandomAccessFile(pdfFile, "r");
+			PDFParser parser = new PDFParser(randomAccessFile);
+			parser.parse();
+			cosDoc = parser.getDocument();
+			pdfStripper = new PDFTextStripper();
+			pdDoc = new PDDocument(cosDoc);
+			pdfStripper.setStartPage(1);
+			pdfStripper.setEndPage(5);
+			String parsedText = pdfStripper.getText(pdDoc);
+			randomAccessFile.close();
+			pdDoc.close();
+			cosDoc.close();
+			return parsedText;
+		} catch (IOException e) {
+			return null;
+		}
 	}
 }

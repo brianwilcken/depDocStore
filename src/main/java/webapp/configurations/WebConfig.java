@@ -9,18 +9,13 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.ViewResolverRegistry;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver;
-import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
+import org.springframework.web.servlet.config.annotation.*;
 
 import webapp.components.AsyncExceptionHandler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import webapp.components.DocumentsRequestInterceptor;
 
 @EnableWebMvc
 @Configuration
@@ -32,16 +27,16 @@ public class WebConfig implements WebMvcConfigurer, AsyncConfigurer {
 	
 	@Autowired
     private AsyncExceptionHandler asyncExceptionHandler;
-	
-	@Override
-    public void configureViewResolvers(ViewResolverRegistry registry) {
-        registry.freeMarker();
-    }
     
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
     	registry.addResourceHandler("/resources/**")
     		.addResourceLocations("classpath:/");
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new DocumentsRequestInterceptor()).addPathPatterns("/depDocStore/**");
     }
     
     @Override
@@ -51,25 +46,9 @@ public class WebConfig implements WebMvcConfigurer, AsyncConfigurer {
     
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/eventNLP/**")
+        registry.addMapping("/depDocStore/**")
 				.allowedOrigins("*")
 		        .allowedMethods("*");
-    }
-
-    @Bean
-    public FreeMarkerConfigurer freeMarkerConfigurer() {
-        FreeMarkerConfigurer configurer = new FreeMarkerConfigurer();
-        configurer.setTemplateLoaderPath("classpath:/templates");
-        return configurer;
-    }
-    
-    @Bean 
-    public FreeMarkerViewResolver freemarkerViewResolver() { 
-        FreeMarkerViewResolver resolver = new FreeMarkerViewResolver(); 
-        resolver.setCache(true); 
-        resolver.setPrefix(""); 
-        resolver.setSuffix(".ftl"); 
-        return resolver; 
     }
     
     @Bean(name="processExecutor")

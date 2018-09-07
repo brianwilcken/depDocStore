@@ -1,7 +1,6 @@
 package solrapi.model;
 
 import java.lang.reflect.InvocationTargetException;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -10,7 +9,7 @@ import common.Tools;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.solr.common.SolrDocument;
 
-public abstract class IndexedObject {
+public class IndexedDocument {
 	
 	protected void ConsumeSolr(SolrDocument doc) {
 		Arrays.stream(this.getClass().getDeclaredFields()).forEach(p -> {

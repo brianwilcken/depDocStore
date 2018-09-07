@@ -7,14 +7,12 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.gridfs.*;
 import com.mongodb.client.gridfs.model.*;
 import common.Tools;
-import nlp.EventCategorizer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import java.io.*;
 import java.nio.file.Files;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,16 +43,30 @@ public class DocStoreMongoClient {
         gridFSBucket = GridFSBuckets.create(database);
     }
 
-    public ObjectId StoreFile(String filename) {
+    public ObjectId StoreFile(File fileToUpload) {
         try {
-            File fileToUpload = new File(temporaryFileRepo + filename);
             InputStream streamToUploadFrom = new FileInputStream(fileToUpload);
             // Create some custom options
             String contentType = Files.probeContentType(fileToUpload.toPath());
             GridFSUploadOptions options = new GridFSUploadOptions()
                     .metadata(new Document("type", contentType));
 
-            ObjectId fileId = gridFSBucket.uploadFromStream(filename, streamToUploadFrom, options);
+            ObjectId fileId = gridFSBucket.uploadFromStream(fileToUpload.getName(), streamToUploadFrom, options);
+            streamToUploadFrom.close();
+            return fileId;
+        } catch (IOException e){
+            logger.error(e.getMessage(), e);
+            return null;
+        }
+    }
+
+    public ObjectId StoreFile(InputStream is, String filename) {
+        try {
+            String contentType = Files.probeContentType(new File(filename).toPath());
+            GridFSUploadOptions options = new GridFSUploadOptions()
+                    .metadata(new Document("type", contentType));
+
+            ObjectId fileId = gridFSBucket.uploadFromStream(filename, is, options);
             return fileId;
         } catch (IOException e){
             logger.error(e.getMessage(), e);

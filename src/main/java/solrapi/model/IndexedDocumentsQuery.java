@@ -1,10 +1,7 @@
 package solrapi.model;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.Period;
-import java.time.ZoneOffset;
-import java.time.temporal.TemporalAmount;
 import java.util.Arrays;
 
 import common.Tools;

@@ -21,13 +21,4 @@ public class DocumentsApplication extends SpringBootServletInitializer {
 		logger.info("Application Startup");
 		SpringApplication.run(DocumentsApplication.class, args);
 	}
-
-//	@Override
-//	protected Class<?>[] getConfigClasses() {
-//		return new Class[] {
-//				EventsRouter.class,
-//				WebConfig.class,
-//				CorsConfiguration.class
-//		};
-//	}
 }
