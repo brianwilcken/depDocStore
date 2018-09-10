@@ -69,7 +69,7 @@ public class DocumentsController {
     }
 
     @RequestMapping(method=RequestMethod.POST, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> createDocument(@RequestPart("metadata") Map<String, String> metadata, @RequestPart("file") MultipartFile document) {
+    public ResponseEntity<JsonResponse> createDocument(@RequestPart("metadata") Map<String, Object> metadata, @RequestPart("file") MultipartFile document) {
         try {
             logger.info(context.getRemoteAddr() + " -> " + "Storing new document");
             String filename = document.getOriginalFilename();
@@ -148,7 +148,7 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/metadata/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("metadata") Map<String, String> metadata) {
+    public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("metadata") Map<String, Object> metadata) {
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
             if (!docs.isEmpty()) {
