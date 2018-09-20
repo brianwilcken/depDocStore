@@ -12,10 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.io.RandomAccessFile;
 import org.apache.pdfbox.pdfparser.PDFParser;
-import org.apache.pdfbox.pdfparser.PDFStreamParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.core.io.ClassPathResource;
@@ -153,6 +151,15 @@ public class Tools {
 		return b;
 	}
 
+	public static final String UTF8_BOM = "\uFEFF";
+
+	public static String removeUTF8BOM(String s) {
+		if (s.startsWith(UTF8_BOM)) {
+			s = s.substring(1);
+		}
+		return s;
+	}
+
 	@FunctionalInterface
 	public interface CheckedConsumer<T> {
 		void apply(T t) throws Exception;
@@ -174,8 +181,9 @@ public class Tools {
 			cosDoc = parser.getDocument();
 			pdfStripper = new PDFTextStripper();
 			pdDoc = new PDDocument(cosDoc);
+			int pageCount = pdDoc.getNumberOfPages();
 			pdfStripper.setStartPage(1);
-			pdfStripper.setEndPage(5);
+			pdfStripper.setEndPage(pageCount - 1);
 			String parsedText = pdfStripper.getText(pdDoc);
 			randomAccessFile.close();
 			pdDoc.close();

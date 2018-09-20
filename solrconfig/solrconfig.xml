@@ -857,8 +857,8 @@
   </requestHandler>
   <requestHandler name="/mlt" class="solr.MoreLikeThisHandler">
 	<lst name="defaults">
-		<str name="mlt.qf">summary,title</str>
-		<str name="mlt.fl">summary,title</str>
+		<str name="mlt.qf">docText,title</str>
+		<str name="mlt.fl">docText,title</str>
 		<str name="mlt.mintf">1</str>
 		<str name="mlt.mindf">2</str>
 		<str name="mlt.boost">true</str>

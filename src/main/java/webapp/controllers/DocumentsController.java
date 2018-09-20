@@ -3,6 +3,8 @@ package webapp.controllers;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import common.Tools;
 import mongoapi.DocStoreMongoClient;
+import nlp.DocumentCategorizer;
+import nlp.NamedEntityRecognizer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -28,6 +30,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 @CrossOrigin
@@ -36,6 +39,8 @@ import java.util.Map;
 public class DocumentsController {
     private SolrClient solrClient;
     private DocStoreMongoClient mongoClient;
+    private DocumentCategorizer categorizer;
+    private NamedEntityRecognizer recognizer;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
 
@@ -50,6 +55,8 @@ public class DocumentsController {
     public DocumentsController() {
         solrClient = new SolrClient(Tools.getProperty("solr.url"));
         mongoClient = new DocStoreMongoClient(Tools.getProperty("mongodb.url"));
+        categorizer = new DocumentCategorizer();
+        recognizer = new NamedEntityRecognizer();
     }
 
     @RequestMapping(method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
@@ -77,7 +84,7 @@ public class DocumentsController {
 
             ObjectId fileId = mongoClient.StoreFile(uploadedFile);
 
-            SolrInputDocument solrDocument = new SolrInputDocument();
+            SolrDocument solrDocument = new SolrDocument();
             metadata.entrySet().stream().forEach(p -> solrDocument.addField(p.getKey(), p.getValue()));
             solrDocument.addField("docStoreId", fileId.toString());
 
@@ -89,6 +96,10 @@ public class DocumentsController {
             if (contentType.compareTo("application/pdf") == 0) {
                 String docText = Tools.extractPDFText(uploadedFile);
                 solrDocument.addField("docText", docText);
+                String category = Tools.removeUTF8BOM(categorizer.detectCategory(docText));
+                solrDocument.addField("category", category);
+                final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.8);
+
             }
 
             solrClient.indexDocument(solrDocument);
@@ -124,18 +135,20 @@ public class DocumentsController {
                         } else {
                             doc.addField("docText", docText);
                         }
+                        String category = Tools.removeUTF8BOM(categorizer.detectCategory(docText));
+                        final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.8);
+                        if (doc.containsKey("category")) {
+                            doc.replace("category", category);
+                        } else {
+                            doc.addField("category", category);
+                        }
                     }
                 }
 
                 String timestamp = Tools.getFormattedDateTimeString(Instant.now());
                 doc.replace("lastUpdated", timestamp);
 
-                SolrInputDocument solrInputDocument = new SolrInputDocument();
-
-                for (String name : doc.getFieldNames()) {
-                    solrInputDocument.addField(name, doc.getFieldValue(name));
-                }
-                solrClient.indexDocument(solrInputDocument);
+                solrClient.indexDocument(doc);
                 cleanupService.process();
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
@@ -165,12 +178,7 @@ public class DocumentsController {
                 String timestamp = Tools.getFormattedDateTimeString(Instant.now());
                 doc.replace("lastUpdated", timestamp);
 
-                SolrInputDocument solrInputDocument = new SolrInputDocument();
-
-                for (String name : doc.getFieldNames()) {
-                    solrInputDocument.addField(name, doc.getFieldValue(name));
-                }
-                solrClient.indexDocument(solrInputDocument);
+                solrClient.indexDocument(doc);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));

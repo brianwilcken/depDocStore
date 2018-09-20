@@ -1,18 +1,25 @@
 package solrapi;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import common.Tools;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.util.Strings;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
 import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.StreamingResponseCallback;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
@@ -40,22 +47,40 @@ public class SolrClient {
 		client = new HttpSolrClient.Builder(solrHostURL).build();
 	}
 	
-//	public static void main(String[] args) {
-//		SolrClient solrClient = new SolrClient("http://localhost:8983/solr");
-//		//solrClient.writeTrainingDataToFile("data/analyzed-events.csv", solrClient::getAnalyzedDataQuery, solrClient::formatForClustering, new ClusteringThrottle("", 0));
-//		try {
-//			solrClient.WriteEventDataToFile("data/all-model-training-events.json", "eventState:* AND concepts:*", 10000);
-//			//solrClient.UpdateIndexedEventsFromJsonFile("data/solrData.json");
-//			//solrClient.UpdateIndexedEventsWithAnalyzedEvents("data/doc_clusters.csv");
-//		} catch (SolrServerException e) {
-//			e.printStackTrace();
-//		}
-//	}
+	public static void main(String[] args) {
+		SolrClient client = new SolrClient("http://localhost:8983/solr");
+		//client.writeTrainingDataToFile("data/ner-water.train", client::getAnnotatedDataQuery, client::formatForNERModelTraining);
+
+		String annotated = Tools.GetFileString("data/annotated.txt");
+		try {
+			SolrDocumentList docs = client.QuerySolrDocuments("id:764aeace-a51c-4d64-afe4-71cff0609ba8", 1, 0, null);
+			SolrDocument doc = docs.get(0);
+			if (doc.containsKey("annotated")) {
+				doc.replace("annotated", annotated);
+			} else {
+				doc.addField("annotated", annotated);
+			}
+
+			client.indexDocument(doc);
+		} catch (SolrServerException e) {
+			e.printStackTrace();
+		}
+	}
 	
-	public void indexDocuments(Collection<SolrInputDocument> docs) throws SolrServerException {
+	public void indexDocuments(Collection<SolrDocument> docs) throws SolrServerException {
 		try {
 			if (!docs.isEmpty()) {
-				client.add(COLLECTION, docs);
+				List<SolrInputDocument> inputDocuments = new ArrayList<>();
+				for (SolrDocument doc : docs) {
+					SolrInputDocument solrInputDocument = new SolrInputDocument();
+
+					for (String name : doc.getFieldNames()) {
+						solrInputDocument.addField(name, doc.getFieldValue(name));
+					}
+					inputDocuments.add(solrInputDocument);
+				}
+
+				client.add(COLLECTION, inputDocuments);
 				UpdateResponse updateResponse = client.commit(COLLECTION);
 				
 				if (updateResponse.getStatus() != 0) {
@@ -67,8 +92,8 @@ public class SolrClient {
 		}
 	}
 
-	public void indexDocument(SolrInputDocument doc) throws SolrServerException {
-		List<SolrInputDocument> docs = new ArrayList<>();
+	public void indexDocument(SolrDocument doc) throws SolrServerException {
+		List<SolrDocument> docs = new ArrayList<>();
 		docs.add(doc);
 		indexDocuments(docs);
 	}
@@ -193,6 +218,25 @@ public class SolrClient {
 		return typedDocs;
 	}
 
+	public SolrQuery getAnnotatedDataQuery(SolrQuery query) {
+		query.setQuery("annotated:*");
+
+		return query;
+	}
+
+	public SolrQuery getWaterDataQuery(SolrQuery query) {
+		query.setQuery("annotated:* AND category:Water");
+
+		return query;
+	}
+
+	public void formatForNERModelTraining(SolrDocument doc, FileOutputStream fos) throws IOException {
+		String[] lines = ((String)doc.get("annotated")).split("\r\n");
+		List<String> annotatedLines = Arrays.stream(lines).filter(p -> p.contains("<START:")).collect(Collectors.toList());
+		String onlyAnnotated = String.join("\r\n", annotatedLines);
+		fos.write(onlyAnnotated.getBytes(Charset.forName("Cp1252")));
+	}
+
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
 		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
 		SolrDocumentList docs = QuerySolrDocuments(queryStr, rows, 0, null, filterQueries);
@@ -203,6 +247,66 @@ public class SolrClient {
 			Files.write(output, file, Charset.forName("Cp1252"));
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
+		}
+	}
+
+	public void writeTrainingDataToFile(String trainingFilePath, Function<SolrQuery, SolrQuery> queryGetter,
+										Tools.CheckedBiConsumer<SolrDocument, FileOutputStream> consumer) {
+		SolrQuery query = queryGetter.apply(new SolrQuery());
+		query.setRows(1000000);
+		try {
+			File file = new File(trainingFilePath);
+			file.getParentFile().mkdirs();
+			FileOutputStream fos = new FileOutputStream(file);
+			final BlockingQueue<SolrDocument> tmpQueue = new LinkedBlockingQueue<SolrDocument>();
+			client.queryAndStreamResponse(COLLECTION, query, new CallbackHandler(tmpQueue));
+
+			SolrDocument tmpDoc;
+			do {
+				tmpDoc = tmpQueue.take();
+				if (!(tmpDoc instanceof StopDoc)) {
+					consumer.apply(tmpDoc, fos);
+					fos.write(System.lineSeparator().getBytes());
+				}
+			} while (!(tmpDoc instanceof StopDoc));
+
+			fos.close();
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+		}
+	}
+
+	private class StopDoc extends SolrDocument {
+		// marker to finish queuing
+	}
+
+	private class CallbackHandler extends StreamingResponseCallback {
+		private BlockingQueue<SolrDocument> queue;
+		private long currentPosition;
+		private long numFound;
+
+		public CallbackHandler(BlockingQueue<SolrDocument> aQueue) {
+			queue = aQueue;
+		}
+
+		@Override
+		public void streamDocListInfo(long aNumFound, long aStart, Float aMaxScore) {
+			// called before start of streaming
+			// probably use for some statistics
+			currentPosition = aStart;
+			numFound = aNumFound;
+			if (numFound == 0) {
+				queue.add(new StopDoc());
+			}
+		}
+
+		@Override
+		public void streamSolrDocument(SolrDocument doc) {
+			currentPosition++;
+			queue.add(doc);
+			if (currentPosition == numFound) {
+				queue.add(new StopDoc());
+			}
 		}
 	}
 }
