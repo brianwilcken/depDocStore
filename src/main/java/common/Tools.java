@@ -5,6 +5,9 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.apache.commons.io.FileUtils;
 
@@ -168,6 +171,11 @@ public class Tools {
 	@FunctionalInterface
 	public interface CheckedBiConsumer<T, U> {
 		void apply(T t, U u) throws Exception;
+	}
+
+	public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+		Set<Object> seen = ConcurrentHashMap.newKeySet();
+		return t -> seen.add(keyExtractor.apply(t));
 	}
 
 	public static String extractPDFText(File pdfFile) {

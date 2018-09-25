@@ -67,7 +67,7 @@ public class NLPTools {
         return null;
     }
 
-    public static <T> T getModel(Class<T> clazz, String modelFilePath) {
+    public static <T> T getModel(Class<T> clazz, String modelFilePath) throws IOException {
         try (InputStream modelIn = new FileInputStream(modelFilePath)) {
 
             Constructor<?> cons = clazz.getConstructor(InputStream.class);
@@ -76,7 +76,7 @@ public class NLPTools {
 
             return o;
         } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException |
-                IllegalArgumentException | InvocationTargetException | IOException e) {
+                IllegalArgumentException | InvocationTargetException e) {
             logger.fatal(e.getMessage(), e);
         }
         return null;

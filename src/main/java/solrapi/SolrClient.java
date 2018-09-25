@@ -13,6 +13,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import common.Tools;
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.util.Strings;
@@ -49,11 +50,29 @@ public class SolrClient {
 	
 	public static void main(String[] args) {
 		SolrClient client = new SolrClient("http://localhost:8983/solr");
-		//client.writeTrainingDataToFile("data/ner-water.train", client::getAnnotatedDataQuery, client::formatForNERModelTraining);
+		//client.writeTrainingDataToFile(Tools.getProperty("nlp.waterNerTrainingFile"), client::getWaterDataQuery, client::formatForNERModelTraining);
 
+		//retrieveAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
+		updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
+	}
+
+	private static void retrieveAnnotatedData(SolrClient client, String id) {
+		try {
+			SolrDocumentList docs = client.QuerySolrDocuments("id:" + id, 1, 0, null);
+			SolrDocument doc = docs.get(0);
+
+			String annotated = (String)doc.get("annotated");
+
+			FileUtils.writeStringToFile(new File("data/annotated.txt"), annotated, Charset.forName("Cp1252").displayName());
+		} catch (SolrServerException | IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void updateAnnotatedData(SolrClient client, String id) {
 		String annotated = Tools.GetFileString("data/annotated.txt");
 		try {
-			SolrDocumentList docs = client.QuerySolrDocuments("id:764aeace-a51c-4d64-afe4-71cff0609ba8", 1, 0, null);
+			SolrDocumentList docs = client.QuerySolrDocuments("id:" + id, 1, 0, null);
 			SolrDocument doc = docs.get(0);
 			if (doc.containsKey("annotated")) {
 				doc.replace("annotated", annotated);
@@ -218,14 +237,26 @@ public class SolrClient {
 		return typedDocs;
 	}
 
-	public SolrQuery getAnnotatedDataQuery(SolrQuery query) {
+	public static SolrQuery getAnnotatedDataQuery(SolrQuery query) {
 		query.setQuery("annotated:*");
 
 		return query;
 	}
 
-	public SolrQuery getWaterDataQuery(SolrQuery query) {
+	public static SolrQuery getWaterDataQuery(SolrQuery query) {
 		query.setQuery("annotated:* AND category:Water");
+
+		return query;
+	}
+
+	public static SolrQuery getWastewaterDataQuery(SolrQuery query) {
+		query.setQuery("annotated:* AND category:Wastewater");
+
+		return query;
+	}
+
+	public static SolrQuery getElectricityDataQuery(SolrQuery query) {
+		query.setQuery("annotated:* AND category:Electricity");
 
 		return query;
 	}
