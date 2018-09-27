@@ -91,11 +91,7 @@ public class SolrClient {
 			if (!docs.isEmpty()) {
 				List<SolrInputDocument> inputDocuments = new ArrayList<>();
 				for (SolrDocument doc : docs) {
-					SolrInputDocument solrInputDocument = new SolrInputDocument();
-
-					for (String name : doc.getFieldNames()) {
-						solrInputDocument.addField(name, doc.getFieldValue(name));
-					}
+					SolrInputDocument solrInputDocument = convertSolrDocument(doc);
 					inputDocuments.add(solrInputDocument);
 				}
 
@@ -109,6 +105,23 @@ public class SolrClient {
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
 		}
+	}
+
+	private SolrInputDocument convertSolrDocument(SolrDocument doc) {
+		SolrInputDocument solrInputDocument = new SolrInputDocument();
+
+		for (String name : doc.getFieldNames()) {
+			solrInputDocument.addField(name, doc.getFieldValue(name));
+		}
+
+		List<SolrDocument> children = doc.getChildDocuments();
+		if (children != null) {
+			for (SolrDocument child : children) {
+				solrInputDocument.addChildDocument(convertSolrDocument(child));
+			}
+		}
+
+		return solrInputDocument;
 	}
 
 	public void indexDocument(SolrDocument doc) throws SolrServerException {
