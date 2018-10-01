@@ -81,6 +81,26 @@ public class DocumentsController {
         }
     }
 
+    @RequestMapping(value="/annotate/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> autoAnnotate(@PathVariable(name="id") String id) {
+        logger.info(context.getRemoteAddr() + " -> " + "In autoAnnotate method");
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
+            if (!docs.isEmpty()) {
+                SolrDocument doc = docs.get(0);
+
+                String annotated = recognizer.autoAnnotate(doc.get("docText").toString(), doc.get("category").toString(), 0.5);
+
+                return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(context.getRemoteAddr() + " -> " + e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
     @RequestMapping(method=RequestMethod.POST, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> createDocument(@RequestPart("metadata") Map<String, Object> metadata, @RequestPart("file") MultipartFile document) {
         try {
@@ -114,8 +134,10 @@ public class DocumentsController {
 
                 String category = Tools.removeUTF8BOM(categorizer.detectCategory(docText));
                 solrDocument.addField("category", category);
-                String annotated = recognizer.autoAnnotate(docText, category, 0.5);
-                solrDocument.addField("annotated", annotated);
+                String parsed = recognizer.prepForAnnotation(docText);
+                solrDocument.addField("parsed", parsed);
+                //String annotated = recognizer.autoAnnotate(docText, category, 0.5);
+                //solrDocument.addField("annotated", annotated);
                 final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.5);
 
                 List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, docId);
@@ -172,12 +194,18 @@ public class DocumentsController {
                         } else {
                             doc.addField("category", category);
                         }
-                        String annotated = recognizer.autoAnnotate(docText, category, 0.5);
-                        if (doc.containsKey("annotated")) {
-                            doc.replace("annotated", annotated);
+                        String parsed = recognizer.prepForAnnotation(docText);
+                        if (doc.containsKey("parsed")) {
+                            doc.replace("parsed", parsed);
                         } else {
-                            doc.addField("annotated", annotated);
+                            doc.addField("parsed", parsed);
                         }
+//                        String annotated = recognizer.autoAnnotate(docText, category, 0.5);
+//                        if (doc.containsKey("annotated")) {
+//                            doc.replace("annotated", annotated);
+//                        } else {
+//                            doc.addField("annotated", annotated);
+//                        }
 
                         //final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.5);
 
@@ -220,9 +248,9 @@ public class DocumentsController {
                 doc.replace("lastUpdated", timestamp);
 
                 solrClient.indexDocument(doc);
-                if (metadata.keySet().contains("annotated")) {
-                    nerModelTrainingService.process(this, (String)doc.get("category"));
-                }
+//                if (metadata.keySet().contains("annotated")) {
+//                    nerModelTrainingService.process(this, (String)doc.get("category"));
+//                }
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));

@@ -58,6 +58,13 @@ public class NamedEntityRecognizer {
         }
     }
 
+    public String prepForAnnotation(String document) {
+        String[] sentences = detectSentences(document);
+        document = String.join("\r\n", sentences);
+
+        return document;
+    }
+
     public String autoAnnotate(String document, String category, double threshold) {
         String[] sentences = detectSentences(document);
         document = String.join("\r\n", sentences);
