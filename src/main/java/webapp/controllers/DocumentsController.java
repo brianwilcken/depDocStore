@@ -32,6 +32,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @CrossOrigin
@@ -82,18 +85,32 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/annotate/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> autoAnnotate(@PathVariable(name="id") String id) {
+    public ResponseEntity<JsonResponse> getAutoAnnotatedDocument(@PathVariable(name="id") String id, int threshold) {
         logger.info(context.getRemoteAddr() + " -> " + "In autoAnnotate method");
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
 
-                String annotated = recognizer.autoAnnotate(doc.get("docText").toString(), doc.get("category").toString(), 0.5);
+                double dblThreshold = (double)threshold / (double)100;
+                String annotated = recognizer.autoAnnotate(doc.get("docText").toString(), doc.get("category").toString(), dblThreshold);
 
                 return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(context.getRemoteAddr() + " -> " + e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/trainNER", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> trainNERModel(String category) {
+        logger.info(context.getRemoteAddr() + " -> " + "In trainNERModel method");
+        try {
+            nerModelTrainingService.process(this, category);
+            return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
             logger.error(context.getRemoteAddr() + " -> " + e);
             Tools.getExceptions().add(e);
@@ -235,6 +252,8 @@ public class DocumentsController {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US);
+                ZonedDateTime created = ZonedDateTime.parse(doc.get("created").toString(), formatter);
 
                 metadata.entrySet().stream().forEach(p -> {
                     if (doc.containsKey(p.getKey())) {
@@ -244,9 +263,12 @@ public class DocumentsController {
                     }
                 });
 
+                doc.replace("created", Tools.getFormattedDateTimeString(created.toInstant()));
+
                 String timestamp = Tools.getFormattedDateTimeString(Instant.now());
                 doc.replace("lastUpdated", timestamp);
 
+                doc.remove("_version_");
                 solrClient.indexDocument(doc);
 //                if (metadata.keySet().contains("annotated")) {
 //                    nerModelTrainingService.process(this, (String)doc.get("category"));
