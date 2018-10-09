@@ -1,5 +1,6 @@
 package nlp;
 
+import nlp.gibberish.GibberishDetector;
 import opennlp.tools.ml.EventTrainer;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
@@ -181,5 +182,7 @@ public class NLPTools {
 
         return null;
     }
+
+
 
 }

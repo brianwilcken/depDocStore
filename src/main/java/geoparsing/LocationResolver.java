@@ -17,10 +17,13 @@ import org.apache.commons.math3.ml.clustering.Cluster;
 import org.apache.commons.math3.ml.clustering.DBSCANClusterer;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.solr.common.SolrDocument;
 import webapp.models.GeoNameWithFrequencyScore;
 
 public class LocationResolver {
+    private final static Logger logger = LogManager.getLogger(LocationResolver.class);
     private GeoParser parser;
 
     public LocationResolver() {
@@ -38,13 +41,13 @@ public class LocationResolver {
     }
 
     public List<SolrDocument> getLocationsFromDocument(String docText, String docId) {
+        List<SolrDocument> locDocs = new ArrayList<>();
         try {
             //Geoparse the document to extract a list of geolocations
             List<ResolvedLocation> resolvedLocations = parser.parse(docText);
 
             List<GeoNameWithFrequencyScore> geoNames = getValidGeoNames(resolvedLocations);
 
-            List<SolrDocument> locDocs = new ArrayList<>();
             for (GeoNameWithFrequencyScore geoName : geoNames) {
                 SolrDocument locDoc = new SolrDocument();
                 locDoc.addField("docId", docId);
@@ -54,11 +57,10 @@ public class LocationResolver {
 
                 locDocs.add(locDoc);
             }
-
-            return locDocs;
         } catch (Exception e) {
-            return null;
+            logger.error(e.getMessage(), e);
         }
+        return locDocs;
     }
 
     private String composeLocationName(GeoName geoName) {

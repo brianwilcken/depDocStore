@@ -1,12 +1,16 @@
 package webapp.controllers;
 
 import com.google.common.base.CharMatcher;
+import com.google.common.base.Strings;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import common.Tools;
 import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.util.PdfBoxUtilities;
 import nlp.DocumentCategorizer;
 import nlp.NamedEntityRecognizer;
+import nlp.gibberish.GibberishDetector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -32,7 +36,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -46,8 +49,10 @@ public class DocumentsController {
     private DocumentCategorizer categorizer;
     private NamedEntityRecognizer recognizer;
     private final LocationResolver locationResolver;
+    private GibberishDetector detector;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
+    private static String tessdata = Tools.getProperty("tess4j.path");
 
     final static Logger logger = LogManager.getLogger(DocumentsController.class);
 
@@ -66,6 +71,10 @@ public class DocumentsController {
         categorizer = new DocumentCategorizer();
         recognizer = new NamedEntityRecognizer(solrClient);
         locationResolver = new LocationResolver();
+        detector = new GibberishDetector(recognizer);
+
+        //This setting speeds up Tesseract OCR
+        System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
     }
 
     @RequestMapping(method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
@@ -139,13 +148,10 @@ public class DocumentsController {
 
             String contentType = Files.probeContentType(uploadedFile.toPath());
             if (contentType.compareTo("application/pdf") == 0) {
-                String docText = Tools.extractPDFText(uploadedFile);
+                String docText = Tools.extractPDFText(uploadedFile, detector);
                 solrDocument.addField("docText", docText);
 
-                //The pdf document may contain some arbitrary text encoding, in which case text extraction
-                // will be problematic.  In such a case the only option is to use OCR.
-                if (getAsciiPercentage(docText) < 0.8) {
-                    //TODO attempt to use OCR to extract pdf text (look into using Apache Tika)
+                if (Strings.isNullOrEmpty(docText)) {
                     return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
                 }
 
@@ -176,10 +182,6 @@ public class DocumentsController {
         }
     }
 
-    private double getAsciiPercentage(String docText) {
-        return (double)CharMatcher.ascii().countIn(docText) / (double)docText.length();
-    }
-
     @RequestMapping(value="/file/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("file") MultipartFile document) {
         try {
@@ -199,7 +201,7 @@ public class DocumentsController {
 
                     String contentType = Files.probeContentType(uploadedFile.toPath());
                     if (contentType.compareTo("application/pdf") == 0) {
-                        String docText = Tools.extractPDFText(uploadedFile);
+                        String docText = Tools.extractPDFText(uploadedFile, detector);
                         if (doc.containsKey("docText")) {
                             doc.replace("docText", docText);
                         } else {
