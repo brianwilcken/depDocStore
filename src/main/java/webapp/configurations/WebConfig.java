@@ -17,6 +17,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import webapp.components.DocumentsRequestInterceptor;
 
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
+
 @EnableWebMvc
 @Configuration
 @ComponentScan(basePackages = {"webapp.components", "webapp.services", "webapp.controllers"})
@@ -55,10 +58,18 @@ public class WebConfig implements WebMvcConfigurer, AsyncConfigurer {
     public TaskExecutor workExecutor() {
         ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
         threadPoolTaskExecutor.setThreadNamePrefix("Async-");
-        threadPoolTaskExecutor.setCorePoolSize(3);
-        threadPoolTaskExecutor.setMaxPoolSize(3);
-        threadPoolTaskExecutor.setQueueCapacity(600);
+        threadPoolTaskExecutor.setCorePoolSize(16);
+        threadPoolTaskExecutor.setMaxPoolSize(16);
+        //threadPoolTaskExecutor.setQueueCapacity(600);
         threadPoolTaskExecutor.afterPropertiesSet();
+
+        threadPoolTaskExecutor.setRejectedExecutionHandler(new RejectedExecutionHandler() {
+            @Override
+            public void rejectedExecution(Runnable runnable, ThreadPoolExecutor threadPoolExecutor) {
+                threadPoolExecutor.execute(runnable);
+            }
+        });
+
         return threadPoolTaskExecutor;
     }
 }

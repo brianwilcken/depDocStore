@@ -168,14 +168,20 @@ public class NamedEntityRecognizer {
     }
 
     public String[] detectSentences(String document) {
+        return detectSentences(document, false);
+    }
+
+    public String[] detectSentences(String document, Boolean sterilize) {
         document = document.replace("\r\n", "");
         document = document.replace("(", " ");
         document = document.replace(")", " ");
         document = document.replaceAll("\\P{Print}", " ");
-        //document = document.replaceAll("(\\w+\\W+)?\\d+(\\w+\\W+)?", ""); //removes all the numbers
-        //document = document.replaceAll("[$-,/:-?{-~!\"^_`\\[\\]+]", ""); //removes most special characters
-        document = document.replaceAll("[%-*/:-?{-~!\"^_`\\[\\]+]", "");
-        //document = document.replaceAll("-", " ");
+        if (sterilize) {
+            document = document.replaceAll("(\\w+\\W+)?\\d+(\\w+\\W+)?", ""); //removes all the numbers
+            document = document.replaceAll("[$-,/:-?{-~!\"^_`\\[\\]+]", ""); //removes most special characters
+            document = document.replaceAll("-", " ");
+        }
+        document = document.replaceAll("[\\\\%-*/:-?{-~!\"^_`\\[\\]+]", "");
         document = document.replaceAll(" +\\.", ".");
         document = document.replaceAll("\\.{2,}", ". ");
         document = document.replaceAll(" {2,}", " ");

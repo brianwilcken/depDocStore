@@ -16,7 +16,7 @@ public class TemporaryRepoCleanupService {
 
     private static File temporaryFileRepo = new File(Tools.getProperty("mongodb.temporaryFileRepo"));
 
-    final static Logger logger = LogManager.getLogger(DocStoreMongoClient.class);
+    final static Logger logger = LogManager.getLogger(TemporaryRepoCleanupService.class);
 
     @Async("processExecutor")
     public void process() {

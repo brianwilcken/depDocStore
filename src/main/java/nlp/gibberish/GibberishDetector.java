@@ -145,20 +145,30 @@ public class GibberishDetector {
 		}
 		return sum; 
 	}
-	
+
 	/**
 	 * determines if a document is gibberish or not.
 	 * @param doc a document to be classified as gibberish or not.
 	 * @return the line-by-line percentage of the document containing gibberish.
 	 */
 	public double getPercentGibberish(String doc) {
+		int docSize = doc.length();
+		double minConfidence = threshold / docSize;
 		String[] sentences = recognizer.detectSentences(doc);
 
 		int totalLines = sentences.length;
 		int gibberishLines = 0;
-		for (String sentence : sentences) {
-			String test = sentence.replaceAll(" ", ""); //remove all whitespace
-			if (isLineGibberish(test)) {
+		if (sentences.length > 1) {
+			for (String sentence : sentences) {
+				String line = sentence.replaceAll(" ", ""); //remove all whitespace
+				double degreeOfConfidence = getAvgTransitionProbability(line, logProbabilityMatrix) - threshold;
+				double confidenceScore = degreeOfConfidence / line.length();
+				if (confidenceScore < minConfidence) {
+					++gibberishLines;
+				}
+			}
+		} else if (sentences.length > 0) {
+			if (isLineGibberish(sentences[0])) {
 				++gibberishLines;
 			}
 		}
@@ -169,13 +179,23 @@ public class GibberishDetector {
 	}
 
 	public String removeGibberishLines(String doc) {
+		int docSize = doc.length();
+		double minConfidence = threshold / docSize;
 		String[] sentences = recognizer.detectSentences(doc);
 
 		List<String> notGibberish = new ArrayList<>();
-		for (String sentence : sentences) {
-			String test = sentence.replaceAll(" ", ""); //remove all whitespace
-			if (!isLineGibberish(test)) {
-				notGibberish.add(sentence);
+		if (sentences.length > 1) {
+			for (String sentence : sentences) {
+				String line = sentence.replaceAll(" ", ""); //remove all whitespace
+				double degreeOfConfidence = getAvgTransitionProbability(line, logProbabilityMatrix) - threshold;
+				double confidenceScore = degreeOfConfidence / line.length();
+				if (confidenceScore < minConfidence) {
+					notGibberish.add(sentence);
+				}
+			}
+		} else if (sentences.length > 0) {
+			if (!isLineGibberish(sentences[0])) {
+				notGibberish.add(sentences[0]);
 			}
 		}
 

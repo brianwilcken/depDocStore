@@ -29,7 +29,9 @@ import solrapi.SolrClient;
 import solrapi.model.IndexedDocumentsQueryParams;
 import webapp.models.JsonResponse;
 import webapp.services.NERModelTrainingService;
+import webapp.services.PDFProcessingService;
 import webapp.services.TemporaryRepoCleanupService;
+import webapp.services.TesseractOCRService;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
@@ -61,6 +63,12 @@ public class DocumentsController {
 
     @Autowired
     private NERModelTrainingService nerModelTrainingService;
+
+    @Autowired
+    private TesseractOCRService tesseractOCRService;
+
+    @Autowired
+    private PDFProcessingService pdfProcessingService;
 
     @Autowired
     private HttpServletRequest context;
@@ -148,7 +156,7 @@ public class DocumentsController {
 
             String contentType = Files.probeContentType(uploadedFile.toPath());
             if (contentType.compareTo("application/pdf") == 0) {
-                String docText = Tools.extractPDFText(uploadedFile, detector);
+                String docText = Tools.extractPDFText(uploadedFile, detector, pdfProcessingService, tesseractOCRService);
                 solrDocument.addField("docText", docText);
 
                 if (Strings.isNullOrEmpty(docText)) {
@@ -172,7 +180,7 @@ public class DocumentsController {
             //solrDocument.addField("docStoreId", fileId.toString());
 
             docs.add(solrDocument);
-            solrClient.indexDocuments(docs);
+            //solrClient.indexDocuments(docs);
             cleanupService.process();
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
@@ -201,7 +209,7 @@ public class DocumentsController {
 
                     String contentType = Files.probeContentType(uploadedFile.toPath());
                     if (contentType.compareTo("application/pdf") == 0) {
-                        String docText = Tools.extractPDFText(uploadedFile, detector);
+                        String docText = Tools.extractPDFText(uploadedFile, detector, pdfProcessingService, tesseractOCRService);
                         if (doc.containsKey("docText")) {
                             doc.replace("docText", docText);
                         } else {

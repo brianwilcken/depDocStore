@@ -1,5 +1,9 @@
 package nlp;
 
+import common.Tools;
+import edu.stanford.nlp.ling.HasWord;
+import edu.stanford.nlp.ling.TaggedWord;
+import edu.stanford.nlp.tagger.maxent.MaxentTagger;
 import nlp.gibberish.GibberishDetector;
 import opennlp.tools.ml.EventTrainer;
 import opennlp.tools.sentdetect.SentenceDetectorME;
@@ -21,6 +25,8 @@ import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 public class NLPTools {
     final static Logger logger = LogManager.getLogger(NLPTools.class);
@@ -144,12 +150,24 @@ public class NLPTools {
         return sentences;
     }
 
+    public static String[] detectSentences(String input) {
+        SentenceModel model = getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
+
+        return detectSentences(model, input);
+    }
+
     public static String[] detectTokens(TokenizerModel model, String input) {
         TokenizerME tokenDetector = new TokenizerME(model);
 
         String[] tokens = tokenDetector.tokenize(input);
 
         return tokens;
+    }
+
+    public static String[] detectTokens(String input) {
+        TokenizerModel model = getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
+
+        return detectTokens(model, input);
     }
 
     public static String normalizeText(Stemmer stemmer, String text) {
@@ -183,6 +201,20 @@ public class NLPTools {
         return null;
     }
 
+    public static void main(String[] args) {
+        tagText("The North Milwaukee Power Plant is a coal-fired steam-turbine based generator with a maximum operating capacity of 250 MW.");
+    }
 
+    public static List<List<TaggedWord>> tagText(String text) {
+        String modelPath = Tools.getProperty("nlp.stanfordPOSTagger");
+        MaxentTagger tagger = new MaxentTagger(modelPath);
+        List<List<HasWord>> sentences = MaxentTagger.tokenizeText(new BufferedReader(new StringReader(text)));
+        List<List<TaggedWord>> taggedSentences = new ArrayList<>();
+        for (List<HasWord> sentence : sentences) {
+            List<TaggedWord> tSentence = tagger.tagSentence(sentence);
+            taggedSentences.add(tSentence);
+        }
+        return taggedSentences;
+    }
 
 }
