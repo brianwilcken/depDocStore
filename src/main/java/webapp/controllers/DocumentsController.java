@@ -142,6 +142,7 @@ public class DocumentsController {
             String filename = document.getOriginalFilename();
             File uploadedFile = Tools.WriteFileToDisk(temporaryFileRepo + filename, document.getInputStream());
 
+            logger.info(context.getRemoteAddr() + " -> " + "Document stored");
             List<SolrDocument> docs = new ArrayList<>();
 
             SolrDocument solrDocument = new SolrDocument();
@@ -150,12 +151,16 @@ public class DocumentsController {
             solrDocument.addField("filename", filename);
             metadata.entrySet().stream().forEach(p -> solrDocument.addField(p.getKey(), p.getValue()));
 
+            logger.info(context.getRemoteAddr() + " -> " + "Metadata added to document");
             String timestamp = Tools.getFormattedDateTimeString(Instant.now());
             solrDocument.addField("created", timestamp);
             solrDocument.addField("lastUpdated", timestamp);
 
+            logger.info(context.getRemoteAddr() + " -> " + "timestamp added");
             String contentType = Files.probeContentType(uploadedFile.toPath());
+            logger.info(context.getRemoteAddr() + " -> " + "uploaded file type: " + contentType);
             if (contentType.compareTo("application/pdf") == 0) {
+                logger.info(context.getRemoteAddr() + " -> " + "pdf document detected");
                 String docText = Tools.extractPDFText(uploadedFile, detector, pdfProcessingService, tesseractOCRService);
                 solrDocument.addField("docText", docText);
 
@@ -165,22 +170,23 @@ public class DocumentsController {
 
                 String category = Tools.removeUTF8BOM(categorizer.detectCategory(docText));
                 solrDocument.addField("category", category);
+                logger.info(context.getRemoteAddr() + " -> " + "category detected: " + category);
                 String parsed = recognizer.prepForAnnotation(docText);
                 solrDocument.addField("parsed", parsed);
                 String annotated = recognizer.autoAnnotate(docText, category, 0.5);
                 //solrDocument.addField("annotated", annotated);
-                final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.5);
+                //final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.5);
 
                 List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, docId);
 
                 docs.addAll(locDocs);
             }
 
-            //ObjectId fileId = mongoClient.StoreFile(uploadedFile);
-            //solrDocument.addField("docStoreId", fileId.toString());
+            ObjectId fileId = mongoClient.StoreFile(uploadedFile);
+            solrDocument.addField("docStoreId", fileId.toString());
 
             docs.add(solrDocument);
-            //solrClient.indexDocuments(docs);
+            solrClient.indexDocuments(docs);
             cleanupService.process();
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {

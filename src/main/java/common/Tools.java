@@ -131,6 +131,11 @@ public class Tools {
 		org.apache.commons.io.IOUtils.copy(stream, fileOutputStream);
 		stream.close();
 		fileOutputStream.close();
+		if (file.exists()) {
+			logger.info("file written to disk");
+		} else {
+			logger.info("failure writing file to disk");
+		}
 		return file;
 	}
 	
