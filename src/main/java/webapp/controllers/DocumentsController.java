@@ -167,7 +167,7 @@ public class DocumentsController {
                 solrDocument.addField("category", category);
                 String parsed = recognizer.prepForAnnotation(docText);
                 solrDocument.addField("parsed", parsed);
-                //String annotated = recognizer.autoAnnotate(docText, category, 0.5);
+                String annotated = recognizer.autoAnnotate(docText, category, 0.5);
                 //solrDocument.addField("annotated", annotated);
                 final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.5);
 

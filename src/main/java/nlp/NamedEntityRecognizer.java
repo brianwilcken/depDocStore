@@ -43,7 +43,8 @@ public class NamedEntityRecognizer {
             SolrDocumentList docs = client.QuerySolrDocuments("category:" + category + " AND -annotated:*", 1000, 0, null);
             for (SolrDocument doc : docs) {
                 String document = (String)doc.get("docText");
-                String annotated = namedEntityRecognizer.autoAnnotate(document, category, 0.5);
+                Map<String, Double> entities = detectNamedEntities(document, category, 0.5);
+                String annotated = namedEntityRecognizer.autoAnnotate(document, entities);
                 if (doc.containsKey("annotated")) {
                     doc.replace("annotated", annotated);
                 } else {
@@ -65,10 +66,9 @@ public class NamedEntityRecognizer {
         return document;
     }
 
-    public String autoAnnotate(String document, String category, double threshold) {
+    public String autoAnnotate(String document, Map<String, Double> entities) {
         String[] sentences = detectSentences(document);
         document = String.join("\r\n", sentences);
-        Map<String, Double> entities = detectNamedEntities(sentences, category, threshold);
         if (!entities.isEmpty()) {
             entities = entities.entrySet().stream().sorted(Collections.reverseOrder(Map.Entry.comparingByKey()))
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
