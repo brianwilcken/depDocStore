@@ -9,6 +9,7 @@ import mongoapi.DocStoreMongoClient;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.util.PdfBoxUtilities;
 import nlp.DocumentCategorizer;
+import nlp.NamedEntity;
 import nlp.NamedEntityRecognizer;
 import nlp.gibberish.GibberishDetector;
 import org.apache.logging.log4j.LogManager;
@@ -41,6 +42,7 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @CrossOrigin
 @RestController
@@ -110,7 +112,8 @@ public class DocumentsController {
                 SolrDocument doc = docs.get(0);
 
                 double dblThreshold = (double)threshold / (double)100;
-                String annotated = recognizer.autoAnnotate(doc.get("docText").toString(), doc.get("category").toString(), dblThreshold);
+                List<NamedEntity> entities = recognizer.detectNamedEntities(doc.get("docText").toString(), doc.get("category").toString(), dblThreshold);
+                String annotated = recognizer.autoAnnotate(doc.get("docText").toString(), entities);
 
                 return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
             }
@@ -173,9 +176,14 @@ public class DocumentsController {
                 logger.info(context.getRemoteAddr() + " -> " + "category detected: " + category);
                 String parsed = recognizer.prepForAnnotation(docText);
                 solrDocument.addField("parsed", parsed);
-                String annotated = recognizer.autoAnnotate(docText, category, 0.5);
-                //solrDocument.addField("annotated", annotated);
-                //final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.5);
+                List<NamedEntity> entities = recognizer.detectNamedEntities(docText, category, 0.5);
+                String annotated = recognizer.autoAnnotate(docText, entities);
+                solrDocument.addField("annotated", annotated);
+
+                List<SolrDocument> entityDocs = entities.stream()
+                        .map(p -> p.mutate(docId))
+                        .collect(Collectors.toList());
+                docs.addAll(entityDocs);
 
                 List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, docId);
 
@@ -233,14 +241,18 @@ public class DocumentsController {
                         } else {
                             doc.addField("parsed", parsed);
                         }
-//                        String annotated = recognizer.autoAnnotate(docText, category, 0.5);
-//                        if (doc.containsKey("annotated")) {
-//                            doc.replace("annotated", annotated);
-//                        } else {
-//                            doc.addField("annotated", annotated);
-//                        }
+                        List<NamedEntity> entities = recognizer.detectNamedEntities(docText, category, 0.5);
+                        String annotated = recognizer.autoAnnotate(docText, entities);
+                        if (doc.containsKey("annotated")) {
+                            doc.replace("annotated", annotated);
+                        } else {
+                            doc.addField("annotated", annotated);
+                        }
 
-                        //final Map<String, Double> entities = recognizer.detectNamedEntities(docText, category, 0.5);
+                        List<SolrDocument> entityDocs = entities.stream()
+                                .map(p -> p.mutate(id))
+                                .collect(Collectors.toList());
+                        solrClient.indexDocuments(entityDocs);
 
                         List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, id);
                         solrClient.indexDocuments(locDocs);
