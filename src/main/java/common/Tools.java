@@ -339,6 +339,7 @@ public class Tools {
 					parsedText.append(System.lineSeparator());
 					parsedText.append("PAGE " + i);
 					parsedText.append(System.lineSeparator());
+					parsedText.append(System.lineSeparator());
 				} catch (InterruptedException | ExecutionException e) {
 					e.printStackTrace();
 				}
