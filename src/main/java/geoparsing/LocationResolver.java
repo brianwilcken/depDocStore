@@ -9,7 +9,6 @@ import com.bericotech.clavin.GeoParser;
 import com.bericotech.clavin.GeoParserFactory;
 import com.bericotech.clavin.gazetteer.FeatureClass;
 import com.bericotech.clavin.gazetteer.GeoName;
-import com.bericotech.clavin.nerd.StanfordExtractor;
 import com.bericotech.clavin.resolver.ResolvedLocation;
 import common.Tools;
 import org.apache.commons.lang.ArrayUtils;

@@ -8,6 +8,7 @@ import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.util.PdfBoxUtilities;
+import nlp.CoreferenceResolver;
 import nlp.DocumentCategorizer;
 import nlp.NamedEntity;
 import nlp.NamedEntityRecognizer;
@@ -51,6 +52,7 @@ public class DocumentsController {
     private DocumentCategorizer categorizer;
     private NamedEntityRecognizer recognizer;
     private final LocationResolver locationResolver;
+    //private final CoreferenceResolver coreferenceResolver;
     private GibberishDetector detector;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
@@ -82,6 +84,7 @@ public class DocumentsController {
         categorizer = new DocumentCategorizer();
         recognizer = new NamedEntityRecognizer(solrClient);
         locationResolver = new LocationResolver();
+        //coreferenceResolver = new CoreferenceResolver();
         detector = new GibberishDetector(recognizer);
 
         //This setting speeds up Tesseract OCR
@@ -208,6 +211,8 @@ public class DocumentsController {
                 docs.addAll(entityDocs);
 
                 List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, docId);
+
+                //List<SolrDocument> corefDocs = coreferenceResolver.getCoreferencesFromDocument(docText, docId, entities);
 
                 docs.addAll(locDocs);
             }
