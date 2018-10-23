@@ -29,11 +29,9 @@ import org.springframework.web.multipart.MultipartFile;
 import solrapi.SolrClient;
 import solrapi.model.IndexedDocumentsQueryParams;
 import webapp.models.JsonResponse;
-import webapp.services.NERModelTrainingService;
-import webapp.services.PDFProcessingService;
-import webapp.services.TemporaryRepoCleanupService;
-import webapp.services.TesseractOCRService;
+import webapp.services.*;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileInputStream;
@@ -73,6 +71,9 @@ public class DocumentsController {
     private PDFProcessingService pdfProcessingService;
 
     @Autowired
+    private WorkExecutorHeartbeatService workExecutorHeartbeatService;
+
+    @Autowired
     private HttpServletRequest context;
 
     public DocumentsController() {
@@ -85,6 +86,12 @@ public class DocumentsController {
 
         //This setting speeds up Tesseract OCR
         System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
+    }
+
+    @PostConstruct
+    public void startHeartbeatMonitor() {
+        workExecutorHeartbeatService.process("pdfProcessExecutor", 1000, 4);
+        workExecutorHeartbeatService.process("tesseractProcessExecutor", 1000, 32);
     }
 
     @RequestMapping(method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
@@ -100,6 +107,21 @@ public class DocumentsController {
             logger.error(context.getRemoteAddr() + " -> " + e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null, params.getQueryTimeStamp()));
+        }
+    }
+
+    @RequestMapping(value="/entities/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getDocumentNamedEntities(@PathVariable(name="id") String id) {
+        logger.info(context.getRemoteAddr() + " -> " + "In getDocumentNamedEntities method");
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("docId:" + id, 1000000, 0, null);
+            JsonResponse response = Tools.formJsonResponse(docs);
+            logger.info(context.getRemoteAddr() + " -> " + "Returning entities");
+            return ResponseEntity.ok().body(response);
+        } catch (Exception e) {
+            logger.error(context.getRemoteAddr() + " -> " + e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
     }
 

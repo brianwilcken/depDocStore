@@ -21,7 +21,7 @@ public class TesseractOCRService {
 
     final static Logger logger = LogManager.getLogger(TesseractOCRService.class);
 
-    @Async("processExecutor")
+    @Async("tesseractProcessExecutor")
     public Future<Boolean> process(File tiffFile, int page, Rectangle rect, List<String> lsOutput, GibberishDetector detector) {
         try {
             if (tiffFile.exists()) {

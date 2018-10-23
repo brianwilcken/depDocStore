@@ -186,7 +186,7 @@ public class NamedEntityRecognizer {
     }
 
     public String[] detectSentences(String document, Boolean sterilize) {
-        document = document.replace("\r\n", "");
+        document = document.replace("\r\n", " ");
         document = document.replace("(", " ");
         document = document.replace(")", " ");
         document = document.replaceAll("\\P{Print}", " ");

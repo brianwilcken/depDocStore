@@ -43,7 +43,7 @@ public class PDFProcessingService {
     private static String tessdata = Tools.getProperty("tess4j.path");
     private static Leptonica leptInstance = Leptonica.INSTANCE;
 
-    @Async("processExecutor")
+    @Async("pdfProcessExecutor")
     public Future<String> process(File pdfFile, PDDocument pdDoc, int i, GibberishDetector detector, TesseractOCRService tesseractOCRService) {
         Tesseract tesseract = new Tesseract();
         tesseract.setDatapath(tessdata);
@@ -178,6 +178,7 @@ public class PDFProcessingService {
         Pix pix = leptInstance.pixRead(tiffFile.getPath());
         int width = leptInstance.pixGetWidth(pix);
         int height = leptInstance.pixGetHeight(pix);
+        LeptUtils.disposePix(pix);
         int minWidth = width / 8;
         int minHeight = height / 8;
 
@@ -197,10 +198,10 @@ public class PDFProcessingService {
         logger.info("Perform OCR for file " + tiffFile.getName() + " on page " + page + " using box convolution");
         doOCRByConvolution(tasks, tesseractOCRService, tiffFile, page, convRect, width, height, widthStep, heightStep, allOutput, detector);
 
-        //wait for all threads to complete before rotating image
+        //Track all OCR threads
         while(tasks.stream().anyMatch(p -> !p.isDone())) {
             try {
-                Thread.sleep(1000);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 logger.error(e.getMessage(), e);
             }
@@ -275,7 +276,6 @@ public class PDFProcessingService {
             Rectangle rlr = new Rectangle(lr, halfSize);
 
             logger.info("queue rectangle OCR processing task for file " + tiffFile.getName() + " for page " + page + ", rectangle: (" + rect.getX() + ", " + rect.getY() + ") with size: " + rect.width + "x" + rect.height + " pixels");
-            Tools.block();
             Future<Boolean> result = tesseractOCRService.process(tiffFile, page, rect, rectOutput, detector);
             tasks.add(result);
 
@@ -292,7 +292,6 @@ public class PDFProcessingService {
             while(rect.x <= (imgWidth - rect.width)) {
                 Rectangle convRect = new Rectangle(rect.getLocation(), rect.getSize());
                 logger.info("queue convolution OCR processing task for file " + tiffFile.getName() + " for page " + page + ", rectangle: (" + rect.getX() + ", " + rect.getY() + ") with size: " + rect.width + "x" + rect.height + " pixels");
-                Tools.block();
                 Future<Boolean> result = tesseractOCRService.process(tiffFile, page, convRect, convOutput, detector);
                 tasks.add(result);
                 rect.x += widthStep;
@@ -310,6 +309,10 @@ public class PDFProcessingService {
         String binarizedImagePath = image.getParent() + "\\" + FilenameUtils.getBaseName(image.getPath()) + "_bin." + FilenameUtils.getExtension(image.getPath());
 
         leptInstance.pixWrite(binarizedImagePath, pix2, ILeptonica.IFF_TIFF);
+
+        LeptUtils.disposePix(pix);
+        LeptUtils.disposePix(pix1);
+        LeptUtils.disposePix(pix2);
 
         return new File(binarizedImagePath);
     }
@@ -366,12 +369,23 @@ public class PDFProcessingService {
         Pix pix5 = leptInstance.pixRotate90(pix4, -1);
         Pix pix6 = binarizeImage(pix5);
         leptInstance.pixWrite(image.getPath(), pix6, ILeptonica.IFF_TIFF);
+
+        LeptUtils.disposePix(pix);
+        LeptUtils.disposePix(pix1);
+        LeptUtils.disposePix(pix2);
+        LeptUtils.disposePix(pix3);
+        LeptUtils.disposePix(pix4);
+        LeptUtils.disposePix(pix5);
+        LeptUtils.disposePix(pix6);
     }
 
     private void rotateImage(File image) {
         Pix pix = leptInstance.pixRead(image.getPath());
         Pix pix90 = leptInstance.pixRotate90(pix, 1);
         leptInstance.pixWrite(image.getPath(), pix90, ILeptonica.IFF_TIFF);
+
+        LeptUtils.disposePix(pix);
+        LeptUtils.disposePix(pix90);
     }
 
     private double getAsciiPercentage(String docText) {

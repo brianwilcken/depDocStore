@@ -1,7 +1,5 @@
 package nlp;
 
-import edu.stanford.nlp.util.ArrayUtils;
-import opennlp.tools.tokenize.TokenizerModel;
 import org.apache.solr.common.SolrDocument;
 import opennlp.tools.util.Span;
 
@@ -34,7 +32,7 @@ public class NamedEntity {
         String endAnnotation = " <END> ";
 
         tokens[start] = startAnnotation + tokens[start];
-        tokens[end] = tokens[end] + endAnnotation;
+        tokens[end - 1] = tokens[end - 1] + endAnnotation;
 
         return tokens;
     }

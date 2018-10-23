@@ -224,19 +224,19 @@ public class Tools {
 		return t -> seen.add(keyExtractor.apply(t));
 	}
 
-	public static void block() {
-		ThreadPoolTaskExecutor processExecutor = ApplicationContextProvider.getApplicationContext().getBean("processExecutor", ThreadPoolTaskExecutor.class);
-		BlockingQueue<Runnable> queue = processExecutor.getThreadPoolExecutor().getQueue();
-
-		while(queue.size() > 1000) {
-			try {
-				Thread.sleep(100);
-				queue.take().run();
-			} catch (InterruptedException e) {
-				logger.error(e.getMessage(), e);
-			}
-		}
-	}
+//	public static void block() {
+//		ThreadPoolTaskExecutor processExecutor = ApplicationContextProvider.getApplicationContext().getBean("processExecutor", ThreadPoolTaskExecutor.class);
+//		BlockingQueue<Runnable> queue = processExecutor.getThreadPoolExecutor().getQueue();
+//
+//		while(queue.size() > 1000) {
+//			try {
+//				Thread.sleep(100);
+//				queue.take().run();
+//			} catch (InterruptedException e) {
+//				logger.error(e.getMessage(), e);
+//			}
+//		}
+//	}
 
 	public static String extractPDFText(File pdfFile, GibberishDetector detector, PDFProcessingService pdfProcessingService, TesseractOCRService tesseractOCRService) {
 		//String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
@@ -341,10 +341,6 @@ public class Tools {
 				try {
 					String output = pdfTasks.get(i).get();
 					parsedText.append(output);
-					parsedText.append(System.lineSeparator());
-					parsedText.append("PAGE " + i);
-					parsedText.append(System.lineSeparator());
-					parsedText.append(System.lineSeparator());
 				} catch (InterruptedException | ExecutionException e) {
 					e.printStackTrace();
 				}

@@ -59,16 +59,29 @@ public class WebConfig implements WebMvcConfigurer, AsyncConfigurer {
         ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
         threadPoolTaskExecutor.setThreadNamePrefix("Async-");
         threadPoolTaskExecutor.setCorePoolSize(16);
-        threadPoolTaskExecutor.setMaxPoolSize(16);
-        //threadPoolTaskExecutor.setQueueCapacity(600);
+        threadPoolTaskExecutor.setMaxPoolSize(128);
+        threadPoolTaskExecutor.setQueueCapacity(600);
         threadPoolTaskExecutor.afterPropertiesSet();
 
-        threadPoolTaskExecutor.setRejectedExecutionHandler(new RejectedExecutionHandler() {
-            @Override
-            public void rejectedExecution(Runnable runnable, ThreadPoolExecutor threadPoolExecutor) {
-                threadPoolExecutor.execute(runnable);
-            }
-        });
+        return threadPoolTaskExecutor;
+    }
+
+    @Bean(name="pdfProcessExecutor")
+    public TaskExecutor pdfWorkExecutor() {
+        ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+        threadPoolTaskExecutor.setThreadNamePrefix("PDFAsync-");
+        threadPoolTaskExecutor.setCorePoolSize(16);
+        threadPoolTaskExecutor.afterPropertiesSet();
+
+        return threadPoolTaskExecutor;
+    }
+
+    @Bean(name="tesseractProcessExecutor")
+    public TaskExecutor tesseractWorkExecutor() {
+        ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+        threadPoolTaskExecutor.setThreadNamePrefix("TessAsync-");
+        threadPoolTaskExecutor.setCorePoolSize(128);
+        threadPoolTaskExecutor.afterPropertiesSet();
 
         return threadPoolTaskExecutor;
     }
