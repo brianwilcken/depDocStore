@@ -52,7 +52,7 @@ public class DocumentsController {
     private DocumentCategorizer categorizer;
     private NamedEntityRecognizer recognizer;
     private final LocationResolver locationResolver;
-    //private final CoreferenceResolver coreferenceResolver;
+    private final CoreferenceResolver coreferenceResolver;
     private GibberishDetector detector;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
@@ -84,7 +84,7 @@ public class DocumentsController {
         categorizer = new DocumentCategorizer();
         recognizer = new NamedEntityRecognizer(solrClient);
         locationResolver = new LocationResolver();
-        //coreferenceResolver = new CoreferenceResolver();
+        coreferenceResolver = new CoreferenceResolver();
         detector = new GibberishDetector(recognizer);
 
         //This setting speeds up Tesseract OCR
@@ -211,10 +211,12 @@ public class DocumentsController {
                 docs.addAll(entityDocs);
 
                 List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, docId);
-
-                //List<SolrDocument> corefDocs = coreferenceResolver.getCoreferencesFromDocument(docText, docId, entities);
-
                 docs.addAll(locDocs);
+
+                if (entities.size() > 0) {
+                    List<SolrDocument> corefDocs = coreferenceResolver.getCoreferencesFromDocument(parsed, docId, entities);
+                    docs.addAll(corefDocs);
+                }
             }
 
             ObjectId fileId = mongoClient.StoreFile(uploadedFile);
@@ -283,6 +285,11 @@ public class DocumentsController {
 
                         List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, id);
                         solrClient.indexDocuments(locDocs);
+
+                        if (entities.size() > 0) {
+                            List<SolrDocument> corefDocs = coreferenceResolver.getCoreferencesFromDocument(parsed, id, entities);
+                            solrClient.indexDocuments(corefDocs);
+                        }
                     }
                 }
 

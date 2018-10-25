@@ -3,19 +3,24 @@ package nlp;
 import org.apache.solr.common.SolrDocument;
 import opennlp.tools.util.Span;
 
+import java.util.UUID;
+
 public class NamedEntity {
     private String entity;
     private int line;
     private Span span;
+    private String id;
 
     public NamedEntity(String entity, Span span, int line) {
         this.entity = entity;
         this.span = span;
         this.line = line;
+        id = UUID.randomUUID().toString();
     }
 
     public SolrDocument mutate(String docId) {
         SolrDocument doc = new SolrDocument();
+        doc.addField("id", id);
         doc.addField("docId", docId);
         doc.addField("entity", entity);
         doc.addField("line", line);
@@ -35,6 +40,10 @@ public class NamedEntity {
         tokens[end - 1] = tokens[end - 1] + endAnnotation;
 
         return tokens;
+    }
+
+    public String getId() {
+        return id;
     }
 
     public String getEntity() {

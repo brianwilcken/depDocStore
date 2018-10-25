@@ -209,6 +209,19 @@ public class Tools {
 		return s;
 	}
 
+	public static String removeAllNumbers(String document) {
+		document = document.replaceAll("(\\w+\\W+)?\\d+(\\w+\\W+)?", "");
+
+		return document;
+	}
+
+	public static String removeSpecialCharacters(String document) {
+		document = document.replaceAll("[$-,/:-?{-~!\"^_`\\[\\]+]", "");
+		document = document.replaceAll("-", " ");
+
+		return document;
+	}
+
 	@FunctionalInterface
 	public interface CheckedConsumer<T> {
 		void apply(T t) throws Exception;
@@ -341,8 +354,8 @@ public class Tools {
 				try {
 					String output = pdfTasks.get(i).get();
 					parsedText.append(output);
-				} catch (InterruptedException | ExecutionException e) {
-					e.printStackTrace();
+				} catch (Exception e) {
+					continue;
 				}
 			}
 

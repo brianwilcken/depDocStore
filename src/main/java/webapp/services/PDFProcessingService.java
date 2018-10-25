@@ -216,7 +216,7 @@ public class PDFProcessingService {
 
     private String postProcessForOCR(String input) {
         NamedEntityRecognizer recognizer = new NamedEntityRecognizer(null);
-        String[] sentences = recognizer.detectSentences(input, true);
+        String[] sentences = recognizer.detectSentences(input);
 
         Map<String, Integer> termFrequency = new TreeMap<>();
         for (String sentence : sentences) {
@@ -254,7 +254,7 @@ public class PDFProcessingService {
         String output = parsed.toString().replaceAll("\\b[a-zA-Z]{1,2}\\b", "");
 
         //final sterilization pass to filter out noise
-        sentences = recognizer.detectSentences(output, true);
+        sentences = recognizer.detectSentences(output);
 
         output = String.join("\r\n", sentences);
 
