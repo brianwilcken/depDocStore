@@ -253,7 +253,7 @@ public class Tools {
 
 	public static String extractPDFText(File pdfFile, GibberishDetector detector, PDFProcessingService pdfProcessingService, TesseractOCRService tesseractOCRService) {
 		//String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
-		StringBuilder parsedText = new StringBuilder();
+		StringBuilder parsed = new StringBuilder();
 		//final double pdfGibberishThreshold = 0.75; //set this threshold very high to avoid using OCR whenever possible
 		//final double ocrGibberishThreshold = 0.05; //set this threshold low to encourage additional image processing when using OCR
 		try {
@@ -353,7 +353,7 @@ public class Tools {
 			for (int i = 1; i <= pageCount; i++) {
 				try {
 					String output = pdfTasks.get(i).get();
-					parsedText.append(output);
+					parsed.append(output);
 				} catch (Exception e) {
 					continue;
 				}
@@ -367,7 +367,15 @@ public class Tools {
 		} catch (IOException  e) {
 			logger.error(e.getMessage(), e);
 		}
-		return parsedText.toString();
+
+		//clean text to resolve broken hyphenated words
+		String parsedText = parsed.toString();
+		parsedText = parsedText.replaceAll("(?<=[a-z])-\\s(?=[a-z])", "");
+
+		//find and fix any misspelled words
+
+
+		return parsedText;
 	}
 
 //	private static String extractNouns(String input) {
