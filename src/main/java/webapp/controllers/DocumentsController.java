@@ -6,12 +6,12 @@ import com.mongodb.client.gridfs.model.GridFSFile;
 import common.Tools;
 import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
+import neo4japi.Neo4jClient;
+import neo4japi.domain.Dependency;
+import neo4japi.domain.Document;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.util.PdfBoxUtilities;
-import nlp.CoreferenceResolver;
-import nlp.DocumentCategorizer;
-import nlp.NamedEntity;
-import nlp.NamedEntityRecognizer;
+import nlp.*;
 import nlp.gibberish.GibberishDetector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import solrapi.SolrClient;
 import solrapi.model.IndexedDocumentsQueryParams;
+import webapp.models.GeoNameWithFrequencyScore;
 import webapp.models.JsonResponse;
 import webapp.services.*;
 
@@ -49,10 +50,12 @@ import java.util.stream.Collectors;
 public class DocumentsController {
     private SolrClient solrClient;
     private DocStoreMongoClient mongoClient;
+    private Neo4jClient neo4jClient;
     private DocumentCategorizer categorizer;
     private NamedEntityRecognizer recognizer;
     private final LocationResolver locationResolver;
     private final CoreferenceResolver coreferenceResolver;
+    private final InformationExtractor informationExtractor;
     private GibberishDetector detector;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
@@ -81,11 +84,13 @@ public class DocumentsController {
     public DocumentsController() {
         solrClient = new SolrClient(Tools.getProperty("solr.url"));
         mongoClient = new DocStoreMongoClient(Tools.getProperty("mongodb.url"));
+        neo4jClient = new Neo4jClient();
         categorizer = new DocumentCategorizer();
         recognizer = new NamedEntityRecognizer(solrClient);
         locationResolver = new LocationResolver();
         coreferenceResolver = new CoreferenceResolver();
-        detector = new GibberishDetector(recognizer);
+        informationExtractor = new InformationExtractor();
+        detector = new GibberishDetector();
 
         //This setting speeds up Tesseract OCR
         System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
@@ -137,8 +142,8 @@ public class DocumentsController {
                 SolrDocument doc = docs.get(0);
 
                 double dblThreshold = (double)threshold / (double)100;
-                List<NamedEntity> entities = recognizer.detectNamedEntities(doc.get("docText").toString(), doc.get("category").toString(), dblThreshold);
-                String annotated = recognizer.autoAnnotate(doc.get("docText").toString(), entities);
+                List<NamedEntity> entities = recognizer.detectNamedEntities(doc.get("parsed").toString(), doc.get("category").toString(), dblThreshold);
+                String annotated = recognizer.autoAnnotate(doc.get("parsed").toString(), entities);
 
                 return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
             }
@@ -196,13 +201,13 @@ public class DocumentsController {
                     return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
                 }
 
-                String category = Tools.removeUTF8BOM(categorizer.detectCategory(docText));
+                String parsed = recognizer.deepCleanText(docText);
+                solrDocument.addField("parsed", parsed);
+                String category = Tools.removeUTF8BOM(categorizer.detectCategory(parsed));
                 solrDocument.addField("category", category);
                 logger.info(context.getRemoteAddr() + " -> " + "category detected: " + category);
-                String parsed = recognizer.prepForAnnotation(docText);
-                solrDocument.addField("parsed", parsed);
-                List<NamedEntity> entities = recognizer.detectNamedEntities(docText, category, 0.5);
-                String annotated = recognizer.autoAnnotate(docText, entities);
+                List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, category, 0.5);
+                String annotated = recognizer.autoAnnotate(parsed, entities);
                 solrDocument.addField("annotated", annotated);
 
                 List<SolrDocument> entityDocs = entities.stream()
@@ -210,18 +215,42 @@ public class DocumentsController {
                         .collect(Collectors.toList());
                 docs.addAll(entityDocs);
 
-                List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, docId);
+                logger.info(context.getRemoteAddr() + " -> " + "resolving locations");
+                List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed, docId);
+                List<SolrDocument> locDocs = geoNames.stream()
+                        .map(p -> p.mutate(docId))
+                        .collect(Collectors.toList());
                 docs.addAll(locDocs);
 
                 if (entities.size() > 0) {
-                    List<SolrDocument> corefDocs = coreferenceResolver.getCoreferencesFromDocument(parsed, docId, entities);
+                    logger.info(context.getRemoteAddr() + " -> " + "resolving coreferences");
+                    //Coreferences inform the information extraction step
+                    List<Coreference> coreferences = coreferenceResolver.getCoreferencesFromDocument(parsed, docId, entities);
+                    List<SolrDocument> corefDocs = coreferences.stream()
+                            .map(p -> p.mutate())
+                            .collect(Collectors.toList());
                     docs.addAll(corefDocs);
+
+                    logger.info(context.getRemoteAddr() + " -> " + "resolving entity relations");
+                    List<EntityRelation> entityRelations = informationExtractor.getEntityRelations(parsed, docId, entities, coreferences);
+                    List<SolrDocument> relDocs = entityRelations.stream()
+                            .map(p -> p.mutateForSolr(docId))
+                            .collect(Collectors.toList());
+                    docs.addAll(relDocs);
+
+                    if (geoNames.size() > 0) {
+                        Document n4jdoc = neo4jClient.addDocument(solrDocument);
+                        GeoNameWithFrequencyScore optimalGeoLocation = LocationResolver.getOptimalGeoLocation(geoNames);
+                        neo4jClient.addDependencies(n4jdoc, optimalGeoLocation, entityRelations);
+                    }
                 }
             }
 
+            logger.info(context.getRemoteAddr() + " -> " + "storing file to MongoDB");
             ObjectId fileId = mongoClient.StoreFile(uploadedFile);
             solrDocument.addField("docStoreId", fileId.toString());
 
+            logger.info(context.getRemoteAddr() + " -> " + "storing data to Solr");
             docs.add(solrDocument);
             solrClient.indexDocuments(docs);
             cleanupService.process();
@@ -258,20 +287,20 @@ public class DocumentsController {
                         } else {
                             doc.addField("docText", docText);
                         }
-                        String category = Tools.removeUTF8BOM(categorizer.detectCategory(docText));
-                        if (doc.containsKey("category")) {
-                            doc.replace("category", category);
-                        } else {
-                            doc.addField("category", category);
-                        }
-                        String parsed = recognizer.prepForAnnotation(docText);
+                        String parsed = recognizer.deepCleanText(docText);
                         if (doc.containsKey("parsed")) {
                             doc.replace("parsed", parsed);
                         } else {
                             doc.addField("parsed", parsed);
                         }
-                        List<NamedEntity> entities = recognizer.detectNamedEntities(docText, category, 0.5);
-                        String annotated = recognizer.autoAnnotate(docText, entities);
+                        String category = Tools.removeUTF8BOM(categorizer.detectCategory(parsed));
+                        if (doc.containsKey("category")) {
+                            doc.replace("category", category);
+                        } else {
+                            doc.addField("category", category);
+                        }
+                        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, category, 0.5);
+                        String annotated = recognizer.autoAnnotate(parsed, entities);
                         if (doc.containsKey("annotated")) {
                             doc.replace("annotated", annotated);
                         } else {
@@ -283,12 +312,28 @@ public class DocumentsController {
                                 .collect(Collectors.toList());
                         solrClient.indexDocuments(entityDocs);
 
-                        List<SolrDocument> locDocs = locationResolver.getLocationsFromDocument(docText, id);
+                        logger.info(context.getRemoteAddr() + " -> " + "resolving locations");
+                        List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed, id);
+                        List<SolrDocument> locDocs = geoNames.stream()
+                                .map(p -> p.mutate(id))
+                                .collect(Collectors.toList());
+                        docs.addAll(locDocs);
                         solrClient.indexDocuments(locDocs);
 
                         if (entities.size() > 0) {
-                            List<SolrDocument> corefDocs = coreferenceResolver.getCoreferencesFromDocument(parsed, id, entities);
-                            solrClient.indexDocuments(corefDocs);
+                            logger.info(context.getRemoteAddr() + " -> " + "resolving coreferences");
+                            List<Coreference> coreferences = coreferenceResolver.getCoreferencesFromDocument(parsed, id, entities);
+                            List<SolrDocument> corefDocs = coreferences.stream()
+                                    .map(p -> p.mutate())
+                                    .collect(Collectors.toList());
+                            docs.addAll(corefDocs);
+
+                            logger.info(context.getRemoteAddr() + " -> " + "resolving entity relations");
+                            List<EntityRelation> entityRelations = informationExtractor.getEntityRelations(parsed, id, entities, coreferences);
+                            List<SolrDocument> relDocs = entityRelations.stream()
+                                    .map(p -> p.mutateForSolr(id))
+                                    .collect(Collectors.toList());
+                            docs.addAll(relDocs);
                         }
                     }
                 }
@@ -296,6 +341,7 @@ public class DocumentsController {
                 String timestamp = Tools.getFormattedDateTimeString(Instant.now());
                 doc.replace("lastUpdated", timestamp);
 
+                logger.info(context.getRemoteAddr() + " -> " + "storing data to Solr");
                 solrClient.indexDocument(doc);
                 cleanupService.process();
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));

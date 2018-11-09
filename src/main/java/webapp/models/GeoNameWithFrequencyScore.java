@@ -2,6 +2,7 @@ package webapp.models;
 
 import com.bericotech.clavin.gazetteer.GeoName;
 import org.apache.commons.math3.ml.clustering.Clusterable;
+import org.apache.solr.common.SolrDocument;
 
 public class GeoNameWithFrequencyScore implements Clusterable {
     private GeoName geoName;
@@ -12,6 +13,25 @@ public class GeoNameWithFrequencyScore implements Clusterable {
         this.geoName = geoName;
         this.freqScore = freqScore;
         this.adminDiv = adminDiv;
+    }
+
+    public SolrDocument mutate(String docId) {
+        SolrDocument locDoc = new SolrDocument();
+        locDoc.addField("docId", docId);
+        locDoc.addField("name", composeLocationName(geoName));
+        locDoc.addField("latitude", geoName.getLatitude());
+        locDoc.addField("longitude", geoName.getLongitude());
+
+        return locDoc;
+    }
+
+    public String composeLocationName(GeoName geoName) {
+        GeoName parent = geoName.getParent();
+        if (parent == null) {
+            return geoName.getName();
+        } else {
+            return geoName.getName() + ", " + composeLocationName(parent);
+        }
     }
 
     public GeoName getGeoName() {

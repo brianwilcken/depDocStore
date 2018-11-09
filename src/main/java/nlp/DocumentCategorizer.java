@@ -3,11 +3,8 @@ package nlp;
 import java.io.*;
 
 import common.Tools;
-import opennlp.tools.stemmer.Stemmer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import solrapi.SolrClient;
-import solrapi.model.IndexedDocument;
 import opennlp.tools.doccat.DoccatModel;
 import opennlp.tools.doccat.DocumentCategorizerME;
 import opennlp.tools.stemmer.PorterStemmer;

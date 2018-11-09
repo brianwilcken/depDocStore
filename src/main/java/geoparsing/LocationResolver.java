@@ -13,12 +13,12 @@ import com.bericotech.clavin.resolver.ResolvedLocation;
 import common.Tools;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.math3.ml.clustering.Cluster;
+import org.apache.commons.math3.ml.clustering.Clusterable;
 import org.apache.commons.math3.ml.clustering.DBSCANClusterer;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.common.SolrDocument;
 import webapp.models.GeoNameWithFrequencyScore;
 
 public class LocationResolver {
@@ -39,36 +39,30 @@ public class LocationResolver {
         }
     }
 
-    public List<SolrDocument> getLocationsFromDocument(String docText, String docId) {
-        List<SolrDocument> locDocs = new ArrayList<>();
+    public List<GeoNameWithFrequencyScore> getLocationsFromDocument(String docText, String docId) {
+        List<GeoNameWithFrequencyScore> geoNames = new ArrayList<>();
         try {
             //Geoparse the document to extract a list of geolocations
             List<ResolvedLocation> resolvedLocations = parser.parse(docText);
 
-            List<GeoNameWithFrequencyScore> geoNames = getValidGeoNames(resolvedLocations);
+            geoNames = getValidGeoNames(resolvedLocations);
 
-            for (GeoNameWithFrequencyScore geoName : geoNames) {
-                SolrDocument locDoc = new SolrDocument();
-                locDoc.addField("docId", docId);
-                locDoc.addField("name", composeLocationName(geoName.getGeoName()));
-                locDoc.addField("latitude", geoName.getGeoName().getLatitude());
-                locDoc.addField("longitude", geoName.getGeoName().getLongitude());
-
-                locDocs.add(locDoc);
-            }
+            return geoNames;
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
-        return locDocs;
+        return geoNames;
     }
 
-    private String composeLocationName(GeoName geoName) {
-        GeoName parent = geoName.getParent();
-        if (parent == null) {
-            return geoName.getName();
-        } else {
-            return geoName.getName() + ", " + composeLocationName(parent);
-        }
+    public static GeoNameWithFrequencyScore getOptimalGeoLocation(List<GeoNameWithFrequencyScore> geoNames) {
+        GeoNameWithFrequencyScore optimalGeoLocation = geoNames.stream().max(new Comparator<GeoNameWithFrequencyScore>() {
+            @Override
+            public int compare(GeoNameWithFrequencyScore geoName1, GeoNameWithFrequencyScore geoName2) {
+                return Integer.compare(geoName1.getFreqScore(), geoName2.getFreqScore());
+            }
+        }).get();
+
+        return optimalGeoLocation;
     }
 
     private List<GeoNameWithFrequencyScore> getValidGeoNames(List<ResolvedLocation> locations) {
@@ -117,14 +111,14 @@ public class LocationResolver {
         List<GeoNameWithFrequencyScore> topLevel = validForAdminDiv.stream().filter(p -> p.getAdminDiv() <= FeatureClass.P.ordinal()).collect(Collectors.toList());
         double clusterRadius = getClusterRadius(topLevel);
         int minClusterSize = getMinClusterSize(topLevel);
-        List<GeoNameWithFrequencyScore> validTopLevel = getValidGeoNamesByClustering(topLevel, clusterRadius, minClusterSize, 1, 2, 0);
+        List<GeoNameWithFrequencyScore> validTopLevel = getValidGeoCoordinatesByClustering(topLevel, clusterRadius, minClusterSize, 1, 2, 0);
         List<GeoNameWithFrequencyScore> lowerLevel = validForAdminDiv.stream().filter(p -> p.getAdminDiv() > FeatureClass.P.ordinal()).collect(Collectors.toList());
         clusterRadius = getClusterRadius(lowerLevel);
         minClusterSize = getMinClusterSize(lowerLevel);
         List<GeoNameWithFrequencyScore> validTopLevelWithLowerLevel = new ArrayList<>();
         validTopLevelWithLowerLevel.addAll(validTopLevel);
         validTopLevelWithLowerLevel.addAll(lowerLevel);
-        List<GeoNameWithFrequencyScore> validLowerLevel = getValidGeoNamesByClustering(validTopLevelWithLowerLevel, clusterRadius, minClusterSize, 0.25, 5, 0);
+        List<GeoNameWithFrequencyScore> validLowerLevel = getValidGeoCoordinatesByClustering(validTopLevelWithLowerLevel, clusterRadius, minClusterSize, 0.25, 5, 0);
         validLowerLevel = validLowerLevel.stream().filter(p -> p.getAdminDiv() > FeatureClass.P.ordinal()).collect(Collectors.toList());
 
         List<GeoNameWithFrequencyScore> validOverall = new ArrayList<>();
@@ -145,18 +139,18 @@ public class LocationResolver {
         return validOverall;
     }
 
-    private List<GeoNameWithFrequencyScore> getValidGeoNamesByClustering(List<GeoNameWithFrequencyScore> geoNames, double clusterRadius, int minClusterSize, double radiusIncrement, int maxIncrements, int incrementNum) {
-        List<GeoNameWithFrequencyScore> validOverall = new ArrayList<>();
-        if (geoNames.size() > 1) {
+    public static <T extends Clusterable> List<T> getValidGeoCoordinatesByClustering(Collection<T> geoCoordinates, double clusterRadius, int minClusterSize, double radiusIncrement, int maxIncrements, int incrementNum) {
+        List<T> validGeoCoordinates = new ArrayList<>();
+        if (geoCoordinates.size() > 1) {
             //A cluster is defined as a group of at least minClusterSize locations all lying within at most clusterRadius degree(s) of measure
             //from each other.
             DBSCANClusterer clusterer = new DBSCANClusterer(clusterRadius, minClusterSize);
-            List<Cluster<GeoNameWithFrequencyScore>> geoNameClusters = clusterer.cluster(geoNames);
+            List<Cluster<T>> geoNameClusters = clusterer.cluster(geoCoordinates);
 
             if (geoNameClusters.size() > 0) {
                 //Now within each cluster filter again by statistics to get the final set of overall valid locations.
-                for (Cluster<GeoNameWithFrequencyScore> cluster : geoNameClusters) {
-                    validOverall.addAll(cluster.getPoints());
+                for (Cluster<T> cluster : geoNameClusters) {
+                    validGeoCoordinates.addAll(cluster.getPoints());
                 }
             } else {
                 //The points must be too spread out to form clusters with at least minClusterSize points.
@@ -164,13 +158,13 @@ public class LocationResolver {
                 clusterRadius += radiusIncrement;
                 minClusterSize = minClusterSize / 2 < 1 ? 1 : minClusterSize / 2;
                 if (incrementNum <= maxIncrements) {
-                    return getValidGeoNamesByClustering(geoNames, clusterRadius, minClusterSize, radiusIncrement, maxIncrements, ++incrementNum);
+                    return getValidGeoCoordinatesByClustering(geoCoordinates, clusterRadius, minClusterSize, radiusIncrement, maxIncrements, ++incrementNum);
                 }
             }
         } else {
-            validOverall.addAll(geoNames);
+            validGeoCoordinates.addAll(geoCoordinates);
         }
-        return validOverall;
+        return validGeoCoordinates;
     }
 
     private double getClusterRadius(List<GeoNameWithFrequencyScore> validForAdminDiv) {

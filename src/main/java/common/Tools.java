@@ -210,16 +210,20 @@ public class Tools {
 	}
 
 	public static String removeAllNumbers(String document) {
-		document = document.replaceAll("(\\w+\\W+)?\\d+(\\w+\\W+)?", "");
+		document = document.replaceAll("\\d+", "");
 
 		return document;
 	}
 
 	public static String removeSpecialCharacters(String document) {
 		document = document.replaceAll("[$-,/:-?{-~!\"^_`\\[\\]+]", "");
-		document = document.replaceAll("-", " ");
+		document = document.replace("-", " ");
 
 		return document;
+	}
+
+	public static boolean numericRangeCompare(double num1, double num2, double rng) {
+		return ((num1 - rng) < num2) && (num2 < (num1 + rng));
 	}
 
 	@FunctionalInterface
@@ -286,7 +290,7 @@ public class Tools {
 //						pdfPercentGibberish > pdfGibberishThreshold) {
 //					//Use OCR to extract page text
 //					//first convert page to TIFF format that is compatible with OCR
-//					String filename = temporaryFileRepo + pdfFile.getName() + "_" + i;
+//					String filename = temporaryFileRepo + pdfFile.getTitle() + "_" + i;
 //					File pageFile = new File(filename);
 //					PdfBoxUtilities.splitPdf(pdfFile, pageFile, i, i);
 //
@@ -371,9 +375,6 @@ public class Tools {
 		//clean text to resolve broken hyphenated words
 		String parsedText = parsed.toString();
 		parsedText = parsedText.replaceAll("(?<=[a-z])-\\s(?=[a-z])", "");
-
-		//find and fix any misspelled words
-
 
 		return parsedText;
 	}

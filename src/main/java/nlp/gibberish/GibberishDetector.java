@@ -1,6 +1,7 @@
 package nlp.gibberish;
 
 import common.Tools;
+import nlp.NLPTools;
 import nlp.NamedEntityRecognizer;
 
 import java.util.ArrayList;
@@ -20,8 +21,6 @@ public class GibberishDetector {
 	private final Map<Character, Integer> alphabetPositionMap = new HashMap<Character, Integer>();
 	private static final int MIN_COUNT_VAL = 10;
 
-	private NamedEntityRecognizer recognizer;
-
 	//for gibberish detection
 	private static String goodEnglish = Tools.getResource(Tools.getProperty("nlp.gibberish.goodEnglish"));
 	private static String badEnglish = Tools.getResource(Tools.getProperty("nlp.gibberish.badEnglish"));
@@ -33,11 +32,10 @@ public class GibberishDetector {
 	private double[][] logProbabilityMatrix = null;
 	private double threshold = 0d;
 
-	public GibberishDetector(NamedEntityRecognizer recognizer) {
-		this.recognizer = recognizer;
-		goodEng = recognizer.detectSentences(goodEnglish);
-		badEng = recognizer.detectSentences(badEnglish);
-		bigEng = recognizer.detectSentences(bigEnglish);
+	public GibberishDetector() {
+		goodEng = NLPTools.detectSentences(goodEnglish);
+		badEng = NLPTools.detectSentences(badEnglish);
+		bigEng = NLPTools.detectSentences(bigEnglish);
 		train(Arrays.asList(bigEng), Arrays.asList(goodEng), Arrays.asList(badEng));
 	}
 			
@@ -154,7 +152,7 @@ public class GibberishDetector {
 	public double getPercentGibberish(String doc) {
 		int docSize = doc.length();
 		double minConfidence = threshold / docSize;
-		String[] sentences = recognizer.detectSentences(doc);
+		String[] sentences = NLPTools.detectSentences(doc);
 
 		int totalLines = sentences.length;
 		int gibberishLines = 0;
@@ -181,7 +179,7 @@ public class GibberishDetector {
 	public String removeGibberishLines(String doc) {
 		int docSize = doc.length();
 		double minConfidence = threshold / docSize;
-		String[] sentences = recognizer.detectSentences(doc);
+		String[] sentences = NLPTools.detectSentences(doc);
 
 		List<String> notGibberish = new ArrayList<>();
 		if (sentences.length > 1) {

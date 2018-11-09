@@ -115,7 +115,7 @@
        solr.RAMDirectoryFactory is memory based, not
        persistent, and doesn't work with replication.
     -->
-  <directoryFactory name="DirectoryFactory"
+  <directoryFactory title="DirectoryFactory"
                     class="${solr.directoryFactory:solr.NRTCachingDirectoryFactory}"/>
 
   <!-- The CodecFactory for defining the format of the inverted index.
@@ -170,9 +170,9 @@
       -->
     <!--
         <mergePolicyFactory class="org.apache.solr.index.TieredMergePolicyFactory">
-          <int name="maxMergeAtOnce">10</int>
-          <int name="segmentsPerTier">10</int>
-          <double name="noCFSRatio">0.1</double>
+          <int title="maxMergeAtOnce">10</int>
+          <int title="segmentsPerTier">10</int>
+          <double title="noCFSRatio">0.1</double>
         </mergePolicyFactory>
       -->
 
@@ -222,16 +222,16 @@
     <deletionPolicy class="solr.SolrDeletionPolicy">
     -->
     <!-- The number of commit points to be kept -->
-    <!-- <str name="maxCommitsToKeep">1</str> -->
+    <!-- <str title="maxCommitsToKeep">1</str> -->
     <!-- The number of optimized commit points to be kept -->
-    <!-- <str name="maxOptimizedCommitsToKeep">0</str> -->
+    <!-- <str title="maxOptimizedCommitsToKeep">0</str> -->
     <!--
         Delete all commit points once they have reached the given age.
         Supports DateMathParser syntax e.g.
       -->
     <!--
-       <str name="maxCommitAge">30MINUTES</str>
-       <str name="maxCommitAge">1DAY</str>
+       <str title="maxCommitAge">30MINUTES</str>
+       <str title="maxCommitAge">1DAY</str>
     -->
     <!-- 
     </deletionPolicy>
@@ -284,8 +284,8 @@
                 of heap space per Solr core.
     -->
     <updateLog>
-      <str name="dir">${solr.ulog.dir:}</str>
-      <int name="numVersionBuckets">${solr.ulog.numVersionBuckets:65536}</int>
+      <str title="dir">${solr.ulog.dir:}</str>
+      <int title="numVersionBuckets">${solr.ulog.numVersionBuckets:65536}</int>
     </updateLog>
 
     <!-- AutoCommit
@@ -335,7 +335,7 @@
     <!-- The RunExecutableListener executes an external command from a
          hook such as postCommit or postOptimize.
          
-         exe - the name of the executable to run
+         exe - the title of the executable to run
          dir - dir to use as the current working directory. (default=".")
          wait - the calling thread waits until the executable returns. 
                 (default="true")
@@ -348,11 +348,11 @@
       -->
     <!--
        <listener event="postCommit" class="solr.RunExecutableListener">
-         <str name="exe">solr/bin/snapshooter</str>
-         <str name="dir">.</str>
-         <bool name="wait">true</bool>
-         <arr name="args"> <str>arg1</str> <str>arg2</str> </arr>
-         <arr name="env"> <str>MYVAR=val1</str> </arr>
+         <str title="exe">solr/bin/snapshooter</str>
+         <str title="dir">.</str>
+         <bool title="wait">true</bool>
+         <arr title="args"> <str>arg1</str> <str>arg2</str> </arr>
+         <arr title="env"> <str>MYVAR=val1</str> </arr>
        </listener>
       -->
 
@@ -381,8 +381,8 @@
 
     -->
   <!--
-  <indexReaderFactory name="IndexReaderFactory" class="package.class">
-    <str name="someArg">Some Value</str>
+  <indexReaderFactory title="IndexReaderFactory" class="package.class">
+    <str title="someArg">Some Value</str>
   </indexReaderFactory >
   -->
 
@@ -470,7 +470,7 @@
                    autowarmCount="0"/>
 
     <!-- custom cache currently used by block join -->
-    <cache name="perSegFilter"
+    <cache title="perSegFilter"
            class="solr.search.LRUCache"
            size="10"
            initialSize="0"
@@ -493,14 +493,14 @@
     <!-- Custom Cache
 
          Example of a generic cache.  These caches may be accessed by
-         name through SolrIndexSearcher.getCache(),cacheLookup(), and
+         title through SolrIndexSearcher.getCache(),cacheLookup(), and
          cacheInsert().  The purpose is to enable easy caching of
          user/application level data.  The regenerator argument should
          be specified as an implementation of solr.CacheRegenerator 
          if autowarming is desired.  
       -->
     <!--
-       <cache name="myUserCache"
+       <cache title="myUserCache"
               class="solr.LRUCache"
               size="4096"
               initialSize="1024"
@@ -573,18 +573,18 @@
          local query request for each NamedList in sequence. 
       -->
     <listener event="newSearcher" class="solr.QuerySenderListener">
-      <arr name="queries">
+      <arr title="queries">
         <!--
-           <lst><str name="q">solr</str><str name="sort">price asc</str></lst>
-           <lst><str name="q">rocks</str><str name="sort">weight asc</str></lst>
+           <lst><str title="q">solr</str><str title="sort">price asc</str></lst>
+           <lst><str title="q">rocks</str><str title="sort">weight asc</str></lst>
           -->
       </arr>
     </listener>
     <listener event="firstSearcher" class="solr.QuerySenderListener">
-      <arr name="queries">
+      <arr title="queries">
         <!--
         <lst>
-          <str name="q">static firstSearcher warming in solrconfig.xml</str>
+          <str title="q">static firstSearcher warming in solrconfig.xml</str>
         </lst>
         -->
       </arr>
@@ -616,7 +616,7 @@
 
        handleSelect="false" will cause the SolrDispatchFilter to
        ignore "/select" requests, resulting in a 404 unless a handler
-       is explicitly registered with the name "/select"
+       is explicitly registered with the title "/select"
 
        handleSelect="true" is not recommended for new users, but is the default
        for backwards compatibility
@@ -717,14 +717,14 @@
 
        http://wiki.apache.org/solr/SolrRequestHandler
 
-       Incoming queries will be dispatched to a specific handler by name
+       Incoming queries will be dispatched to a specific handler by title
        based on the path specified in the request.
 
        Legacy behavior: If the request path uses "/select" but no Request
-       Handler has that name, and if handleSelect="true" has been specified in
+       Handler has that title, and if handleSelect="true" has been specified in
        the requestDispatcher, then the Request Handler is dispatched based on
        the qt parameter.  Handlers without a leading '/' are accessed this way
-       like so: http://host/app/[core/]select?qt=name  If no qt is
+       like so: http://host/app/[core/]select?qt=title  If no qt is
        given, then the requestHandler that declares default="true" will be
        used or the one named "standard".
 
@@ -741,14 +741,14 @@
        of SearchComponents (see below) and supports distributed
        queries across multiple shards
     -->
-  <requestHandler name="/select" class="solr.SearchHandler">
+  <requestHandler title="/select" class="solr.SearchHandler">
     <!-- default values for query parameters can be specified, these
          will be overridden by parameters in the request
       -->
-    <lst name="defaults">
-      <str name="echoParams">explicit</str>
-      <int name="rows">10</int>
-      <!-- <str name="df">text</str> -->
+    <lst title="defaults">
+      <str title="echoParams">explicit</str>
+      <int title="rows">10</int>
+      <!-- <str title="df">text</str> -->
     </lst>
     <!-- In addition to defaults, "appends" params can be specified
          to identify values which should be appended to the list of
@@ -764,8 +764,8 @@
          unless you are sure you always want it.
       -->
     <!--
-       <lst name="appends">
-         <str name="fq">inStock:true</str>
+       <lst title="appends">
+         <str title="fq">inStock:true</str>
        </lst>
       -->
     <!-- "invariants" are a way of letting the Solr maintainer lock down
@@ -785,11 +785,11 @@
          unless you are sure you always want it.
       -->
     <!--
-       <lst name="invariants">
-         <str name="facet.field">cat</str>
-         <str name="facet.field">manu_exact</str>
-         <str name="facet.query">price:[* TO 500]</str>
-         <str name="facet.query">price:[500 TO *]</str>
+       <lst title="invariants">
+         <str title="facet.field">cat</str>
+         <str title="facet.field">manu_exact</str>
+         <str title="facet.query">price:[* TO 500]</str>
+         <str title="facet.query">price:[500 TO *]</str>
        </lst>
       -->
     <!-- If the default list of SearchComponents is not desired, that
@@ -797,7 +797,7 @@
          prepended or appended to the default list.  (see below)
       -->
     <!--
-       <arr name="components">
+       <arr title="components">
          <str>nameOfCustomComponent1</str>
          <str>nameOfCustomComponent2</str>
        </arr>
@@ -805,11 +805,11 @@
   </requestHandler>
 
   <!-- A request handler that returns indented JSON by default -->
-  <requestHandler name="/query" class="solr.SearchHandler">
-    <lst name="defaults">
-      <str name="echoParams">explicit</str>
-      <str name="wt">json</str>
-      <str name="indent">true</str>
+  <requestHandler title="/query" class="solr.SearchHandler">
+    <lst title="defaults">
+      <str title="echoParams">explicit</str>
+      <str title="wt">json</str>
+      <str title="indent">true</str>
     </lst>
   </requestHandler>
 
@@ -823,21 +823,21 @@
        (SearchHandler) can be registered multiple times with different
        names (and different init parameters)
     -->
-  <requestHandler name="/browse" class="solr.SearchHandler" useParams="query,facets,velocity,browse">
-    <lst name="defaults">
-      <str name="echoParams">explicit</str>
+  <requestHandler title="/browse" class="solr.SearchHandler" useParams="query,facets,velocity,browse">
+    <lst title="defaults">
+      <str title="echoParams">explicit</str>
     </lst>
   </requestHandler>
 
   <initParams path="/update/**,/query,/select,/tvrh,/elevate,/spell,/browse">
-    <lst name="defaults">
-      <str name="df">_text_</str>
+    <lst title="defaults">
+      <str title="df">_text_</str>
     </lst>
   </initParams>
 
   <initParams path="/update/**">
-    <lst name="defaults">
-      <str name="update.chain">add-unknown-fields-to-the-schema</str>
+    <lst title="defaults">
+      <str title="update.chain">add-unknown-fields-to-the-schema</str>
     </lst>
   </initParams>
 
@@ -846,41 +846,41 @@
        http://wiki.apache.org/solr/ExtractingRequestHandler 
 
     -->
-  <requestHandler name="/update/extract"
+  <requestHandler title="/update/extract"
                   startup="lazy"
                   class="solr.extraction.ExtractingRequestHandler" >
-    <lst name="defaults">
-      <str name="lowernames">true</str>
-      <str name="fmap.meta">ignored_</str>
-      <str name="fmap.content">_text_</str>
+    <lst title="defaults">
+      <str title="lowernames">true</str>
+      <str title="fmap.meta">ignored_</str>
+      <str title="fmap.content">_text_</str>
     </lst>
   </requestHandler>
-  <requestHandler name="/mlt" class="solr.MoreLikeThisHandler">
-	<lst name="defaults">
-		<str name="mlt.qf">docText,title</str>
-		<str name="mlt.fl">docText,title</str>
-		<str name="mlt.mintf">1</str>
-		<str name="mlt.mindf">2</str>
-		<str name="mlt.boost">true</str>
+  <requestHandler title="/mlt" class="solr.MoreLikeThisHandler">
+	<lst title="defaults">
+		<str title="mlt.qf">docText,title</str>
+		<str title="mlt.fl">docText,title</str>
+		<str title="mlt.mintf">1</str>
+		<str title="mlt.mindf">2</str>
+		<str title="mlt.boost">true</str>
 	</lst>
   </requestHandler>
   <!-- Search Components
 
        Search components are registered to SolrCore and used by 
-       instances of SearchHandler (which can access them by name)
+       instances of SearchHandler (which can access them by title)
        
        By default, the following components are available:
        
-       <searchComponent name="query"     class="solr.QueryComponent" />
-       <searchComponent name="facet"     class="solr.FacetComponent" />
-       <searchComponent name="mlt"       class="solr.MoreLikeThisComponent" />
-       <searchComponent name="highlight" class="solr.HighlightComponent" />
-       <searchComponent name="stats"     class="solr.StatsComponent" />
-       <searchComponent name="debug"     class="solr.DebugComponent" />
+       <searchComponent title="query"     class="solr.QueryComponent" />
+       <searchComponent title="facet"     class="solr.FacetComponent" />
+       <searchComponent title="mlt"       class="solr.MoreLikeThisComponent" />
+       <searchComponent title="highlight" class="solr.HighlightComponent" />
+       <searchComponent title="stats"     class="solr.StatsComponent" />
+       <searchComponent title="debug"     class="solr.DebugComponent" />
    
        Default configuration in a requestHandler would look like:
 
-       <arr name="components">
+       <arr title="components">
          <str>query</str>
          <str>facet</str>
          <str>mlt</str>
@@ -894,15 +894,15 @@
 
        To insert components before or after the 'standard' components, use:
     
-       <arr name="first-components">
+       <arr title="first-components">
          <str>myFirstComponentName</str>
        </arr>
     
-       <arr name="last-components">
+       <arr title="last-components">
          <str>myLastComponentName</str>
        </arr>
 
-       NOTE: The component registered with the name "debug" will
+       NOTE: The component registered with the title "debug" will
        always be executed after the "last-components" 
        
      -->
@@ -914,47 +914,47 @@
 
        http://wiki.apache.org/solr/SpellCheckComponent
     -->
-  <searchComponent name="spellcheck" class="solr.SpellCheckComponent">
+  <searchComponent title="spellcheck" class="solr.SpellCheckComponent">
 
-    <str name="queryAnalyzerFieldType">text_general</str>
+    <str title="queryAnalyzerFieldType">text_general</str>
 
     <!-- Multiple "Spell Checkers" can be declared and used by this
          component
       -->
 
     <!-- a spellchecker built from a field of the main index -->
-    <lst name="spellchecker">
-      <str name="name">default</str>
-      <str name="field">_text_</str>
-      <str name="classname">solr.DirectSolrSpellChecker</str>
+    <lst title="spellchecker">
+      <str title="title">default</str>
+      <str title="field">_text_</str>
+      <str title="classname">solr.DirectSolrSpellChecker</str>
       <!-- the spellcheck distance measure used, the default is the internal levenshtein -->
-      <str name="distanceMeasure">internal</str>
+      <str title="distanceMeasure">internal</str>
       <!-- minimum accuracy needed to be considered a valid spellcheck suggestion -->
-      <float name="accuracy">0.5</float>
+      <float title="accuracy">0.5</float>
       <!-- the maximum #edits we consider when enumerating terms: can be 1 or 2 -->
-      <int name="maxEdits">2</int>
+      <int title="maxEdits">2</int>
       <!-- the minimum shared prefix when enumerating terms -->
-      <int name="minPrefix">1</int>
+      <int title="minPrefix">1</int>
       <!-- maximum number of inspections per result. -->
-      <int name="maxInspections">5</int>
+      <int title="maxInspections">5</int>
       <!-- minimum length of a query term to be considered for correction -->
-      <int name="minQueryLength">4</int>
+      <int title="minQueryLength">4</int>
       <!-- maximum threshold of documents a query term can appear to be considered for correction -->
-      <float name="maxQueryFrequency">0.01</float>
+      <float title="maxQueryFrequency">0.01</float>
       <!-- uncomment this to require suggestions to occur in 1% of the documents
-        <float name="thresholdTokenFrequency">.01</float>
+        <float title="thresholdTokenFrequency">.01</float>
       -->
     </lst>
 
     <!-- a spellchecker that can break or combine words.  See "/spell" handler below for usage -->
     <!--
-    <lst name="spellchecker">
-      <str name="name">wordbreak</str>
-      <str name="classname">solr.WordBreakSolrSpellChecker</str>
-      <str name="field">name</str>
-      <str name="combineWords">true</str>
-      <str name="breakWords">true</str>
-      <int name="maxChanges">10</int>
+    <lst title="spellchecker">
+      <str title="title">wordbreak</str>
+      <str title="classname">solr.WordBreakSolrSpellChecker</str>
+      <str title="field">title</str>
+      <str title="combineWords">true</str>
+      <str title="breakWords">true</str>
+      <int title="maxChanges">10</int>
     </lst>
     -->
   </searchComponent>
@@ -972,24 +972,24 @@
        See http://wiki.apache.org/solr/SpellCheckComponent for details
        on the request parameters.
     -->
-  <requestHandler name="/spell" class="solr.SearchHandler" startup="lazy">
-    <lst name="defaults">
+  <requestHandler title="/spell" class="solr.SearchHandler" startup="lazy">
+    <lst title="defaults">
       <!-- Solr will use suggestions from both the 'default' spellchecker
            and from the 'wordbreak' spellchecker and combine them.
            collations (re-written queries) can include a combination of
            corrections from both spellcheckers -->
-      <str name="spellcheck.dictionary">default</str>
-      <str name="spellcheck">on</str>
-      <str name="spellcheck.extendedResults">true</str>
-      <str name="spellcheck.count">10</str>
-      <str name="spellcheck.alternativeTermCount">5</str>
-      <str name="spellcheck.maxResultsForSuggest">5</str>
-      <str name="spellcheck.collate">true</str>
-      <str name="spellcheck.collateExtendedResults">true</str>
-      <str name="spellcheck.maxCollationTries">10</str>
-      <str name="spellcheck.maxCollations">5</str>
+      <str title="spellcheck.dictionary">default</str>
+      <str title="spellcheck">on</str>
+      <str title="spellcheck.extendedResults">true</str>
+      <str title="spellcheck.count">10</str>
+      <str title="spellcheck.alternativeTermCount">5</str>
+      <str title="spellcheck.maxResultsForSuggest">5</str>
+      <str title="spellcheck.collate">true</str>
+      <str title="spellcheck.collateExtendedResults">true</str>
+      <str title="spellcheck.maxCollationTries">10</str>
+      <str title="spellcheck.maxCollations">5</str>
     </lst>
-    <arr name="last-components">
+    <arr title="last-components">
       <str>spellcheck</str>
     </arr>
   </requestHandler>
@@ -998,7 +998,7 @@
 
        http://wiki.apache.org/solr/TermVectorComponent
     -->
-  <searchComponent name="tvComponent" class="solr.TermVectorComponent"/>
+  <searchComponent title="tvComponent" class="solr.TermVectorComponent"/>
 
   <!-- A request handler for demonstrating the term vector component
 
@@ -1007,11 +1007,11 @@
        In reality you will likely want to add the component to your 
        already specified request handlers. 
     -->
-  <requestHandler name="/tvrh" class="solr.SearchHandler" startup="lazy">
-    <lst name="defaults">
-      <bool name="tv">true</bool>
+  <requestHandler title="/tvrh" class="solr.SearchHandler" startup="lazy">
+    <lst title="defaults">
+      <bool title="tv">true</bool>
     </lst>
-    <arr name="last-components">
+    <arr title="last-components">
       <str>tvComponent</str>
     </arr>
   </requestHandler>
@@ -1025,15 +1025,15 @@
        A component to return terms and document frequency of those
        terms
     -->
-  <searchComponent name="terms" class="solr.TermsComponent"/>
+  <searchComponent title="terms" class="solr.TermsComponent"/>
 
   <!-- A request handler for demonstrating the terms component -->
-  <requestHandler name="/terms" class="solr.SearchHandler" startup="lazy">
-    <lst name="defaults">
-      <bool name="terms">true</bool>
-      <bool name="distrib">false</bool>
+  <requestHandler title="/terms" class="solr.SearchHandler" startup="lazy">
+    <lst title="defaults">
+      <bool title="terms">true</bool>
+      <bool title="distrib">false</bool>
     </lst>
-    <arr name="components">
+    <arr title="components">
       <str>terms</str>
     </arr>
   </requestHandler>
@@ -1047,18 +1047,18 @@
        results for a given query regardless of the normal lucene
        scoring.
     -->
-  <searchComponent name="elevator" class="solr.QueryElevationComponent" >
+  <searchComponent title="elevator" class="solr.QueryElevationComponent" >
     <!-- pick a fieldType to analyze queries -->
-    <str name="queryFieldType">string</str>
-    <str name="config-file">elevate.xml</str>
+    <str title="queryFieldType">string</str>
+    <str title="config-file">elevate.xml</str>
   </searchComponent>
 
   <!-- A request handler for demonstrating the elevator component -->
-  <requestHandler name="/elevate" class="solr.SearchHandler" startup="lazy">
-    <lst name="defaults">
-      <str name="echoParams">explicit</str>
+  <requestHandler title="/elevate" class="solr.SearchHandler" startup="lazy">
+    <lst title="defaults">
+      <str title="echoParams">explicit</str>
     </lst>
-    <arr name="last-components">
+    <arr title="last-components">
       <str>elevator</str>
     </arr>
   </requestHandler>
@@ -1067,103 +1067,103 @@
 
        http://wiki.apache.org/solr/HighlightingParameters
     -->
-  <searchComponent class="solr.HighlightComponent" name="highlight">
+  <searchComponent class="solr.HighlightComponent" title="highlight">
     <highlighting>
       <!-- Configure the standard fragmenter -->
       <!-- This could most likely be commented out in the "default" case -->
-      <fragmenter name="gap"
+      <fragmenter title="gap"
                   default="true"
                   class="solr.highlight.GapFragmenter">
-        <lst name="defaults">
-          <int name="hl.fragsize">100</int>
+        <lst title="defaults">
+          <int title="hl.fragsize">100</int>
         </lst>
       </fragmenter>
 
       <!-- A regular-expression-based fragmenter 
            (for sentence extraction) 
         -->
-      <fragmenter name="regex"
+      <fragmenter title="regex"
                   class="solr.highlight.RegexFragmenter">
-        <lst name="defaults">
+        <lst title="defaults">
           <!-- slightly smaller fragsizes work better because of slop -->
-          <int name="hl.fragsize">70</int>
+          <int title="hl.fragsize">70</int>
           <!-- allow 50% slop on fragment sizes -->
-          <float name="hl.regex.slop">0.5</float>
+          <float title="hl.regex.slop">0.5</float>
           <!-- a basic sentence pattern -->
-          <str name="hl.regex.pattern">[-\w ,/\n\&quot;&apos;]{20,200}</str>
+          <str title="hl.regex.pattern">[-\w ,/\n\&quot;&apos;]{20,200}</str>
         </lst>
       </fragmenter>
 
       <!-- Configure the standard formatter -->
-      <formatter name="html"
+      <formatter title="html"
                  default="true"
                  class="solr.highlight.HtmlFormatter">
-        <lst name="defaults">
-          <str name="hl.simple.pre"><![CDATA[<em>]]></str>
-          <str name="hl.simple.post"><![CDATA[</em>]]></str>
+        <lst title="defaults">
+          <str title="hl.simple.pre"><![CDATA[<em>]]></str>
+          <str title="hl.simple.post"><![CDATA[</em>]]></str>
         </lst>
       </formatter>
 
       <!-- Configure the standard encoder -->
-      <encoder name="html"
+      <encoder title="html"
                class="solr.highlight.HtmlEncoder" />
 
       <!-- Configure the standard fragListBuilder -->
-      <fragListBuilder name="simple"
+      <fragListBuilder title="simple"
                        class="solr.highlight.SimpleFragListBuilder"/>
 
       <!-- Configure the single fragListBuilder -->
-      <fragListBuilder name="single"
+      <fragListBuilder title="single"
                        class="solr.highlight.SingleFragListBuilder"/>
 
       <!-- Configure the weighted fragListBuilder -->
-      <fragListBuilder name="weighted"
+      <fragListBuilder title="weighted"
                        default="true"
                        class="solr.highlight.WeightedFragListBuilder"/>
 
       <!-- default tag FragmentsBuilder -->
-      <fragmentsBuilder name="default"
+      <fragmentsBuilder title="default"
                         default="true"
                         class="solr.highlight.ScoreOrderFragmentsBuilder">
         <!-- 
-        <lst name="defaults">
-          <str name="hl.multiValuedSeparatorChar">/</str>
+        <lst title="defaults">
+          <str title="hl.multiValuedSeparatorChar">/</str>
         </lst>
         -->
       </fragmentsBuilder>
 
       <!-- multi-colored tag FragmentsBuilder -->
-      <fragmentsBuilder name="colored"
+      <fragmentsBuilder title="colored"
                         class="solr.highlight.ScoreOrderFragmentsBuilder">
-        <lst name="defaults">
-          <str name="hl.tag.pre"><![CDATA[
+        <lst title="defaults">
+          <str title="hl.tag.pre"><![CDATA[
                <b style="background:yellow">,<b style="background:lawgreen">,
                <b style="background:aquamarine">,<b style="background:magenta">,
                <b style="background:palegreen">,<b style="background:coral">,
                <b style="background:wheat">,<b style="background:khaki">,
                <b style="background:lime">,<b style="background:deepskyblue">]]></str>
-          <str name="hl.tag.post"><![CDATA[</b>]]></str>
+          <str title="hl.tag.post"><![CDATA[</b>]]></str>
         </lst>
       </fragmentsBuilder>
 
-      <boundaryScanner name="default"
+      <boundaryScanner title="default"
                        default="true"
                        class="solr.highlight.SimpleBoundaryScanner">
-        <lst name="defaults">
-          <str name="hl.bs.maxScan">10</str>
-          <str name="hl.bs.chars">.,!? &#9;&#10;&#13;</str>
+        <lst title="defaults">
+          <str title="hl.bs.maxScan">10</str>
+          <str title="hl.bs.chars">.,!? &#9;&#10;&#13;</str>
         </lst>
       </boundaryScanner>
 
-      <boundaryScanner name="breakIterator"
+      <boundaryScanner title="breakIterator"
                        class="solr.highlight.BreakIteratorBoundaryScanner">
-        <lst name="defaults">
+        <lst title="defaults">
           <!-- type should be one of CHARACTER, WORD(default), LINE and SENTENCE -->
-          <str name="hl.bs.type">WORD</str>
+          <str title="hl.bs.type">WORD</str>
           <!-- language and country are used when constructing Locale object.  -->
           <!-- And the Locale object will be used when getting instance of BreakIterator -->
-          <str name="hl.bs.language">en</str>
-          <str name="hl.bs.country">US</str>
+          <str title="hl.bs.language">en</str>
+          <str title="hl.bs.country">US</str>
         </lst>
       </boundaryScanner>
     </highlighting>
@@ -1172,7 +1172,7 @@
   <!-- Update Processors
 
        Chains of Update Processor Factories for dealing with Update
-       Requests can be declared, and then used by name in Update
+       Requests can be declared, and then used by title in Update
        Request Processors
 
        http://wiki.apache.org/solr/UpdateRequestProcessor
@@ -1192,19 +1192,19 @@
        
        See http://wiki.apache.org/solr/GuessingFieldTypes
     -->
-  <updateRequestProcessorChain name="add-unknown-fields-to-the-schema">
+  <updateRequestProcessorChain title="add-unknown-fields-to-the-schema">
     <!-- UUIDUpdateProcessorFactory will generate an id if none is present in the incoming document -->
     <processor class="solr.UUIDUpdateProcessorFactory" />
     <processor class="solr.RemoveBlankFieldUpdateProcessorFactory"/>
     <processor class="solr.FieldNameMutatingUpdateProcessorFactory">
-      <str name="pattern">[^\w-\.]</str>
-      <str name="replacement">_</str>
+      <str title="pattern">[^\w-\.]</str>
+      <str title="replacement">_</str>
     </processor>
     <processor class="solr.ParseBooleanFieldUpdateProcessorFactory"/>
     <processor class="solr.ParseLongFieldUpdateProcessorFactory"/>
     <processor class="solr.ParseDoubleFieldUpdateProcessorFactory"/>
     <processor class="solr.ParseDateFieldUpdateProcessorFactory">
-      <arr name="format">
+      <arr title="format">
         <str>yyyy-MM-dd'T'HH:mm:ss.SSSZ</str>
         <str>yyyy-MM-dd'T'HH:mm:ss,SSSZ</str>
         <str>yyyy-MM-dd'T'HH:mm:ss.SSS</str>
@@ -1225,23 +1225,23 @@
       </arr>
     </processor>
     <processor class="solr.AddSchemaFieldsUpdateProcessorFactory">
-      <str name="defaultFieldType">strings</str>
-      <lst name="typeMapping">
-        <str name="valueClass">java.lang.Boolean</str>
-        <str name="fieldType">booleans</str>
+      <str title="defaultFieldType">strings</str>
+      <lst title="typeMapping">
+        <str title="valueClass">java.lang.Boolean</str>
+        <str title="fieldType">booleans</str>
       </lst>
-      <lst name="typeMapping">
-        <str name="valueClass">java.util.Date</str>
-        <str name="fieldType">tdates</str>
+      <lst title="typeMapping">
+        <str title="valueClass">java.util.Date</str>
+        <str title="fieldType">tdates</str>
       </lst>
-      <lst name="typeMapping">
-        <str name="valueClass">java.lang.Long</str>
-        <str name="valueClass">java.lang.Integer</str>
-        <str name="fieldType">tlongs</str>
+      <lst title="typeMapping">
+        <str title="valueClass">java.lang.Long</str>
+        <str title="valueClass">java.lang.Integer</str>
+        <str title="fieldType">tlongs</str>
       </lst>
-      <lst name="typeMapping">
-        <str name="valueClass">java.lang.Number</str>
-        <str name="fieldType">tdoubles</str>
+      <lst title="typeMapping">
+        <str title="valueClass">java.lang.Number</str>
+        <str title="fieldType">tdoubles</str>
       </lst>
     </processor>
     <processor class="solr.LogUpdateProcessorFactory"/>
@@ -1259,13 +1259,13 @@
        
     -->
   <!--
-     <updateRequestProcessorChain name="dedupe">
+     <updateRequestProcessorChain title="dedupe">
        <processor class="solr.processor.SignatureUpdateProcessorFactory">
-         <bool name="enabled">true</bool>
-         <str name="signatureField">id</str>
-         <bool name="overwriteDupes">false</bool>
-         <str name="fields">name,features,cat</str>
-         <str name="signatureClass">solr.processor.Lookup3Signature</str>
+         <bool title="enabled">true</bool>
+         <str title="signatureField">id</str>
+         <bool title="overwriteDupes">false</bool>
+         <str title="fields">title,features,cat</str>
+         <str title="signatureClass">solr.processor.Lookup3Signature</str>
        </processor>
        <processor class="solr.LogUpdateProcessorFactory" />
        <processor class="solr.RunUpdateProcessorFactory" />
@@ -1276,18 +1276,18 @@
 
        This example update chain identifies the language of the incoming
        documents using the langid contrib. The detected language is
-       written to field language_s. No field name mapping is done.
+       written to field language_s. No field title mapping is done.
        The fields used for detection are text, title, subject and description,
        making this example suitable for detecting languages form full-text
        rich documents injected via ExtractingRequestHandler.
        See more about langId at http://wiki.apache.org/solr/LanguageDetection
     -->
   <!--
-   <updateRequestProcessorChain name="langid">
+   <updateRequestProcessorChain title="langid">
      <processor class="org.apache.solr.update.processor.TikaLanguageIdentifierUpdateProcessorFactory">
-       <str name="langid.fl">text,title,subject,description</str>
-       <str name="langid.langField">language_s</str>
-       <str name="langid.fallback">en</str>
+       <str title="langid.fl">text,title,subject,description</str>
+       <str title="langid.langField">language_s</str>
+       <str title="langid.fallback">en</str>
      </processor>
      <processor class="solr.LogUpdateProcessorFactory" />
      <processor class="solr.RunUpdateProcessorFactory" />
@@ -1301,11 +1301,11 @@
     See more about the script update processor at http://wiki.apache.org/solr/ScriptUpdateProcessor
   -->
   <!--
-    <updateRequestProcessorChain name="script">
+    <updateRequestProcessorChain title="script">
       <processor class="solr.StatelessScriptUpdateProcessorFactory">
-        <str name="script">update-script.js</str>
-        <lst name="params">
-          <str name="config_param">example config parameter</str>
+        <str title="script">update-script.js</str>
+        <lst title="params">
+          <str title="config_param">example config parameter</str>
         </lst>
       </processor>
       <processor class="solr.RunUpdateProcessorFactory" />
@@ -1317,7 +1317,7 @@
        http://wiki.apache.org/solr/QueryResponseWriter
 
        Request responses will be written using the writer specified by
-       the 'wt' request parameter matching the name of a registered
+       the 'wt' request parameter matching the title of a registered
        writer.
 
        The "default" writer is the default and will be used if 'wt' is
@@ -1327,66 +1327,66 @@
        overridden...
     -->
   <!--
-     <queryResponseWriter name="xml" 
+     <queryResponseWriter title="xml"
                           default="true"
                           class="solr.XMLResponseWriter" />
-     <queryResponseWriter name="json" class="solr.JSONResponseWriter"/>
-     <queryResponseWriter name="python" class="solr.PythonResponseWriter"/>
-     <queryResponseWriter name="ruby" class="solr.RubyResponseWriter"/>
-     <queryResponseWriter name="php" class="solr.PHPResponseWriter"/>
-     <queryResponseWriter name="phps" class="solr.PHPSerializedResponseWriter"/>
-     <queryResponseWriter name="csv" class="solr.CSVResponseWriter"/>
-     <queryResponseWriter name="schema.xml" class="solr.SchemaXmlResponseWriter"/>
+     <queryResponseWriter title="json" class="solr.JSONResponseWriter"/>
+     <queryResponseWriter title="python" class="solr.PythonResponseWriter"/>
+     <queryResponseWriter title="ruby" class="solr.RubyResponseWriter"/>
+     <queryResponseWriter title="php" class="solr.PHPResponseWriter"/>
+     <queryResponseWriter title="phps" class="solr.PHPSerializedResponseWriter"/>
+     <queryResponseWriter title="csv" class="solr.CSVResponseWriter"/>
+     <queryResponseWriter title="schema.xml" class="solr.SchemaXmlResponseWriter"/>
     -->
 
-  <queryResponseWriter name="json" class="solr.JSONResponseWriter">
+  <queryResponseWriter title="json" class="solr.JSONResponseWriter">
     <!-- For the purposes of the tutorial, JSON responses are written as
      plain text so that they are easy to read in *any* browser.
      If you expect a MIME type of "application/json" just remove this override.
     -->
-    <str name="content-type">text/plain; charset=UTF-8</str>
+    <str title="content-type">text/plain; charset=UTF-8</str>
   </queryResponseWriter>
 
   <!--
      Custom response writers can be declared as needed...
     -->
-  <queryResponseWriter name="velocity" class="solr.VelocityResponseWriter" startup="lazy">
-    <str name="template.base.dir">${velocity.template.base.dir:}</str>
-    <str name="solr.resource.loader.enabled">${velocity.solr.resource.loader.enabled:true}</str>
-    <str name="params.resource.loader.enabled">${velocity.params.resource.loader.enabled:false}</str>
+  <queryResponseWriter title="velocity" class="solr.VelocityResponseWriter" startup="lazy">
+    <str title="template.base.dir">${velocity.template.base.dir:}</str>
+    <str title="solr.resource.loader.enabled">${velocity.solr.resource.loader.enabled:true}</str>
+    <str title="params.resource.loader.enabled">${velocity.params.resource.loader.enabled:false}</str>
   </queryResponseWriter>
 
   <!-- XSLT response writer transforms the XML output by any xslt file found
        in Solr's conf/xslt directory.  Changes to xslt files are checked for
        every xsltCacheLifetimeSeconds.  
     -->
-  <queryResponseWriter name="xslt" class="solr.XSLTResponseWriter">
-    <int name="xsltCacheLifetimeSeconds">5</int>
+  <queryResponseWriter title="xslt" class="solr.XSLTResponseWriter">
+    <int title="xsltCacheLifetimeSeconds">5</int>
   </queryResponseWriter>
 
   <!-- Query Parsers
 
        https://cwiki.apache.org/confluence/display/solr/Query+Syntax+and+Parsing
 
-       Multiple QParserPlugins can be registered by name, and then
+       Multiple QParserPlugins can be registered by title, and then
        used in either the "defType" param for the QueryComponent (used
        by SearchHandler) or in LocalParams
     -->
   <!-- example of registering a query parser -->
   <!--
-     <queryParser name="myparser" class="com.mycompany.MyQParserPlugin"/>
+     <queryParser title="myparser" class="com.mycompany.MyQParserPlugin"/>
     -->
 
   <!-- Function Parsers
 
        http://wiki.apache.org/solr/FunctionQuery
 
-       Multiple ValueSourceParsers can be registered by name, and then
+       Multiple ValueSourceParsers can be registered by title, and then
        used as function names when using the "func" QParser.
     -->
   <!-- example of registering a custom function parser  -->
   <!--
-     <valueSourceParser name="myfunc" 
+     <valueSourceParser title="myfunc"
                         class="com.mycompany.MyValueSourceParser" />
     -->
 
@@ -1396,22 +1396,22 @@
     -->
   <!--
      Could be something like:
-     <transformer name="db" class="com.mycompany.LoadFromDatabaseTransformer" >
-       <int name="connection">jdbc://....</int>
+     <transformer title="db" class="com.mycompany.LoadFromDatabaseTransformer" >
+       <int title="connection">jdbc://....</int>
      </transformer>
      
      To add a constant value to all docs, use:
-     <transformer name="mytrans2" class="org.apache.solr.response.transform.ValueAugmenterFactory" >
-       <int name="value">5</int>
+     <transformer title="mytrans2" class="org.apache.solr.response.transform.ValueAugmenterFactory" >
+       <int title="value">5</int>
      </transformer>
      
      If you want the user to still be able to change it with _value:something_ use this:
-     <transformer name="mytrans3" class="org.apache.solr.response.transform.ValueAugmenterFactory" >
-       <double name="defaultValue">5</double>
+     <transformer title="mytrans3" class="org.apache.solr.response.transform.ValueAugmenterFactory" >
+       <double title="defaultValue">5</double>
      </transformer>
 
       If you are using the QueryElevationComponent, you may wish to mark documents that get boosted.  The
       EditorialMarkerFactory will do exactly that:
-     <transformer name="qecBooster" class="org.apache.solr.response.transform.EditorialMarkerFactory" />
+     <transformer title="qecBooster" class="org.apache.solr.response.transform.EditorialMarkerFactory" />
     -->
 </config>
