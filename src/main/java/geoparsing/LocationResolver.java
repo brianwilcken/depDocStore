@@ -55,10 +55,17 @@ public class LocationResolver {
     }
 
     public static GeoNameWithFrequencyScore getOptimalGeoLocation(List<GeoNameWithFrequencyScore> geoNames) {
+        //in case two geoname objects have equal frequencies then prefer the object with a higher administrative division
         GeoNameWithFrequencyScore optimalGeoLocation = geoNames.stream().max(new Comparator<GeoNameWithFrequencyScore>() {
             @Override
             public int compare(GeoNameWithFrequencyScore geoName1, GeoNameWithFrequencyScore geoName2) {
-                return Integer.compare(geoName1.getFreqScore(), geoName2.getFreqScore());
+                int freqCompare = Integer.compare(geoName1.getFreqScore(), geoName2.getFreqScore());
+                if (freqCompare != 0) {
+                    return freqCompare;
+                } else {
+                    int adminDivCompare = Integer.compare(geoName1.getAdminDiv(), geoName2.getAdminDiv());
+                    return adminDivCompare;
+                }
             }
         }).get();
 
@@ -104,37 +111,39 @@ public class LocationResolver {
             }
         }
 
-        //Having filtered down to a set of statistically significant geoNames, run a clustering
-        //method to ensure against outliers.
-
-        //There should be two levels of clustering happen: top-level clustering of division 0 and 1 locations, and lower-level for everything else
-        List<GeoNameWithFrequencyScore> topLevel = validForAdminDiv.stream().filter(p -> p.getAdminDiv() <= FeatureClass.P.ordinal()).collect(Collectors.toList());
-        double clusterRadius = getClusterRadius(topLevel);
-        int minClusterSize = getMinClusterSize(topLevel);
-        List<GeoNameWithFrequencyScore> validTopLevel = getValidGeoCoordinatesByClustering(topLevel, clusterRadius, minClusterSize, 1, 2, 0);
-        List<GeoNameWithFrequencyScore> lowerLevel = validForAdminDiv.stream().filter(p -> p.getAdminDiv() > FeatureClass.P.ordinal()).collect(Collectors.toList());
-        clusterRadius = getClusterRadius(lowerLevel);
-        minClusterSize = getMinClusterSize(lowerLevel);
-        List<GeoNameWithFrequencyScore> validTopLevelWithLowerLevel = new ArrayList<>();
-        validTopLevelWithLowerLevel.addAll(validTopLevel);
-        validTopLevelWithLowerLevel.addAll(lowerLevel);
-        List<GeoNameWithFrequencyScore> validLowerLevel = getValidGeoCoordinatesByClustering(validTopLevelWithLowerLevel, clusterRadius, minClusterSize, 0.25, 5, 0);
-        validLowerLevel = validLowerLevel.stream().filter(p -> p.getAdminDiv() > FeatureClass.P.ordinal()).collect(Collectors.toList());
-
         List<GeoNameWithFrequencyScore> validOverall = new ArrayList<>();
-        validOverall.addAll(validTopLevel);
-        validOverall.addAll(validLowerLevel);
-        //validOverall = filterByStatistics(validOverall);
+        if (validForAdminDiv.size() > 0) {
+            //Having filtered down to a set of statistically significant geoNames, run a clustering
+            //method to ensure against outliers.
 
-        //Sort the valid set by geoname class ordinal to find the minimum administrative level.  This is assumed to
-        //be the most precise location.
-        Collections.sort(validOverall, new Comparator<GeoNameWithFrequencyScore>() {
+            //There should be two levels of clustering happen: top-level clustering of division 0 and 1 locations, and lower-level for everything else
+            List<GeoNameWithFrequencyScore> topLevel = validForAdminDiv.stream().filter(p -> p.getAdminDiv() <= FeatureClass.P.ordinal()).collect(Collectors.toList());
+            double clusterRadius = getClusterRadius(topLevel);
+            int minClusterSize = getMinClusterSize(topLevel);
+            List<GeoNameWithFrequencyScore> validTopLevel = getValidGeoCoordinatesByClustering(topLevel, clusterRadius, minClusterSize, 1, 2, 0);
+            List<GeoNameWithFrequencyScore> lowerLevel = validForAdminDiv.stream().filter(p -> p.getAdminDiv() > FeatureClass.P.ordinal()).collect(Collectors.toList());
+            clusterRadius = getClusterRadius(lowerLevel);
+            minClusterSize = getMinClusterSize(lowerLevel);
+            List<GeoNameWithFrequencyScore> validTopLevelWithLowerLevel = new ArrayList<>();
+            validTopLevelWithLowerLevel.addAll(validTopLevel);
+            validTopLevelWithLowerLevel.addAll(lowerLevel);
+            List<GeoNameWithFrequencyScore> validLowerLevel = getValidGeoCoordinatesByClustering(validTopLevelWithLowerLevel, clusterRadius, minClusterSize, 0.25, 5, 0);
+            validLowerLevel = validLowerLevel.stream().filter(p -> p.getAdminDiv() > FeatureClass.P.ordinal()).collect(Collectors.toList());
 
-            @Override
-            public int compare(GeoNameWithFrequencyScore t1, GeoNameWithFrequencyScore t2) {
-                return Integer.compare(t2.getGeoName().getFeatureClass().ordinal(), t1.getGeoName().getFeatureClass().ordinal());
-            }
-        });
+            validOverall.addAll(validTopLevel);
+            validOverall.addAll(validLowerLevel);
+            //validOverall = filterByStatistics(validOverall);
+
+            //Sort the valid set by geoname class ordinal to find the minimum administrative level.  This is assumed to
+            //be the most precise location.
+            Collections.sort(validOverall, new Comparator<GeoNameWithFrequencyScore>() {
+
+                @Override
+                public int compare(GeoNameWithFrequencyScore t1, GeoNameWithFrequencyScore t2) {
+                    return Integer.compare(t2.getGeoName().getFeatureClass().ordinal(), t1.getGeoName().getFeatureClass().ordinal());
+                }
+            });
+        }
 
         return validOverall;
     }
@@ -168,21 +177,25 @@ public class LocationResolver {
     }
 
     private double getClusterRadius(List<GeoNameWithFrequencyScore> validForAdminDiv) {
-        GeoNameWithFrequencyScore maxFreqGeoName = validForAdminDiv.stream().max(new Comparator<GeoNameWithFrequencyScore>() {
+        Optional<GeoNameWithFrequencyScore> maxFreqGeoName = validForAdminDiv.stream().max(new Comparator<GeoNameWithFrequencyScore>() {
             @Override
             public int compare(GeoNameWithFrequencyScore t1, GeoNameWithFrequencyScore t2) {
                 return Integer.compare(t1.getFreqScore(), t2.getFreqScore());
             }
-        }).get();
+        });
 
-        //The assumption is that the search radius needs to expand if the most frequently mentioned location
-        //is an administrative region like a state or a county.
-        if (maxFreqGeoName.getAdminDiv() == FeatureClass.A.ordinal()) {
-            return 3; //corresponds to a radius of about 210 miles
-        } else if (maxFreqGeoName.getAdminDiv() == FeatureClass.P.ordinal()) {
-            return 1; //radius of about 70 miles
+        if (maxFreqGeoName.isPresent()) {
+            //The assumption is that the search radius needs to expand if the most frequently mentioned location
+            //is an administrative region like a state or a county.
+            if (maxFreqGeoName.get().getAdminDiv() == FeatureClass.A.ordinal()) {
+                return 3; //corresponds to a radius of about 210 miles
+            } else if (maxFreqGeoName.get().getAdminDiv() == FeatureClass.P.ordinal()) {
+                return 1; //radius of about 70 miles
+            } else {
+                return 0.25; //radius of about 17 miles
+            }
         } else {
-            return 0.25; //radius of about 17 miles
+            return 0;
         }
     }
 

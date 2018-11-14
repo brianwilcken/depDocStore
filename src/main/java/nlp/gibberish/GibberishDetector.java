@@ -150,17 +150,26 @@ public class GibberishDetector {
 	 * @return the line-by-line percentage of the document containing gibberish.
 	 */
 	public double getPercentGibberish(String doc) {
-		int docSize = doc.length();
-		double minConfidence = threshold / docSize;
+		double minConfidence = getMinConfidence(doc);
+		return getPercentGibberish(doc, minConfidence);
+	}
+
+	public double getConfidenceScore(String sentence) {
+		String line = sentence.replaceAll(" ", ""); //remove all whitespace
+		double degreeOfConfidence = getAvgTransitionProbability(line, logProbabilityMatrix) - threshold;
+		double confidenceScore = degreeOfConfidence / line.length();
+
+		return confidenceScore;
+	}
+
+	public double getPercentGibberish(String doc, double minConfidence) {
 		String[] sentences = NLPTools.detectSentences(doc);
 
 		int totalLines = sentences.length;
 		int gibberishLines = 0;
 		if (sentences.length > 1) {
 			for (String sentence : sentences) {
-				String line = sentence.replaceAll(" ", ""); //remove all whitespace
-				double degreeOfConfidence = getAvgTransitionProbability(line, logProbabilityMatrix) - threshold;
-				double confidenceScore = degreeOfConfidence / line.length();
+				double confidenceScore = getConfidenceScore(sentence);
 				if (confidenceScore < minConfidence) {
 					++gibberishLines;
 				}
@@ -176,17 +185,25 @@ public class GibberishDetector {
 		return percentGibberish;
 	}
 
-	public String removeGibberishLines(String doc) {
+	public double getMinConfidence(String doc) {
 		int docSize = doc.length();
 		double minConfidence = threshold / docSize;
+
+		return minConfidence;
+	}
+
+	public String removeGibberishLines(String doc) {
+		double minConfidence = getMinConfidence(doc);
+		return removeGibberishLines(doc, minConfidence);
+	}
+
+	public String removeGibberishLines(String doc, double minConfidence) {
 		String[] sentences = NLPTools.detectSentences(doc);
 
 		List<String> notGibberish = new ArrayList<>();
 		if (sentences.length > 1) {
 			for (String sentence : sentences) {
-				String line = sentence.replaceAll(" ", ""); //remove all whitespace
-				double degreeOfConfidence = getAvgTransitionProbability(line, logProbabilityMatrix) - threshold;
-				double confidenceScore = degreeOfConfidence / line.length();
+				double confidenceScore = getConfidenceScore(sentence);
 				if (confidenceScore < minConfidence) {
 					notGibberish.add(sentence);
 				}
@@ -202,7 +219,7 @@ public class GibberishDetector {
 		return gibberishRemoved;
 	}
 
-	private boolean isLineGibberish(String line) {
+	public boolean isLineGibberish(String line) {
 		return !(getAvgTransitionProbability(line, logProbabilityMatrix) > threshold);
 	}
 }

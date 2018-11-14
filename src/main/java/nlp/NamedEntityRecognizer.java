@@ -6,6 +6,7 @@ import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
+import edu.stanford.nlp.util.StringUtils;
 import opennlp.tools.namefind.*;
 import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.tokenize.TokenizerModel;
@@ -188,34 +189,36 @@ public class NamedEntityRecognizer {
 
     public List<NamedEntity> detectNamedEntities(String document, String category, double threshold) throws IOException {
         List<CoreMap> sentences = NLPTools.detectSentencesStanford(document);
-        return detectNamedEntities(sentences, category, threshold);
+        List<NamedEntity> entities = detectNamedEntities(sentences, category, threshold);
+        return entities;
     }
 
     public List<NamedEntity> detectNamedEntities(List<CoreMap> sentences, String category, double threshold, int... numTries) {
         List<NamedEntity> namedEntities = new ArrayList<>();
         try {
-            TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, models.get(category));
-            NameFinderME nameFinder = new NameFinderME(model);
+            if (models.containsKey(category)) {
+                TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, models.get(category));
+                NameFinderME nameFinder = new NameFinderME(model);
 
-            for (int s = 0; s < sentences.size(); s++) {
-                String sentence = sentences.get(s).toString();
-                List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
-                String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
-                Span[] nameSpans = nameFinder.find(tokensArr);
-                double[] probs = nameFinder.probs(nameSpans);
-                for (int i = 0; i < nameSpans.length; i++) {
-                    double prob = probs[i];
-                    Span span = nameSpans[i];
-                    int start = span.getStart();
-                    int end = span.getEnd();
-                    String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
-                    String entity = String.join(" ", entityParts);
-                    if (prob > threshold) {
-                        namedEntities.add(new NamedEntity(entity, span, s));
+                for (int s = 0; s < sentences.size(); s++) {
+                    String sentence = sentences.get(s).toString();
+                    List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+                    String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
+                    Span[] nameSpans = nameFinder.find(tokensArr);
+                    double[] probs = nameFinder.probs(nameSpans);
+                    for (int i = 0; i < nameSpans.length; i++) {
+                        double prob = probs[i];
+                        Span span = nameSpans[i];
+                        int start = span.getStart();
+                        int end = span.getEnd();
+                        String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
+                        String entity = String.join(" ", entityParts);
+                        if (prob > threshold) {
+                            namedEntities.add(new NamedEntity(entity, span, s));
+                        }
                     }
                 }
             }
-
             return namedEntities;
         } catch (IOException e) {
             if(numTries.length == 0) {

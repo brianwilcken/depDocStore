@@ -6,10 +6,12 @@ import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.coref.CorefCoreAnnotations;
 import edu.stanford.nlp.coref.data.Mention;
 import edu.stanford.nlp.ling.CoreAnnotations;
+import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
 
+import nlp.gibberish.GibberishDetector;
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,9 +29,9 @@ public class CoreferenceResolver {
     public CoreferenceResolver() {
         Properties props = new Properties();
         props.setProperty("annotators", "tokenize,ssplit,pos,lemma,ner,parse,coref");
-        props.setProperty("threads", "4");
+        props.setProperty("threads", "16");
         pipeline = new StanfordCoreNLP(props);
-        props.setProperty("annotators", "tokenize,ssplit");
+        props.setProperty("annotators", "tokenize,ssplit,pos");
         sentPipeline = new StanfordCoreNLP(props);
     }
 
@@ -65,6 +67,7 @@ public class CoreferenceResolver {
         List<CoreMap> sentences = sentenceAnnotations.get(CoreAnnotations.SentencesAnnotation.class);
 
         final double similarityThreshold = 0.7;
+        final double maxNounPercentage = 0.65;
         final int partitionSize = 10;
         List<List<CoreMap>> chunks = Lists.partition(sentences, partitionSize);
 
@@ -72,11 +75,18 @@ public class CoreferenceResolver {
         int lineStart = 0;
         logger.info("Coref: partitioned document by " + partitionSize + " line chunks into " + chunks.size() + " parts");
         for (List<CoreMap> chunk : chunks) {
+
             List<String> chunkSentences = chunk.stream().map(p -> p.toString()).collect(Collectors.toList());
             int sentTotal = chunkSentences.size();
             for (int i = 0; i < sentTotal; i++) {
-                String chunkSentence = chunkSentences.get(i);
-                if (chunkSentence.length() >= 1500) {
+                List<CoreLabel> tokens = chunk.get(i).get(CoreAnnotations.TokensAnnotation.class);
+                int numTokens = tokens.size();
+                int numNounTokens = tokens.stream()
+                        .filter(p -> p.tag().contains("NN") || p.tag().contains("CD"))
+                        .collect(Collectors.toList())
+                        .size();
+                double percentNouns = (double) numNounTokens / (double) numTokens;
+                if (percentNouns > maxNounPercentage) {
                     chunkSentences.set(i, "Redacted.");
                 }
             }
@@ -103,9 +113,6 @@ public class CoreferenceResolver {
                 e.printStackTrace();
             }
         }
-
-
-        //EXPERIMENT
 
         logger.info("Coref: finished resolving coreferences for all chunks");
         List<Coreference> corefEntities = new ArrayList<>();
@@ -180,35 +187,6 @@ public class CoreferenceResolver {
                 }
             }
         }
-
-        //END EXPERIMENT
-
-//        logger.info("Coref: finished resolving coreferences for all chunks");
-//        List<Coreference> corefEntities = new ArrayList<>();
-//        for (CorefTask corefTask : corefTasks) {
-//            Collection<CorefChain> corefs = corefTask.getCorefs();
-//            for (CorefChain coref : corefs) {
-//                CorefChain.CorefMention mention = coref.getRepresentativeMention();
-//                String corefEntity = mention.mentionSpan;
-//                logger.info("Coref: now evaluating coreference: " + corefEntity);
-//                List<NamedEntity> matchingEntities = entities.stream()
-//                        .filter(p -> NLPTools.similarity(p.getEntity(), corefEntity) > similarityThreshold &&
-//                                corefTask.getLineStart() <= p.getLine() &&
-//                                p.getLine() < (corefTask.getLineStart() + partitionSize))
-//                        .collect(Collectors.toList());
-//
-//                if (matchingEntities.size() > 0) {
-//                    logger.info("Coref: matching entity found.  Saving relation for: " + corefEntity);
-//                    NamedEntity namedEntity = matchingEntities.get(0);
-//                    List<CorefChain.CorefMention> mentions = coref.getMentionsInTextualOrder();
-//                    for (CorefChain.CorefMention corefMention : mentions) {
-//                        int line = corefTask.getLineStart() + (corefMention.sentNum - 1);
-//                        Coreference coreference = new Coreference(docId, namedEntity, corefMention.mentionSpan, line, corefMention.startIndex, corefMention.endIndex);
-//                        corefEntities.add(coreference);
-//                    }
-//                }
-//            }
-//        }
 
         return corefEntities;
     }
@@ -403,8 +381,8 @@ public class CoreferenceResolver {
                 "A result of changes in financial management has been an improved bond rating with Fitch Moody s and Standard Poors from A to AA.\n" +
                 "Balance Sheet Summary for fiscal years ended June th Income Statement Sum ary fiscal years nded June th Other Cash Flow Information r fiscal years nded June th Million Dollars Total Assets Million Dollars Million Dollars Million Dollars Total Revenues Net Income Funds Spent on Capital Projects Staff Administration Richard Bay Marilyn Payan Linda Townes Neil Cox Reid Lewis Catherine Collins Debbie Ericksen Brian Callister Ellen Bolliger Debbie Gates David Martin Perry Widdison Linda MacNeil Abby Patonai Nelson Jeanette Perry Ann Mecham Margaret Dea Tammy Parker Engineering Alan Packard Yvette Amparo Espinoza Mark Atencio David McLean Don Olsen Shane Swensen Dave Norman Marcelo Anglade Paul Rowley Denise Goodwin Distribution Dirk Anderson Carolyn Greenwell Karen Marchant Jeff Hilbert Steve Anderson Kirk Oman Robert Squire Frank Montoya Dave Spackman Craig Fahrni Allen Taylor Paul Pierce Mike Astill Chris Egan James Estrada Devin Th edell Greg Mark Jim Bogenschutz Samuel Rogers Steve Schmidt Paul Wanlass Val Cossey Devin Warr Adrian Parra Casey Mascaro Jared Ballard Kevin Crane Neil Duncan Leonard Mascher Larry Love Alan Th ackeray Ken Brown Danny White Kathryn Brown Al Warner Dave Hyde Larry Shipman Chad Steadman Jeff Moulton Gordon Batt Blake Woolsey Ken Butterfi eld Steve Beck Scott Olsen Tracy Timothy Danny Ernest Steve Minch Quintin Rubio Dustin Hamilton Justin Shinsel Mike Sigler Water SupplyWater Quality Bart Forsyth Jackie Maas Jeff King David Rice Clifton Smith Courtney Brown Water Supply Jeff Bryant Karin Terry Mark Winters Wade Tuft Blake Bills Trade Barnett Nathan Talbot Dave Beratto Jarod Moffi tt Andy Adams Information Technology Jason Brown Matt Olsen Kelly Erickson Twila Brantley Lorrie Fox Treatment Shazelle Terry Vickie Hart Lorraine Kirkham Steve Blake Josh Th omas Tweet Johnson Doug Leonard Scott Hermreck Johnny Trimble Duff Turner Gene Anderson Ray Stokes Mike Axelgard Kevin James Dave Mecham Cary Shaw Don Scallions Steve Crawford Brad Mabey Dan Claypool Eduardo Cracchiolo Nick McDonald Steve Hansen Marie Owens Ron Kidd Stan Grundy Deon Whittle Te Phan Savidtri Th anasilp Ron Bown Lorena Purissimo Jackie Buhler JORDAN VALLEY WATER CONSERVANCY DISTRICT Jordan Valley Water Conservancy District South West West Jordan UT www.jvwcd.org\n";
 
-        CoreferenceResolver resolver = new CoreferenceResolver();
-        resolver.getCoreferencesFromDocument(text2, null, null);
+        //CoreferenceResolver resolver = new CoreferenceResolver();
+        //resolver.getCoreferencesFromDocument(text2, null, null);
 //        resolver.resolve(text2);
 //        Collection<CorefChain> corefs = resolver.getCoreferences();
 //        List<CoreMap> sentences = resolver.getSentences();

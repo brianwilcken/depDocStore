@@ -13,9 +13,11 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.util.PdfBoxUtilities;
 import nlp.*;
 import nlp.gibberish.GibberishDetector;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.bson.types.ObjectId;
@@ -37,6 +39,7 @@ import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -88,9 +91,9 @@ public class DocumentsController {
         categorizer = new DocumentCategorizer();
         recognizer = new NamedEntityRecognizer(solrClient);
         locationResolver = new LocationResolver();
+        detector = new GibberishDetector();
         coreferenceResolver = new CoreferenceResolver();
         informationExtractor = new InformationExtractor();
-        detector = new GibberishDetector();
 
         //This setting speeds up Tesseract OCR
         System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
@@ -176,18 +179,18 @@ public class DocumentsController {
             File uploadedFile = Tools.WriteFileToDisk(temporaryFileRepo + filename, document.getInputStream());
 
             logger.info(context.getRemoteAddr() + " -> " + "Document stored");
-            List<SolrDocument> docs = new ArrayList<>();
+            SolrDocumentList docs = new SolrDocumentList();
 
-            SolrDocument solrDocument = new SolrDocument();
+            SolrDocument doc = new SolrDocument();
             String docId = UUID.randomUUID().toString();
-            solrDocument.addField("id", docId);
-            solrDocument.addField("filename", filename);
-            metadata.entrySet().stream().forEach(p -> solrDocument.addField(p.getKey(), p.getValue()));
+            doc.addField("id", docId);
+            doc.addField("filename", filename);
+            metadata.entrySet().stream().forEach(p -> doc.addField(p.getKey(), p.getValue()));
 
             logger.info(context.getRemoteAddr() + " -> " + "Metadata added to document");
             String timestamp = Tools.getFormattedDateTimeString(Instant.now());
-            solrDocument.addField("created", timestamp);
-            solrDocument.addField("lastUpdated", timestamp);
+            doc.addField("created", timestamp);
+            doc.addField("lastUpdated", timestamp);
 
             logger.info(context.getRemoteAddr() + " -> " + "timestamp added");
             String contentType = Files.probeContentType(uploadedFile.toPath());
@@ -195,63 +198,21 @@ public class DocumentsController {
             if (contentType.compareTo("application/pdf") == 0) {
                 logger.info(context.getRemoteAddr() + " -> " + "pdf document detected");
                 String docText = Tools.extractPDFText(uploadedFile, detector, pdfProcessingService, tesseractOCRService);
-                solrDocument.addField("docText", docText);
+                doc.addField("docText", docText);
 
                 if (Strings.isNullOrEmpty(docText)) {
                     return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
                 }
 
-                String parsed = recognizer.deepCleanText(docText);
-                solrDocument.addField("parsed", parsed);
-                String category = Tools.removeUTF8BOM(categorizer.detectCategory(parsed));
-                solrDocument.addField("category", category);
-                logger.info(context.getRemoteAddr() + " -> " + "category detected: " + category);
-                List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, category, 0.5);
-                String annotated = recognizer.autoAnnotate(parsed, entities);
-                solrDocument.addField("annotated", annotated);
-
-                List<SolrDocument> entityDocs = entities.stream()
-                        .map(p -> p.mutate(docId))
-                        .collect(Collectors.toList());
-                docs.addAll(entityDocs);
-
-                logger.info(context.getRemoteAddr() + " -> " + "resolving locations");
-                List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed, docId);
-                List<SolrDocument> locDocs = geoNames.stream()
-                        .map(p -> p.mutate(docId))
-                        .collect(Collectors.toList());
-                docs.addAll(locDocs);
-
-                if (entities.size() > 0) {
-                    logger.info(context.getRemoteAddr() + " -> " + "resolving coreferences");
-                    //Coreferences inform the information extraction step
-                    List<Coreference> coreferences = coreferenceResolver.getCoreferencesFromDocument(parsed, docId, entities);
-                    List<SolrDocument> corefDocs = coreferences.stream()
-                            .map(p -> p.mutate())
-                            .collect(Collectors.toList());
-                    docs.addAll(corefDocs);
-
-                    logger.info(context.getRemoteAddr() + " -> " + "resolving entity relations");
-                    List<EntityRelation> entityRelations = informationExtractor.getEntityRelations(parsed, docId, entities, coreferences);
-                    List<SolrDocument> relDocs = entityRelations.stream()
-                            .map(p -> p.mutateForSolr(docId))
-                            .collect(Collectors.toList());
-                    docs.addAll(relDocs);
-
-                    if (geoNames.size() > 0) {
-                        Document n4jdoc = neo4jClient.addDocument(solrDocument);
-                        GeoNameWithFrequencyScore optimalGeoLocation = LocationResolver.getOptimalGeoLocation(geoNames);
-                        neo4jClient.addDependencies(n4jdoc, optimalGeoLocation, entityRelations);
-                    }
-                }
+                docs = runPDFNLPPipeline(docText, docId, doc);
             }
 
             logger.info(context.getRemoteAddr() + " -> " + "storing file to MongoDB");
             ObjectId fileId = mongoClient.StoreFile(uploadedFile);
-            solrDocument.addField("docStoreId", fileId.toString());
+            doc.addField("docStoreId", fileId.toString());
 
             logger.info(context.getRemoteAddr() + " -> " + "storing data to Solr");
-            docs.add(solrDocument);
+            docs.add(doc);
             solrClient.indexDocuments(docs);
             cleanupService.process();
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
@@ -287,54 +248,9 @@ public class DocumentsController {
                         } else {
                             doc.addField("docText", docText);
                         }
-                        String parsed = recognizer.deepCleanText(docText);
-                        if (doc.containsKey("parsed")) {
-                            doc.replace("parsed", parsed);
-                        } else {
-                            doc.addField("parsed", parsed);
-                        }
-                        String category = Tools.removeUTF8BOM(categorizer.detectCategory(parsed));
-                        if (doc.containsKey("category")) {
-                            doc.replace("category", category);
-                        } else {
-                            doc.addField("category", category);
-                        }
-                        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, category, 0.5);
-                        String annotated = recognizer.autoAnnotate(parsed, entities);
-                        if (doc.containsKey("annotated")) {
-                            doc.replace("annotated", annotated);
-                        } else {
-                            doc.addField("annotated", annotated);
-                        }
 
-                        List<SolrDocument> entityDocs = entities.stream()
-                                .map(p -> p.mutate(id))
-                                .collect(Collectors.toList());
-                        solrClient.indexDocuments(entityDocs);
-
-                        logger.info(context.getRemoteAddr() + " -> " + "resolving locations");
-                        List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed, id);
-                        List<SolrDocument> locDocs = geoNames.stream()
-                                .map(p -> p.mutate(id))
-                                .collect(Collectors.toList());
-                        docs.addAll(locDocs);
-                        solrClient.indexDocuments(locDocs);
-
-                        if (entities.size() > 0) {
-                            logger.info(context.getRemoteAddr() + " -> " + "resolving coreferences");
-                            List<Coreference> coreferences = coreferenceResolver.getCoreferencesFromDocument(parsed, id, entities);
-                            List<SolrDocument> corefDocs = coreferences.stream()
-                                    .map(p -> p.mutate())
-                                    .collect(Collectors.toList());
-                            docs.addAll(corefDocs);
-
-                            logger.info(context.getRemoteAddr() + " -> " + "resolving entity relations");
-                            List<EntityRelation> entityRelations = informationExtractor.getEntityRelations(parsed, id, entities, coreferences);
-                            List<SolrDocument> relDocs = entityRelations.stream()
-                                    .map(p -> p.mutateForSolr(id))
-                                    .collect(Collectors.toList());
-                            docs.addAll(relDocs);
-                        }
+                        SolrDocumentList solrDocs = runPDFNLPPipeline(docText, id, doc);
+                        solrClient.indexDocuments(solrDocs);
                     }
                 }
 
@@ -352,6 +268,66 @@ public class DocumentsController {
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
+    }
+
+    private SolrDocumentList runPDFNLPPipeline(String docText, String id, SolrDocument doc) throws SolrServerException, IOException {
+        SolrDocumentList docs = new SolrDocumentList();
+
+        String parsed = recognizer.deepCleanText(docText);
+        if (doc.containsKey("parsed")) {
+            doc.replace("parsed", parsed);
+        } else {
+            doc.addField("parsed", parsed);
+        }
+        String category = Tools.removeUTF8BOM(categorizer.detectCategory(parsed));
+        logger.info(context.getRemoteAddr() + " -> " + "category detected: " + category);
+        if (doc.containsKey("category")) {
+            doc.replace("category", category);
+        } else {
+            doc.addField("category", category);
+        }
+        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, category, 0.5);
+        String annotated = recognizer.autoAnnotate(parsed, entities);
+        if (doc.containsKey("annotated")) {
+            doc.replace("annotated", annotated);
+        } else {
+            doc.addField("annotated", annotated);
+        }
+
+        List<SolrDocument> entityDocs = entities.stream()
+                .map(p -> p.mutate(id))
+                .collect(Collectors.toList());
+        docs.addAll(entityDocs);
+
+        logger.info(context.getRemoteAddr() + " -> " + "resolving locations");
+        List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed, id);
+        List<SolrDocument> locDocs = geoNames.stream()
+                .map(p -> p.mutate(id))
+                .collect(Collectors.toList());
+        docs.addAll(locDocs);
+
+        if (entities.size() > 0 && geoNames.size() > 0) {
+            logger.info(context.getRemoteAddr() + " -> " + "resolving coreferences");
+            List<Coreference> coreferences = coreferenceResolver.getCoreferencesFromDocument(parsed, id, entities);
+            List<SolrDocument> corefDocs = coreferences.stream()
+                    .map(p -> p.mutate())
+                    .collect(Collectors.toList());
+            docs.addAll(corefDocs);
+
+            logger.info(context.getRemoteAddr() + " -> " + "resolving entity relations");
+            List<EntityRelation> entityRelations = informationExtractor.getEntityRelations(parsed, id, entities, coreferences);
+            List<SolrDocument> relDocs = entityRelations.stream()
+                    .map(p -> p.mutateForSolr(id))
+                    .collect(Collectors.toList());
+            docs.addAll(relDocs);
+
+            if (geoNames.size() > 0) {
+                Document n4jdoc = neo4jClient.addDocument(doc);
+                neo4jClient.addDependencies(n4jdoc, geoNames, entityRelations);
+            }
+        }
+
+        return docs;
     }
 
     @RequestMapping(value="/metadata/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
@@ -381,6 +357,34 @@ public class DocumentsController {
 //                if (metadata.keySet().contains("annotated")) {
 //                    nerModelTrainingService.process(this, (String)doc.get("category"));
 //                }
+                return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(context.getRemoteAddr() + " -> " + e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/reprocess/{id}", method=RequestMethod.PUT, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> reprocessDocument(@PathVariable(name="id") String id) {
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
+            if (!docs.isEmpty()) {
+                SolrDocument doc = docs.get(0);
+                String filename = doc.get("filename").toString();
+                String ext = FilenameUtils.getExtension(filename);
+
+                if (ext.equalsIgnoreCase("pdf")) {
+                    solrClient.deleteDocuments("docId:" + id);
+                    String docText = doc.get("docText").toString();
+                    SolrDocumentList solrDocs = runPDFNLPPipeline(docText, id, doc);
+                    logger.info(context.getRemoteAddr() + " -> " + "storing data to Solr");
+                    solrClient.indexDocuments(solrDocs);
+                    solrClient.indexDocument(doc);
+                }
+
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
