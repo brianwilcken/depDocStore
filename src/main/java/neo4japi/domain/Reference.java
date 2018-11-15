@@ -2,7 +2,7 @@ package neo4japi.domain;
 
 import org.neo4j.ogm.annotation.*;
 
-@RelationshipEntity(type = "REFERS_TO")
+@RelationshipEntity(type = "Refers_To")
 public class Reference {
     @Id
     @GeneratedValue

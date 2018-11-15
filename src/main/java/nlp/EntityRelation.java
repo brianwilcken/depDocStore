@@ -4,6 +4,8 @@ import neo4japi.domain.Dependency;
 import org.apache.solr.common.SolrDocument;
 import webapp.models.GeoNameWithFrequencyScore;
 
+import java.util.List;
+
 public class EntityRelation {
     private NamedEntity subjectEntity;
     private NamedEntity objectEntity;
@@ -28,9 +30,9 @@ public class EntityRelation {
         return doc;
     }
 
-    public Dependency mutateForNeo4j(GeoNameWithFrequencyScore loc) {
+    public Dependency mutateForNeo4j(GeoNameWithFrequencyScore loc, List<GeoNameWithFrequencyScore> geoNames) {
         Dependency dep = new Dependency();
-        dep.consume(this, loc);
+        dep.consume(this, loc, geoNames);
 
         return dep;
     }

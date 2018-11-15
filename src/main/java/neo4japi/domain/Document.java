@@ -9,16 +9,26 @@ import java.util.Set;
 @NodeEntity
 public class Document extends Entity {
 
+    private String UUID;
     private String solrId;
     private String title;
 
-    @Relationship(type = "REFERS_TO")
+    @Relationship(type = "Refers_To")
     private Set<Facility> facilities;
 
     public Document(String solrId, String title) {
+        this.UUID = java.util.UUID.randomUUID().toString();
         this.solrId = solrId;
         this.title = title;
         facilities = new HashSet<>();
+    }
+
+    public String getUUID() {
+        return UUID;
+    }
+
+    public void setUUID(String UUID) {
+        this.UUID = UUID;
     }
 
     public Document() {

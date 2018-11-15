@@ -23,7 +23,7 @@ import webapp.models.GeoNameWithFrequencyScore;
 
 public class LocationResolver {
     private final static Logger logger = LogManager.getLogger(LocationResolver.class);
-    private GeoParser parser;
+    private static GeoParser parser;
 
     public LocationResolver() {
         try {
@@ -54,22 +54,43 @@ public class LocationResolver {
         return geoNames;
     }
 
+    public static List<GeoName> getGeoNames(String text) {
+        try {
+            List<ResolvedLocation> resolvedLocations = parser.parse(text);
+            List<GeoName> geoNames = resolvedLocations.stream().map(p -> p.getGeoname()).collect(Collectors.toList());
+            return geoNames;
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            return null;
+        }
+    }
+
     public static GeoNameWithFrequencyScore getOptimalGeoLocation(List<GeoNameWithFrequencyScore> geoNames) {
         //in case two geoname objects have equal frequencies then prefer the object with a higher administrative division
-        GeoNameWithFrequencyScore optimalGeoLocation = geoNames.stream().max(new Comparator<GeoNameWithFrequencyScore>() {
-            @Override
-            public int compare(GeoNameWithFrequencyScore geoName1, GeoNameWithFrequencyScore geoName2) {
-                int freqCompare = Integer.compare(geoName1.getFreqScore(), geoName2.getFreqScore());
-                if (freqCompare != 0) {
-                    return freqCompare;
-                } else {
-                    int adminDivCompare = Integer.compare(geoName1.getAdminDiv(), geoName2.getAdminDiv());
-                    return adminDivCompare;
+        List<GeoNameWithFrequencyScore> possibleCities = geoNames.stream().filter(p -> p.getAdminDiv() == FeatureClass.P.ordinal()).collect(Collectors.toList());
+        if (possibleCities.size() > 0) {
+            GeoNameWithFrequencyScore optimalGeoLocation = possibleCities.stream().max(new Comparator<GeoNameWithFrequencyScore>() {
+                @Override
+                public int compare(GeoNameWithFrequencyScore geoName1, GeoNameWithFrequencyScore geoName2) {
+                    return Integer.compare(geoName1.getFreqScore(), geoName2.getFreqScore());
                 }
-            }
-        }).get();
+            }).get();
 
-        return optimalGeoLocation;
+            return optimalGeoLocation;
+        } else {
+            final int adminDivWeight = 20;
+
+            GeoNameWithFrequencyScore optimalGeoLocation = geoNames.stream().max(new Comparator<GeoNameWithFrequencyScore>() {
+                @Override
+                public int compare(GeoNameWithFrequencyScore geoName1, GeoNameWithFrequencyScore geoName2) {
+                    int geoName1Score = (geoName1.getAdminDiv() * adminDivWeight) + geoName1.getFreqScore();
+                    int geoName2Score = (geoName2.getAdminDiv() * adminDivWeight) + geoName2.getFreqScore();
+                    return Integer.compare(geoName1Score, geoName2Score);
+                }
+            }).get();
+
+            return optimalGeoLocation;
+        }
     }
 
     private List<GeoNameWithFrequencyScore> getValidGeoNames(List<ResolvedLocation> locations) {

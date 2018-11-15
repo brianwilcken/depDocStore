@@ -77,7 +77,7 @@ public class Neo4jClient {
     public void addDependencies(Document doc, List<GeoNameWithFrequencyScore> geoNames, List<EntityRelation> relations) {
         GeoNameWithFrequencyScore optimalGeoLocation = LocationResolver.getOptimalGeoLocation(geoNames);
         List<Dependency> dependencies = relations.stream()
-                .map(p -> p.mutateForNeo4j(optimalGeoLocation))
+                .map(p -> p.mutateForNeo4j(optimalGeoLocation, geoNames))
                 .collect(Collectors.toList());
 
         for (Dependency dependency : dependencies) {
@@ -97,7 +97,7 @@ public class Neo4jClient {
     public Dependency addDependency(Facility dependentFacility, Facility providingFacility, String relation) {
         Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
 
-        List<Dependency> dependencies = Lists.newArrayList(session.query(Dependency.class, "MATCH p=(f:Facility)-[r:DEPENDS_ON]->(g:Facility) WHERE ID(f) = " + dependentFacility.getId() + " AND r.relation = \"" + relation + "\" RETURN r", Collections.EMPTY_MAP));
+        List<Dependency> dependencies = Lists.newArrayList(session.query(Dependency.class, "MATCH p=(f:Facility)-[r:Dependent_On]->(g:Facility) WHERE f.UUID = \"" + dependentFacility.getUUID() + "\" AND r.relation = \"" + relation + "\" RETURN r", Collections.EMPTY_MAP));
 
         if (dependencies.size() == 0) {
             Dependency dependency = new Dependency();
@@ -114,7 +114,9 @@ public class Neo4jClient {
 
     public Facility addFacility(Facility facility, List<GeoNameWithFrequencyScore> geoNames) {
         final String facilityName = facility.getName();
-        final String facilityLoc = facility.getLocation();
+        final String facilityCity = facility.getCity();
+        final String facilityCounty = facility.getCounty();
+        final String facilityState = facility.getState();
         final double facilityLat = facility.getLatitude();
         final double facilityLon = facility.getLongitude();
         final double minSimilarityThreshold = 0.6;
@@ -139,7 +141,12 @@ public class Neo4jClient {
         if (nameMatched.size() > 0) {
             //first filter to find an exact match
             List<Facility> exactMatches = nameMatched.stream()
-                    .filter(p -> p.getName().equals(facilityName) && p.getLocation().equals(facilityLoc) && p.getLatitude() == facilityLat && p.getLongitude() == facilityLon)
+                    .filter(p -> p.getName().equals(facilityName) &&
+                            ((facilityCity == null && p.getCity() == null) || (p.getCity() != null && p.getCity().equals(facilityCity))) &&
+                            ((facilityCounty == null && p.getCounty() == null) || (p.getCounty() != null && p.getCounty().equals(facilityCounty))) &&
+                            ((facilityState == null && p.getState() == null) || (p.getState() != null && p.getState().equals(facilityState))) &&
+                            p.getLatitude() == facilityLat &&
+                            p.getLongitude() == facilityLon)
                     .collect(Collectors.toList());
 
             //if an exact match is found then return this

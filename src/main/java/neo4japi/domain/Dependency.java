@@ -4,7 +4,9 @@ import nlp.EntityRelation;
 import org.neo4j.ogm.annotation.*;
 import webapp.models.GeoNameWithFrequencyScore;
 
-@RelationshipEntity(type = "DEPENDS_ON")
+import java.util.List;
+
+@RelationshipEntity(type = "Dependent_On")
 public class Dependency {
     @Id
     @GeneratedValue
@@ -25,10 +27,9 @@ public class Dependency {
 
     public Dependency() {}
 
-    public void consume(EntityRelation relation, GeoNameWithFrequencyScore loc) {
-        String location = loc.composeLocationName(loc.getGeoName());
-        dependentFacility = new Facility(relation.getSubjectEntity().getEntity(), location, loc.getGeoName().getLatitude(), loc.getGeoName().getLongitude());
-        providingFacility = new Facility(relation.getObjectEntity().getEntity(), location, loc.getGeoName().getLatitude(), loc.getGeoName().getLongitude());
+    public void consume(EntityRelation relation, GeoNameWithFrequencyScore loc, List<GeoNameWithFrequencyScore> geoNames) {
+        dependentFacility = new Facility(relation.getSubjectEntity().getEntity(), loc, geoNames);
+        providingFacility = new Facility(relation.getObjectEntity().getEntity(), loc, geoNames);
         this.relation = relation.getRelation();
     }
 
