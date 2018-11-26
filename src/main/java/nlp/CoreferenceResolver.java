@@ -1,38 +1,40 @@
 package nlp;
 
 import com.google.common.collect.Lists;
-import common.Tools;
 import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.coref.CorefCoreAnnotations;
-import edu.stanford.nlp.coref.data.Mention;
 import edu.stanford.nlp.ling.CoreAnnotations;
-import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
 
-import nlp.gibberish.GibberishDetector;
-import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.common.SolrDocument;
+import webapp.components.ApplicationContextProvider;
+import webapp.services.WorkExecutorHeartbeatService;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class CoreferenceResolver {
     private final static Logger logger = LogManager.getLogger(CoreferenceResolver.class);
-    private StanfordCoreNLP pipeline;
+    private StanfordCoreNLPWithThreadControl pipeline;
     private StanfordCoreNLP sentPipeline;
     private Annotation document;
 
     public CoreferenceResolver() {
         Properties props = new Properties();
         props.setProperty("annotators", "tokenize,ssplit,pos,lemma,ner,parse,coref");
-        props.setProperty("threads", "16");
-        pipeline = new StanfordCoreNLP(props);
+        pipeline = new StanfordCoreNLPWithThreadControl(props);
         props.setProperty("annotators", "tokenize,ssplit,pos");
         sentPipeline = new StanfordCoreNLP(props);
+    }
+
+    @PostConstruct
+    public void startHeartbeatMonitor() {
+        WorkExecutorHeartbeatService workExecutorHeartbeatService = ApplicationContextProvider.getApplicationContext().getBean(WorkExecutorHeartbeatService.class);
+        workExecutorHeartbeatService.process("corefProcessExecutor", 1000, 16);
     }
 
     public void resolve(String text) {
@@ -67,57 +69,54 @@ public class CoreferenceResolver {
         List<CoreMap> sentences = sentenceAnnotations.get(CoreAnnotations.SentencesAnnotation.class);
 
         final double similarityThreshold = 0.7;
-        final double maxNounPercentage = 0.65;
-        final int partitionSize = 10;
+        final int partitionSize = 50;
+        final long timeout = 180; //seconds
         List<List<CoreMap>> chunks = Lists.partition(sentences, partitionSize);
 
         List<CorefTask> corefTasks = new ArrayList<>();
         int lineStart = 0;
         logger.info("Coref: partitioned document by " + partitionSize + " line chunks into " + chunks.size() + " parts");
         for (List<CoreMap> chunk : chunks) {
-
             List<String> chunkSentences = chunk.stream().map(p -> p.toString()).collect(Collectors.toList());
             int sentTotal = chunkSentences.size();
-            for (int i = 0; i < sentTotal; i++) {
-                List<CoreLabel> tokens = chunk.get(i).get(CoreAnnotations.TokensAnnotation.class);
-                int numTokens = tokens.size();
-                int numNounTokens = tokens.stream()
-                        .filter(p -> p.tag().contains("NN") || p.tag().contains("CD"))
-                        .collect(Collectors.toList())
-                        .size();
-                double percentNouns = (double) numNounTokens / (double) numTokens;
-                if (percentNouns > maxNounPercentage) {
-                    chunkSentences.set(i, "Redacted.");
-                }
-            }
-            String chunkText = StringUtils.join(chunkSentences, "\r\n");
-            logger.info("Coref: queue " + sentTotal + " lines for processing");
+
+            String chunkText = NLPTools.redactTextForNLP(chunk, 0.7, 1000);
+
+            logger.info("Coref: queue " + sentTotal + " lines for processing: " + lineStart);
             CorefTask corefTask = new CorefTask(pipeline, lineStart);
-            corefTask.resolve(chunkText);
+            corefTask.enqueue(chunkText);
             corefTasks.add(corefTask);
             lineStart += sentTotal;
         }
 
         int waitCycles = 0;
-        while(corefTasks.stream().anyMatch(p -> !p.isDone())) {
+        while(corefTasks.stream().anyMatch(p -> !p.isCancelled() && !p.isDone())) {
             try {
+                corefTasks.stream()
+                        .filter(p -> !p.isCancelled() && !p.isDone() && p.hasElapsed(timeout))
+                        .forEach(p -> {
+                            logger.info("Coref: cancelling due to timeout: " + p.getLineStart());
+                            p.cancel();
+                        });
                 Thread.sleep(1000);
+
                 waitCycles++;
                 if (waitCycles % 5 == 0) {
-                    corefTasks.stream().filter(p -> !p.isDone()).forEach(p -> {
+                    corefTasks.stream().filter(p -> p.isActivated() && !p.isCancelled() && !p.isDone()).forEach(p -> {
                         logger.info("Coref: awaiting completion of " + p.getLineStart());
                     });
 
                 }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { }
         }
 
         logger.info("Coref: finished resolving coreferences for all chunks");
         List<Coreference> corefEntities = new ArrayList<>();
-        for (CorefTask corefTask : corefTasks) {
-            Collection<CorefChain> corefs = corefTask.getCorefs();
+        List<CorefTask> completedTasks = corefTasks.stream()
+                .filter(p -> !p.isCancelled())
+                .collect(Collectors.toList());
+        for (CorefTask corefTask : completedTasks) {
+            Collection<CorefChain> corefs = corefTask.getCorefChains();
             for (CorefChain coref : corefs) {
 
                 //Question: does an entity exist anywhere in the current coreference partition that has a name that is sufficiently similar to at least one mention in the current coreference chain?

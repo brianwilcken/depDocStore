@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import solrapi.SolrClient;
 import solrapi.model.IndexedDocumentsQueryParams;
+import webapp.components.ApplicationContextProvider;
 import webapp.models.GeoNameWithFrequencyScore;
 import webapp.models.JsonResponse;
 import webapp.services.*;
@@ -57,8 +58,7 @@ public class DocumentsController {
     private DocumentCategorizer categorizer;
     private NamedEntityRecognizer recognizer;
     private final LocationResolver locationResolver;
-    private final CoreferenceResolver coreferenceResolver;
-    private final InformationExtractor informationExtractor;
+    //private final InformationExtractor informationExtractor;
     private GibberishDetector detector;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
@@ -84,6 +84,9 @@ public class DocumentsController {
     @Autowired
     private HttpServletRequest context;
 
+//    @Autowired
+//    private CoreferenceResolver coreferenceResolver;
+
     public DocumentsController() {
         solrClient = new SolrClient(Tools.getProperty("solr.url"));
         mongoClient = new DocStoreMongoClient(Tools.getProperty("mongodb.url"));
@@ -92,8 +95,7 @@ public class DocumentsController {
         recognizer = new NamedEntityRecognizer(solrClient);
         locationResolver = new LocationResolver();
         detector = new GibberishDetector();
-        coreferenceResolver = new CoreferenceResolver();
-        informationExtractor = new InformationExtractor();
+        //informationExtractor = new InformationExtractor();
 
         //This setting speeds up Tesseract OCR
         System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
@@ -307,14 +309,10 @@ public class DocumentsController {
         docs.addAll(locDocs);
 
         if (entities.size() > 0 && geoNames.size() > 0) {
-            logger.info(context.getRemoteAddr() + " -> " + "resolving coreferences");
-            List<Coreference> coreferences = coreferenceResolver.getCoreferencesFromDocument(parsed, id, entities);
-            List<SolrDocument> corefDocs = coreferences.stream()
-                    .map(p -> p.mutate())
-                    .collect(Collectors.toList());
-            docs.addAll(corefDocs);
+            List<Coreference> coreferences = processCoreferences(docs, parsed, id, entities);
 
             logger.info(context.getRemoteAddr() + " -> " + "resolving entity relations");
+            InformationExtractor informationExtractor = new InformationExtractor();
             List<EntityRelation> entityRelations = informationExtractor.getEntityRelations(parsed, id, entities, coreferences);
             List<SolrDocument> relDocs = entityRelations.stream()
                     .map(p -> p.mutateForSolr(id))
@@ -328,6 +326,18 @@ public class DocumentsController {
         }
 
         return docs;
+    }
+
+    private List<Coreference> processCoreferences(SolrDocumentList docs, String parsed, String id, List<NamedEntity> entities) {
+        logger.info(context.getRemoteAddr() + " -> " + "resolving coreferences");
+        CoreferenceResolver coreferenceResolver = new CoreferenceResolver();
+        List<Coreference> coreferences = coreferenceResolver.getCoreferencesFromDocument(parsed, id, entities);
+        List<SolrDocument> corefDocs = coreferences.stream()
+                .map(p -> p.mutate())
+                .collect(Collectors.toList());
+        docs.addAll(corefDocs);
+
+        return coreferences;
     }
 
     @RequestMapping(value="/metadata/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)

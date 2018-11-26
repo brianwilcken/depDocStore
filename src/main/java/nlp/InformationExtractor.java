@@ -1,5 +1,6 @@
 package nlp;
 
+import com.google.common.collect.Lists;
 import common.Tools;
 import edu.stanford.nlp.ie.util.RelationTriple;
 import edu.stanford.nlp.ling.CoreAnnotations;
@@ -9,126 +10,182 @@ import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.common.SolrDocument;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class InformationExtractor {
     private final static Logger logger = LogManager.getLogger(InformationExtractor.class);
-    private StanfordCoreNLP pipeline;
+    private StanfordCoreNLPWithThreadControl pipeline;
+    private StanfordCoreNLP sentPipeline;
 
     public InformationExtractor() {
         Properties props = new Properties();
         props.setProperty("annotators", "tokenize,ssplit,pos,lemma,depparse,natlog,openie");
-        props.setProperty("threads", "4");
-        pipeline = new StanfordCoreNLP(props);
+        pipeline = new StanfordCoreNLPWithThreadControl(props);
+        props.setProperty("annotators", "tokenize,ssplit,pos");
+        sentPipeline = new StanfordCoreNLP(props);
+    }
+
+    private List<Annotation> getDocumentAnnotations(String text) {
+        final int partitionSize = 300;
+        final long timeout = 180; //seconds
+
+        Annotation sentenceAnnotations = sentPipeline.process(text);
+        List<CoreMap> sentences = sentenceAnnotations.get(CoreAnnotations.SentencesAnnotation.class);
+        List<List<CoreMap>> chunks = Lists.partition(sentences, partitionSize);
+
+        List<OpenIETask> tasks = new ArrayList<>();
+        int lineStart = 0;
+        for (List<CoreMap> chunk : chunks) {
+            List<String> chunkSentences = chunk.stream().map(p -> p.toString()).collect(Collectors.toList());
+            int sentTotal = chunkSentences.size();
+
+            String chunkText = NLPTools.redactTextForNLP(chunk, 0.7, 500);
+
+            logger.info("OpenIE: queue " + sentTotal + " lines for processing: " + lineStart);
+            OpenIETask task = new OpenIETask(pipeline, lineStart);
+            task.enqueue(chunkText);
+            tasks.add(task);
+            lineStart += sentTotal;
+        }
+
+        int waitCycles = 0;
+        while(tasks.stream().anyMatch(p -> !p.isCancelled() && !p.isDone())) {
+            try {
+                tasks.stream()
+                        .filter(p -> !p.isCancelled() && !p.isDone() && p.hasElapsed(timeout))
+                        .forEach(p -> {
+                            logger.info("OpenIE: cancelling due to timeout: " + p.getLineStart());
+                            p.cancel();
+                        });
+                Thread.sleep(1000);
+
+                waitCycles++;
+                if (waitCycles % 5 == 0) {
+                    tasks.stream().filter(p -> p.isActivated() && !p.isCancelled() && !p.isDone()).forEach(p -> {
+                        logger.info("OpenIE: awaiting completion of " + p.getLineStart());
+                    });
+
+                }
+            } catch (Exception e) { }
+        }
+
+        List<Annotation> annotationParts = tasks.stream()
+                .filter(p -> !p.isCancelled())
+                .map(p -> p.getAnnotations())
+                .collect(Collectors.toList());
+
+        return annotationParts;
     }
 
     public List<EntityRelation> getEntityRelations(String text, String docId, List<NamedEntity> entities, List<Coreference> coreferences) {
         final double similarityThreshold = 0.5;
         final double lineNumRange = 5;
-        Annotation document = new Annotation(text);
-        pipeline.annotate(document);
+
+        List<Annotation> annotationParts = getDocumentAnnotations(text);
 
         List<EntityRelation> relatedEntities = new ArrayList<>();
-        List<CoreMap> sentences = document.get(CoreAnnotations.SentencesAnnotation.class);
-        for (int i = 0; i < sentences.size(); i++) {
-            final int lineNum = i;
-            CoreMap sentence = sentences.get(i);
-            // Get the OpenIE triples for the sentence
-            Collection<RelationTriple> triples =
-                    sentence.get(NaturalLogicAnnotations.RelationTriplesAnnotation.class);
 
-            logger.info("Now processing sentence: " + (lineNum + 1));
-            logger.info("Current sentence contains # triples: " + triples.size());
+        for (Annotation annotationPart : annotationParts) {
+            List<CoreMap> sentences = annotationPart.get(CoreAnnotations.SentencesAnnotation.class);
+            for (int i = 0; i < sentences.size(); i++) {
+                final int lineNum = i;
+                CoreMap sentence = sentences.get(i);
+                // Get the OpenIE triples for the sentence
+                Collection<RelationTriple> triples =
+                        sentence.get(NaturalLogicAnnotations.RelationTriplesAnnotation.class);
 
-            for (RelationTriple triple : triples) {
-                String subject = triple.subjectLemmaGloss();
-                String relation = triple.relationLemmaGloss();
-                String object = triple.objectLemmaGloss();
+                logger.info("Now processing sentence: " + (lineNum + 1));
+                logger.info("Current sentence contains # triples: " + triples.size());
 
-                logger.info("Analyzing relation triple: <" + subject + "> <" + relation + "> <" + object + ">");
-                
-                //A relation may be established by either direct reference to a named entity or by coreference
-                List<NamedEntity> subjectEntities = entities.stream()
-                        .filter(p -> NLPTools.similarity(subject, p.getEntity()) > similarityThreshold && Tools.numericRangeCompare(lineNum, p.getLine(), lineNumRange))
-                        .collect(Collectors.toList());
-                if (subjectEntities.size() > 0) {
-                    for (NamedEntity subjectEntity : subjectEntities) {
-                        logger.info("Subject entity found: " + subjectEntity.getEntity());
-                    }
-                }
+                for (RelationTriple triple : triples) {
+                    String subject = triple.subjectLemmaGloss();
+                    String relation = triple.relationLemmaGloss();
+                    String object = triple.objectLemmaGloss();
 
-                List<NamedEntity> objectEntities = entities.stream()
-                        .filter(p -> NLPTools.similarity(object, p.getEntity()) > similarityThreshold && Tools.numericRangeCompare(lineNum, p.getLine(), lineNumRange))
-                        .collect(Collectors.toList());
-                if (objectEntities.size() > 0) {
-                    for (NamedEntity objectEntity : objectEntities) {
-                        logger.info("Object entity found: " + objectEntity.getEntity());
-                    }
-                }
+                    logger.info("Analyzing relation triple: <" + subject + "> <" + relation + "> <" + object + ">");
 
-                List<Coreference> subjectCorefs = coreferences.stream()
-                        .filter(p -> NLPTools.similarity(subject, p.getCoref()) > similarityThreshold && Tools.numericRangeCompare(lineNum, p.getLine(), lineNumRange))
-                        .collect(Collectors.toList());
-                if (subjectCorefs.size() > 0) {
-                    for (Coreference subjectCoref : subjectCorefs) {
-                        logger.info("Subject coreference found: " + subjectCoref.getCoref() + " -> " + subjectCoref.getNamedEntity().getEntity());
-                    }
-                }
-
-                List<Coreference> objectCorefs = coreferences.stream()
-                        .filter(p -> NLPTools.similarity(object, p.getCoref()) > similarityThreshold && Tools.numericRangeCompare(lineNum, p.getLine(), lineNumRange))
-                        .collect(Collectors.toList());
-                if (objectCorefs.size() > 0) {
-                    for (Coreference objectCoref : objectCorefs) {
-                        logger.info("Object coreference found: " + objectCoref.getCoref() + " -> " + objectCoref.getNamedEntity().getEntity());
-
-                    }
-                }
-
-                if ((subjectEntities.size() > 0 || subjectCorefs.size() > 0) &&
-                        (objectEntities.size() > 0 || objectCorefs.size() > 0)) {
-                    logger.info("Possible entity relation discovered in sentence: " + (lineNum + 1));
-                    logger.info("Subject: " + subject);
-                    logger.info("Object: " + object);
-                    logger.info("For relation: " + relation);
-                    //determine which subject/object entity to use
-                    subjectEntities.addAll(subjectCorefs.stream().map(p -> p.getNamedEntity()).collect(Collectors.toList()));
-                    objectEntities.addAll(objectCorefs.stream().map(p -> p.getNamedEntity()).collect(Collectors.toList()));
-
-                    //ensure the sets of entities are distinct
-                    Map<String, List<NamedEntity>> subjectGroups = subjectEntities.stream().collect(Collectors.groupingBy(NamedEntity::getId));
-                    Map<String, List<NamedEntity>> objectGroups = objectEntities.stream().collect(Collectors.groupingBy(NamedEntity::getId));
-
-                    List<NamedEntity> uniqueSubjects = subjectGroups.values().stream().map(p -> p.get(0)).collect(Collectors.toList());
-                    List<NamedEntity> uniqueObjects = objectGroups.values().stream().map(p -> p.get(0)).collect(Collectors.toList());
-
-                    //assign the tentative subject and object entities to those with the smallest distance from the current line
-                    NamedEntity subjectEntity = uniqueSubjects.stream().min(Comparator.comparingInt(p -> Math.abs(lineNum - p.getLine()))).get();
-                    NamedEntity objectEntity = uniqueObjects.stream().min(Comparator.comparingInt(p -> Math.abs(lineNum - p.getLine()))).get();
-
-                    //if the subject and object entities are the same then attempt to find a non-matching pair
-                    if (subjectEntity.getId().equals(objectEntity.getId())) {
-                        Stack<NamedEntity> testEntities = new Stack<>();
-                        if (uniqueSubjects.size() > 1) {
-                            testEntities.addAll(uniqueSubjects);
-                            subjectEntity = getRelationEntity(subjectEntity, objectEntity, testEntities);
-                        } else if (uniqueObjects.size() > 1) {
-                            testEntities.addAll(uniqueObjects);
-                            objectEntity = getRelationEntity(objectEntity, subjectEntity, testEntities);
+                    //A relation may be established by either direct reference to a named entity or by coreference
+                    List<NamedEntity> subjectEntities = entities.stream()
+                            .filter(p -> NLPTools.similarity(subject, p.getEntity()) > similarityThreshold && Tools.numericRangeCompare(lineNum, p.getLine(), lineNumRange))
+                            .collect(Collectors.toList());
+                    if (subjectEntities.size() > 0) {
+                        for (NamedEntity subjectEntity : subjectEntities) {
+                            logger.info("Subject entity found: " + subjectEntity.getEntity());
                         }
                     }
 
-                    if (subjectEntity != null && objectEntity != null && !subjectEntity.getId().equals(objectEntity.getId())) {
-                        logger.info("Entity relation is valid!");
-                        logger.info("Subject Referenced by: " + subjectEntity.getEntity());
-                        logger.info("Object Referenced by: " + objectEntity.getEntity());
-                        EntityRelation entityRelation = new EntityRelation(subjectEntity, objectEntity, relation, lineNum);
-                        relatedEntities.add(entityRelation);
-                    } else {
-                        logger.info("Entity relation is NOT valid.");
+                    List<NamedEntity> objectEntities = entities.stream()
+                            .filter(p -> NLPTools.similarity(object, p.getEntity()) > similarityThreshold && Tools.numericRangeCompare(lineNum, p.getLine(), lineNumRange))
+                            .collect(Collectors.toList());
+                    if (objectEntities.size() > 0) {
+                        for (NamedEntity objectEntity : objectEntities) {
+                            logger.info("Object entity found: " + objectEntity.getEntity());
+                        }
+                    }
+
+                    List<Coreference> subjectCorefs = coreferences.stream()
+                            .filter(p -> NLPTools.similarity(subject, p.getCoref()) > similarityThreshold && Tools.numericRangeCompare(lineNum, p.getLine(), lineNumRange))
+                            .collect(Collectors.toList());
+                    if (subjectCorefs.size() > 0) {
+                        for (Coreference subjectCoref : subjectCorefs) {
+                            logger.info("Subject coreference found: " + subjectCoref.getCoref() + " -> " + subjectCoref.getNamedEntity().getEntity());
+                        }
+                    }
+
+                    List<Coreference> objectCorefs = coreferences.stream()
+                            .filter(p -> NLPTools.similarity(object, p.getCoref()) > similarityThreshold && Tools.numericRangeCompare(lineNum, p.getLine(), lineNumRange))
+                            .collect(Collectors.toList());
+                    if (objectCorefs.size() > 0) {
+                        for (Coreference objectCoref : objectCorefs) {
+                            logger.info("Object coreference found: " + objectCoref.getCoref() + " -> " + objectCoref.getNamedEntity().getEntity());
+
+                        }
+                    }
+
+                    if ((subjectEntities.size() > 0 || subjectCorefs.size() > 0) &&
+                            (objectEntities.size() > 0 || objectCorefs.size() > 0)) {
+                        logger.info("Possible entity relation discovered in sentence: " + (lineNum + 1));
+                        logger.info("Subject: " + subject);
+                        logger.info("Object: " + object);
+                        logger.info("For relation: " + relation);
+                        //determine which subject/object entity to use
+                        subjectEntities.addAll(subjectCorefs.stream().map(p -> p.getNamedEntity()).collect(Collectors.toList()));
+                        objectEntities.addAll(objectCorefs.stream().map(p -> p.getNamedEntity()).collect(Collectors.toList()));
+
+                        //ensure the sets of entities are distinct
+                        Map<String, List<NamedEntity>> subjectGroups = subjectEntities.stream().collect(Collectors.groupingBy(NamedEntity::getId));
+                        Map<String, List<NamedEntity>> objectGroups = objectEntities.stream().collect(Collectors.groupingBy(NamedEntity::getId));
+
+                        List<NamedEntity> uniqueSubjects = subjectGroups.values().stream().map(p -> p.get(0)).collect(Collectors.toList());
+                        List<NamedEntity> uniqueObjects = objectGroups.values().stream().map(p -> p.get(0)).collect(Collectors.toList());
+
+                        //assign the tentative subject and object entities to those with the smallest distance from the current line
+                        NamedEntity subjectEntity = uniqueSubjects.stream().min(Comparator.comparingInt(p -> Math.abs(lineNum - p.getLine()))).get();
+                        NamedEntity objectEntity = uniqueObjects.stream().min(Comparator.comparingInt(p -> Math.abs(lineNum - p.getLine()))).get();
+
+                        //if the subject and object entities are the same then attempt to find a non-matching pair
+                        if (subjectEntity.getId().equals(objectEntity.getId())) {
+                            Stack<NamedEntity> testEntities = new Stack<>();
+                            if (uniqueSubjects.size() > 1) {
+                                testEntities.addAll(uniqueSubjects);
+                                subjectEntity = getRelationEntity(subjectEntity, objectEntity, testEntities);
+                            } else if (uniqueObjects.size() > 1) {
+                                testEntities.addAll(uniqueObjects);
+                                objectEntity = getRelationEntity(objectEntity, subjectEntity, testEntities);
+                            }
+                        }
+
+                        if (subjectEntity != null && objectEntity != null && !subjectEntity.getId().equals(objectEntity.getId())) {
+                            logger.info("Entity relation is valid!");
+                            logger.info("Subject Referenced by: " + subjectEntity.getEntity());
+                            logger.info("Object Referenced by: " + objectEntity.getEntity());
+                            EntityRelation entityRelation = new EntityRelation(subjectEntity, objectEntity, relation, lineNum);
+                            relatedEntities.add(entityRelation);
+                        } else {
+                            logger.info("Entity relation is NOT valid.");
+                        }
                     }
                 }
             }
@@ -162,184 +219,200 @@ public class InformationExtractor {
                 "This can be accomplished if trades are made with Springville to increase their usage of Hobble Creek water, allowing Mapleton more capacity in the pressurized canal pipeline.\n" +
                 "Secondary Water Master Plan Pipe sizing was determined by ensuring that all areas to be serviced had adequate pressure and that velocities in the pipes were reasonable generally less than 5 feet per second.";
 
-        String text2 = "Jordan Valley Water Conservancy District Annual Report Table of Contents Board of Trustees Message Executive Staff Member Agencies Agencies Served by JVWCD Sources Deliveries Facilities Significant Accomplishments Water Quality Water Supply Southwest Jordan Valley Groundwater Project Conservation Safety Increased Capacity Financial Staff JORDAN VALLEY WATER CONSERVANCY DISTRICT Jordan Valley Water Conservancy District Jordan Valley was created in under the Water Conservancy Act and is governed by a board of eight trustees who represent seven geographical divisions.\n" +
-                "They are nominated by either the Salt Lake County Council or a city council depending upon the division they represent.\n" +
-                "Each trustee is appointed by the Governor for a four year term.\n" +
-                "Jordan Valley is primarily a wholesaler of water to cities and improvement districts within Salt Lake County.\n" +
-                "It also has a retail service area in unincorporated areas of the county.\n" +
-                "Jordan Valley delivers percent of its municipal water on a wholesale basis to cities and water districts and percent on a retail basis to unincorporated areas of Salt Lake County.\n" +
-                "In addition Jordan Valley treats and delivers water to Metropolitan Water District of Salt Lake Sandy for delivery to Salt Lake City and Sandy City even though neither city is within Jordan Valleys service boundaries.\n" +
-                "Jordan Valley also delivers untreated water to irrigators in Salt Lake and Utah Counties to meet commitments under irrigation exchanges.\n" +
-                "Gary Swensen Taylorsville City Board of Trustees Richard W. McDonald Granite Park Holladay Murray Union South Cottonwood Willow Creek South Salt Lake White City Water Improvement District and unincorporated areas.\n" +
-                "B. Jeff Rasmussen Draper Herriman and Midvale Margaret K. Peterson West Valley City Lyle C. Summers West Jordan City Steven L. Taggart Vice Chair West Valley City Royce A. Gibson Finance Committee Chair Kearns and Magna Dale F. Gardiner Chair Bluff dale Riverton and South Jordan Photograph by Quinn Farley After our recent experience with five years of drought we enjoyed a second year of good water supply during.\n" +
-                "This provided an opportunity for Jordan Valley to rest its wells and allow the underground aquifer reservoir to recover from the effects of drought.\n" +
-                "Although early data for indicates below normal snowpack conditions we ended calendar year with a good water supply due to substantial reserves in storage.\n" +
-                "The retirement of David Ovard as General Manager was a significant event at the end of.\n" +
-                "Dave s accomplishments and contributions to Jordan Valleys success are extensive and are highlighted in this report.\n" +
-                "Jordan Valley will miss Dave The year also marked a continuation of rapid population growth in Jordan Valleys western and southern service areas.\n" +
-                "Jordan Valley and its member agencies worked together in planning for important new infrastructure to serve these fast growing areas.\n" +
-                "Jordan Valley has made significant progress in infrastructure engineering and construction for these areas and sees a need for these efforts to continue in coming years.\n" +
-                "As population continues to grow rapidly Jordan Valley has continued to lead in the implementation of water conservation education and outreach programs.\n" +
-                "The public responded by achieving nearly a percent reduction in water use by but in water usage increased due to perceptions of the drought ending.\n" +
-                "Jordan Valley will continue its efforts to assist its member agencies and customers in the quest to be more water efficient in coming years.\n" +
-                "Among those efforts in is the planned expansion of the Conservation Garden Park at Jordan Valley.\n" +
-                "Looking Forward David Ovard has been the General Manager of Jordan Valley for the past years.\n" +
-                "His accomplishments are many and varied.\n" +
-                "He leaves Jordan Valley in excellent condition after years of service.\n" +
-                "Richard Bay has been appointed by the Board of Trustees as the new General Manager for Jordan Valley.\n" +
-                "With years of experience and having mentored under David for many years Richard brings experience and foresight to the position.\n" +
-                "photos Immediate right is David Ovard past General Manager far right is Alan Pack ard Assistant General Manager Richard Bay General Manager and Bart Forsyth Assistant General Manager.\n" +
-                "Photograph by Quinn Farley Executive Staff Yvette Amparo Espinoza Administrative Assistant III Linda Townes CommunicationsPR Specialist Jeff Bryant Water Supply Department Manager Dirk Anderson Distribution Department Manager Debbie Ericksen Human Resources Manager Dave Rice Conservation Programs Coordinator Photography by Quinn Farley Marilyn Payan Executive Assistant Neil Cox Assistant Treasurer Jason Brown IT Department Manager Shazelle Terry Treatment Department Manager Jackie Maas Administrative Assistant III Dave Martin Chief Financial Offi cerController Mark Atencio Engineering Department Manager Reid Lewis Attorney Member Agencies Bluff dale City Mayor Claudia Anderson Draper City Mayor Darrell Smith John F. Hendrickson City Manager Granger Hunter Improvement District Gordon W. Evans Board Chair David Warr General Manager Herriman City Mayor J. Lynn Crane Rod Brocious City Engineer Hexcel Corporation Ken Bunkowski General Manager Kearns Improvement District Rodney Bushman Board Chair Carl Eriksson General Manager Magna Water Company Dan Tuttle Board Chair Ed Hansen General Manager Midvale City Mayor JoAnn Seghini Kane Loader City Administrator Riverton City Mayor William Applegarth Lance Blackwood City Manager Sandy City Mayor Tom Dolan Shane Pace Public Utilities Director City of South Jordan Mayor Kent Money Rick Horst City Manager City of South Salt Lake Mayor Robert D. Gray Dennis Peay Public Works Director Taylorsville Bennion Improvement District Benjamin Behunin Board Chair Floyd J. Nielsen General Manager Utah State Department of Corrections Greg Peay Director of Facilities and Construction Rick Johnson Deputy Warden of Support Services WaterPro Inc..\n" +
-                "Stephen L. Tripp President Bruce Cuppett CEO West Jordan City Mayor David Newton Gary Luebbers City Manager White City Water Improvement District Paulina Flint Board Chair Paul Ashton General Manager Willow Creek Country Club Alex Nicolaidis General Manager Agencies Served by Jordan Valley Water Conservancy District Receives water from facilities co owned with and operated by Jordan Valley.\n" +
-                "Parts of these areas receive service from Jordan Valley on a retail basis.\n" +
-                "Sources Pictured above is Bell Canyon Creek located in Bell Canyon in the southeast area of Salt Lake County.\n" +
-                "It is one of the largest sources of mountain stream water to Southeast Regional Water Treatment Plant.\n" +
-                "Other major source water for Jordan Valley includes Provo River Upper Provo River reservoirs high Uinta lakes Weber River Duchesne River Local Wasatch streams Groundwater Salt Lake Valley wells Long term conservation ethics in our community will play an important role in the amount of water avail able for future generations.\n" +
-                "Conservation also affects the cost of future water infrastructure and new source development by delaying the need for new sources of water.\n" +
-                "Jordan Valleys water supply has increased significantly in the last years.\n" +
-                "Page of this report discusses some of the ways that supply has increased.\n" +
-                "Continued ingenuity is paramount to providing the public with clean safe drinking water.\n" +
-                "Having pristine sources such as the Provo River also helps.\n" +
-                "Pictured above are the Provo Falls off the Mirror Lake Highway.\n" +
-                "Municipal industrial water supplies AF AF Jordanelle Reservoir Central Utah Project a Deer Creek Reservoir Provo River Project b storage extra allotment Upper Provo River reservoirsa Echo Reservoirc Provo River direct flows Weber River direct flows Local Wasatch streams Groundwater wells Subtotal for Municipal Industrial supplies Irrigation water supplies Jordanelle Reservoir Central Utah Project a Deer Creek Reservoir Provo River Project b storage extra allotment Upper Provo River reservoirsa Echo Reservoirc Provo River direct flows Weber River direct flows Utah Lake Subtotal for irrigation TOTAL ALL SUPPLIES Total water treated or transported for other agencies TOTAL ALL WATER Municipal Industrial Water S li Irrigation Water Supplies TOTAL AL SUP LIES TOTAL TER a Provo River sources b Weber Duchesne and Provo River sources c Weber River sources Jordan Valley works to provide each of its wholesale member agencies with the highest quality water possible allowing them to then provide their customers with the same.\n" +
-                "Jordan Valley also delivers retail water to over customers as well as irrigation and raw water to several agencies in the Salt Lake Valley.\n" +
-                "Such large amounts of water require enormous storage capacity not only to satisfy demands but to provide fire protection as well.\n" +
-                "Shown above is the interior of a million gallon storage reservoir which provides water for much of the west side of the Salt Lake Valley.\n" +
-                "Deliveries Wholesale deliveries AF AF Bluff dale City Draper City Granger Hunter Improvement District Herriman City Hexcel Corporation Kearns Improvement District Magna Water Company Midvale City Riverton City Sandy City City of South Jordan City of South Salt Lake Taylorsville Bennion Improvement District Utah State Department of Corrections WaterPro Inc..\n" +
-                "West Jordan City White City Water Improvement District Willow Creek Country Club Subtotal for wholesale JVWCD retail area Holladay Murray Sandy South Salt Lake and unincorporated county JVWCD use JVWCD losses Subtotal for deliveries use and loss Irrigation raw water AF AF Utah State Department of Public Safety Staker Parsons Company Welby Jacob Water Users Co..\n" +
-                "Provo Reservoir Canal losses Subtotal for irrigation raw water Total delivered water MI water treated or trans ported for other agencies AF AF Metropolitan Water District of Salt Lake Sandy Taylorsville Bennion Improvement District West Jordan City Subtotal for treated or transported water Total water delivered treated or transported Wholesale deliveries Irrigation and raw water MI water treated or trans ported for other agencies Facilities.\n" +
-                "Upper Provo River Reservoirs Once converted to small storage reservoirs the majority of these Uinta lakes have now been rehabilitated and the storage rights moved to Jordanelle Reservoir.\n" +
-                "Jordan Valley is a major stockholder in the water rights for these lakes.\n" +
-                "WeberProvo Rivers Diversion This canal conveys water from the Weber River and Echo Reservoir to Jordan Valley.\n" +
-                "It is also used by the Provo River Water Users Association for the diversion of Weber River water to supply Deer Creek Reservoir.\n" +
-                "Jordanelle Reservoir With a capacity of acre feet AF this reservoir was built by the U.S. Bureau of Reclamation is operated by Central Utah Water Conservancy District CUWCD and collects and stores Central Utah Project CUP water rights on the Provo River.\n" +
-                "Jordan Valley receives an average of AF of CUP water annually.\n" +
-                "Deer Creek Reservoir This reservoir is a feature of the Provo River Project and has a capacity of AF.\n" +
-                "Jordan Valley is entitled to water stored in this reservoir which originates from the Provo Weber and Duchesne rivers.\n" +
-                "Salt Lake Aqueduct This inch diameter pipeline is owned and operated by Metropolitan Water District of Salt Lake Sandy MWDSLS.\n" +
-                "It conveys Provo River water from Deer Creek Reservoir to service areas of MWDSLS and Jordan Valley.\n" +
-                "Southeast Regional Water Treatment Plant Jordan Valleys MGD facility treats water from the Salt Lake Aqueduct and local mountain streams.\n" +
-                "Little Cottonwood Treatment Plant MWDSLS s MGD plant delivers treated water to Jor dan Valley and MWDSLS service areas.\n" +
-                "Well Field This aquifer is the source of high quality groundwater for Jordan Valley and many municipalities.\n" +
-                "Jordan Aqueduct This inch pipeline is operated by Jordan Valley on behalf of itself and MWDSLS.\n" +
-                "It conveys water from Deer Creek and Jordanelle reservoirs and the Provo River to Jordan Valley Water Treatment Plant.\n" +
-                "Jordan Narrows Pump Station Owned and operated by Jordan Valley this station pumps Utah Lake water into the Welby and Jacob canals for irrigation purposes as part of a large irrigation water exchange.\n" +
-                "Jordan Valley Water Treatment Plant This MGD plant was built by CUWCD and is operated by Jordan Valley on behalf of itself and MWDSLS.\n" +
-                "It supplies water to many communities in Salt Lake Valley.\n" +
-                "It is the largest water treatment plant in Utah.\n" +
-                "Equalization Reservoirs Booster Stations These widely dispersed facilities store and pump water to Jordan Valleys customers.\n" +
-                "Jordan Aqueduct Terminal Reservoir At million gallons this drinking water storage facility has the largest capacity in the state.\n" +
-                "Bingham Canyon Water Treatment Plant In cooperation with Kennecott Utah Copper Jordan Valley receives treated potable water from this reverse osmosis water treatment plant.\n" +
-                "Jordan Valley operates and maintains dozens of facilities throughout the valley.\n" +
-                "District personnel take pride in their upkeep sustaining a rigorous schedule of continuous maintenance and improvements.\n" +
-                "photo Shown above is the Jordan Narrows Pump Station described in paragraph number.\n" +
-                "ane ree nee rer Poe poe rer Poe erran eran eee eee ree nee eee ane erran Significant Accomplishments to During Dave Ovard s tenure as General Manager Jordan Valley has seen many changes challenges and improvements.\n" +
-                "Throughout this publication we will highlight some of those accomplishments sharing with you the tremendous growth and achievements during Dave s years of service as General Manager.\n" +
-                "Due to the efforts highlighted here Jordan Valley is poised for quality growth and success.\n" +
-                "Jordan Valley has been placed on a solid financial footing through sound financial management and planning as evidenced by its year Financial Plan and year Capital Improvements Plan.\n" +
-                "As a result Jordan Valleys bond rating has increased from A to AA.\n" +
-                "Structure for growth of Jordan Valley and employee successes has been established and maintained through the development of professional administrative policies and procedures.\n" +
-                "The firm water supply of Jordan Valley has been in creased by acre feet including ULS water.\n" +
-                "Source capacity has been increased by percent through increased treatment plant and well capacities.\n" +
-                "Through its Slow the Flow and related conservation programs Jordan Valley has led the way for water conservation advances throughout the state of Utah.\n" +
-                "Jordan Valley has improved its working relationships with member agencies sister agencies state and federal agencies the public and the news media.\n" +
-                "Jordan Valley has developed a professional staff that is respected throughout the state.\n" +
-                "The safety record of Jordan Valley has improved substantially.\n" +
-                "Jordan Valley has received a number of awards and recognitions acknowledging its excellence.\n" +
-                "Total Wholesale Water Deliveries AF AF Total Water Deliveries AF AF Municipal Minimum Purchase Contracts AF AF Total Revenues Total OM Expense Debt Service Long Term Debt Bond Rating A AA Total Assets Property Owned Parcels Acres Firm Water Supply AF AF Including ULS Source Capacity Surface Water Groundwater MGD MGD MGD MGD System Storage MG MG Total Wells Total Booster Stations ULS or Utah Lake System is a future water supply that will be provided to Jordan Valley as part of the Central Utah Project CUP.\n" +
-                "Water Quality In Jordan Valley established the Jordan Valley Treatment Plant Laboratory Lab to perform analyses and monitor the water quality of its own sources.\n" +
-                "Initially the Lab was capable of per forming only a handful of basic water quality tests on District sources.\n" +
-                "Currently the Lab can test for almost different compounds and analyzes almost samples a year for itself and several of its member agencies.\n" +
-                "photo Top left in addition to online continuous monitoring Jordan Valley personnel regularly collect grab samples in the system to ensure water quality.\n" +
-                "Bottom left shows how regulations have increased since the inception of the Safe Drinking Water Act in.\n" +
-                "Water quality regulations have increased significantly over the past years with the and amendments to the Safe Drinking Water Act of.\n" +
-                "During this time EPA has added regulations for surface water and groundwater involving organic and inorganic compounds lead copper turbidity disinfectants and disinfection by products filtration protozoa bacteria viruses radionuclides fluoride source water protection and unregulated contaminants.\n" +
-                "Additional regulations are slated for the coming years.\n" +
-                "In order to stay ahead of these regulations and meet customers increasing expectations Jordan Valley continually researches and implements new treatment technologies.\n" +
-                "Some of the most significant projects impacting water quality completed in the last years include Design and installation of a pilot plant for various treatment studies at Jordan Valley Water Treatment Plant JVWTP.\n" +
-                "Addition of a high rate clarification process at Southeast Regional Water Treatment Plant SERWTP to allow additional treatment of mountain stream sources.\n" +
-                "Completion of a full scale study to determine the effectiveness of chlorine dioxide as the primary disinfectant at JVWTP to reduce disinfection by products.\n" +
-                "Design of a new chlorine dioxide system at JVWTP will begin in.\n" +
-                "A full scale study of poly aluminum chloride PACl as the primary coagulant at SERWTP.\n" +
-                "PACl is now being used at both SERWTP and JVWTP.\n" +
-                "Installation of additional water quality monitoring stations throughout Jordan Valleys water trans mission system.\n" +
-                "Regulated Contaminants and Processes Water Supply Thousand Acre Feet Jordan Valleys water supply has increased by approximately acre feet in the last years.\n" +
-                "With these increased sources the supply of water to much of the Salt Lake Valley has been made secure well into the future.\n" +
-                "With improved conservation efforts the date for pursuing additional supplies may be even later than currently anticipated.\n" +
-                "Even with all the water supply sources utilized by Jordan Valley it will not be enough for future demands.\n" +
-                "In the last years Jordan Valley has increased its firm water supply by approximately acre feet or roughly percent.\n" +
-                "With this increased supply and conservation results achieved the need to develop even more costly future supplies is diminished.\n" +
-                "Some supplies that have been developed include additional groundwater sources imported surface water from irrigation exchanges and groundwater remediation such as the South west Jordan Valley Groundwater Project.\n" +
-                "Increase in Water Supply Since Southwest Jordan Valley Groundwater Project The Southwest Jordan Valley Groundwater Project a joint project with Kennecott Utah Copper is designed to remediate contaminated water in two groundwater plumes in the southwestern portion of the Salt Lake Val ley.\n" +
-                "In the spring of Jordan Valley began exploratory drilling of the deep wells in the eastern area of contamination known as Zone B. Drilling of three wells provided information regarding the geology for the drilling of seven deep production wells that began later in.\n" +
-                "In May of the Bingham Canyon Water Treatment Plant reverse osmosis treatment plant began operation photo above.\n" +
-                "This plant was constructed by Kennecott Utah Copper Corporation to treat water from the west ern Zone A groundwater sulfate plume.\n" +
-                "This plant has a capacity of gallons per minute and produces acre feet of water per year.\n" +
-                "In the fall Jordan Valley began drilling five deep wells in Zone B. These wells are along West between South and South.\n" +
-                "Each well is expected to produce between gpm and gpm.\n" +
-                "The drilling of these wells is to be complete in the spring of.\n" +
-                "Engineering design activities during will focus on wells the Southwest Groundwater Treatment Plant SWGWTP a reverse osmosis treatment plant and a by product water pipeline.\n" +
-                "Construction activities in will include well drilling feed water pipelines and the SWGWTP.\n" +
-                "photo Sampling the water from Bingham Canyon Water Treatment Plant at its startup in are Dale Gardiner JVWCD Board Chair Bill Champion KUCC CEO Congressional representative Chris Cannon and Lieutenant Governor Gary Herbert.\n" +
-                "The water was deemed very tasty and has been a successful addition to our existing sources.\n" +
-                "Conservation Jordan Valley initiated the Slow The Flow conservation campaign in.\n" +
-                "Now adopted by the State of Utah the campaign continues to inspire and educate all water users.\n" +
-                "Although precipitation has increased in the last couple of years the conservation messages and emphasis are focused on efficient long term use of our water supply to keep up with growth and increasing water demands.\n" +
-                "The greatest water conservation potential exists in our landscapes.\n" +
-                "Water use patterns can be reduced significantly if water wise practices and principles are applied to the landscape.\n" +
-                "Changing our ideals now will ensure water for future generations our children grandchildren and great grandchildren.\n" +
-                "One element of Jordan Valleys conservation program has been development of the Conservation Garden Park previously known as the Demonstration Garden.\n" +
-                "Plans to expand and improve the existing Garden Park are underway with the majority of the funding being provided through a fundraising effort.\n" +
-                "Jordan Valley is excited to provide enhanced opportunities for the public to learn about conservation through the Garden Park expansion.\n" +
-                "The expansion will include detailed educational exhibits and interactive hands on displays which will provide improved learning opportunities about how to conserve water in the landscape.\n" +
-                "Visit www.ConservationGardenPark.org for more information.\n" +
-                "In the name of the demonstration garden was changed to Conservation Garden Park.\n" +
-                "It is hoped that an expansion of the Garden will begin in with fundraising in progress to help fund expenses.\n" +
-                "Expansion design is underway and some money has already been raised.\n" +
-                "We look forward to enhancing the conservation education experience for garden visitors by not only showing them how a finished water efficient landscape looks but show and teach them how to get from where they are to where they want to be.\n" +
-                "You can get more information on the garden expansion by visiting the web site www.conservationgarden\n" +
-                "park.org.\n" +
-                "JVWCD Goal reduction by Actual progress line Jordan Valleys goal to reduce per capita water usage percent by has already had excellent results.\n" +
-                "This chart shows that conservation education efforts are an effective method for reducing outdoor and overall water use.\n" +
-                "Annual per capita water use in gallons per day Visit the Conservation Garden Park for your own ideas on water efficient landscaping.\n" +
-                "If we each save a little well all save a lot.\n" +
-                "Even though safety is always a priority it took some coaxing to get every one at Jordan Valley on board.\n" +
-                "A district wide goal of zero lost time injuries and zero vehicle incidents caused by employees has been implemented with promising results.\n" +
-                "While only the lost time injury goal has been met to this point the number of total injuries has decreased and the cost associated with vehicle incidents has decreased.\n" +
-                "Increased employee aware ness involvement and ac countability departmental and district wide safety committees coupled with the implementation of a Safety Incentive Program have all contributed to the success of the program.\n" +
-                "Over the past several years Jordan Valley has worked to improve its workplace safety program to reduce the number of injuries and other injury related losses it experiences each year.\n" +
-                "Beginning in efforts in safety increased significantly resulting in record improvements.\n" +
-                "In Jordan Valley set an organization record for the lowest number of OSHA recordable injuries ORIs with a total of three and made even greater improvements in with just two ORIs.\n" +
-                "Considering that Jordan Valley averaged ORIs per year between and this has been a remarkable achievement.\n" +
-                "The incident rate graph at right shows the improvements Jordan Valley has made regarding ORIs.\n" +
-                "Jordan Valley has been able to save significant amounts of money by reducing its Experience Modification e mod rate.\n" +
-                "E mod rates are calculated each year by the National Council on Compensation Insurance Inc. and area Workers Compensation insurance premium modifier that reflects the loss experience of a company compared with payroll exposure during the same time period.\n" +
-                "The modifier increases or decreases the premium depending on how the actual exposure and losses for the past three years compares with expected losses for the same amount of exposure.\n" +
-                "Ane mod rate of.\n" +
-                "is considered average.\n" +
-                "Jordan Valleys e mod rate for s premium was.\n" +
-                "which is the lowest rate it has ever recorded.\n" +
-                "This is also the fourth year in a row that Jordan Valleys e mod rate was below average.\n" +
-                "This saves Jordan Valley thousands of dollars in Workers Compensation insurance premiums each year.\n" +
-                "OSHA Recordable Injuries have decreased significantly with the increased push toward safety awareness.\n" +
-                "Decreased E mod rates save Jordan Valley thousands on Workers Compensation insurance premiums.\n" +
-                "Safety Increased Capacity Even with conservation efforts the demand for water continues to increase.\n" +
-                "With that increased demand comes a need for increased transmission and distribution capacity.\n" +
-                "From to Jordan Valley has seen significant increase in its ability to transmit and distribute water through several system improvements.\n" +
-                "New major water lines have been installed along West inch South inch South inch and South inch.\n" +
-                "These pipelines provide increased capacity to Herriman Riverton South Jordan West Jordan Draper and Bluff dale.\n" +
-                "A new pipeline on South inch will be constructed in.\n" +
-                "Th ree new booster stations totalling cubic feet per second cfs capacity and new reservoir storage totaling million gallons of storage have been built.\n" +
-                "Right of way for major transmission pipelines including the Southwest Aqueduct and Wasatch Front Regional Pipeline has also been acquired.\n" +
-                "With increased capacity comes the responsibility to monitor additional facilities so new SCADA Supervisory Control and Data Acquisition and instrumentation improvements were made to monitor and control operation of the water system and treatment plants.\n" +
-                "Geographical Information System GIS capabilities have been added to assist with the maintenance of rights of way property easements and facilities.\n" +
-                "photo Two new hp pumps during installation at the South pump station.\n" +
-                "Capacity of the pump station was doubled with the addition of these pumps.\n" +
-                "photo At right the instal lation of a inch pipeline along South in which serves Draper and Bluff dale and provides an interconnection between the transmission systems of Jordan Valley and Metropolitan Water District of Salt Lake Sandy.\n" +
-                "Financial Balance Sheet Summary as of June th Assets Current Restricted Capital Other Total Assets Liabilities Current Long term Total Liabilities Total Fund Net Assets Total Liabilities Fund Net Assets Income Statement Summary for fiscal years ended June th Revenues Operating Property taxes Interest Intergovernmental Non operating Total Revenues Expenses Operating Interest Total Expenses Net Income Other Cash Flow Information for fiscal years ended June th Capital Projects Debt Service Payments On a final note Jordan Valleys financial status in the last years has improved significantly.\n" +
-                "Changes include switching to a fiscal year generating revenues in advance of needs reworking budgeting policies defi ning funds purposes developing a year financial and capital improvements plan as well as addressing water rates impact fees and property taxes.\n" +
-                "A result of changes in financial management has been an improved bond rating with Fitch Moody s and Standard Poors from A to AA.\n" +
-                "Balance Sheet Summary for fiscal years ended June th Income Statement Sum ary fiscal years nded June th Other Cash Flow Information r fiscal years nded June th Million Dollars Total Assets Million Dollars Million Dollars Million Dollars Total Revenues Net Income Funds Spent on Capital Projects Staff Administration Richard Bay Marilyn Payan Linda Townes Neil Cox Reid Lewis Catherine Collins Debbie Ericksen Brian Callister Ellen Bolliger Debbie Gates David Martin Perry Widdison Linda MacNeil Abby Patonai Nelson Jeanette Perry Ann Mecham Margaret Dea Tammy Parker Engineering Alan Packard Yvette Amparo Espinoza Mark Atencio David McLean Don Olsen Shane Swensen Dave Norman Marcelo Anglade Paul Rowley Denise Goodwin Distribution Dirk Anderson Carolyn Greenwell Karen Marchant Jeff Hilbert Steve Anderson Kirk Oman Robert Squire Frank Montoya Dave Spackman Craig Fahrni Allen Taylor Paul Pierce Mike Astill Chris Egan James Estrada Devin Th edell Greg Mark Jim Bogenschutz Samuel Rogers Steve Schmidt Paul Wanlass Val Cossey Devin Warr Adrian Parra Casey Mascaro Jared Ballard Kevin Crane Neil Duncan Leonard Mascher Larry Love Alan Th ackeray Ken Brown Danny White Kathryn Brown Al Warner Dave Hyde Larry Shipman Chad Steadman Jeff Moulton Gordon Batt Blake Woolsey Ken Butterfi eld Steve Beck Scott Olsen Tracy Timothy Danny Ernest Steve Minch Quintin Rubio Dustin Hamilton Justin Shinsel Mike Sigler Water SupplyWater Quality Bart Forsyth Jackie Maas Jeff King David Rice Clifton Smith Courtney Brown Water Supply Jeff Bryant Karin Terry Mark Winters Wade Tuft Blake Bills Trade Barnett Nathan Talbot Dave Beratto Jarod Moffi tt Andy Adams Information Technology Jason Brown Matt Olsen Kelly Erickson Twila Brantley Lorrie Fox Treatment Shazelle Terry Vickie Hart Lorraine Kirkham Steve Blake Josh Th omas Tweet Johnson Doug Leonard Scott Hermreck Johnny Trimble Duff Turner Gene Anderson Ray Stokes Mike Axelgard Kevin James Dave Mecham Cary Shaw Don Scallions Steve Crawford Brad Mabey Dan Claypool Eduardo Cracchiolo Nick McDonald Steve Hansen Marie Owens Ron Kidd Stan Grundy Deon Whittle Te Phan Savidtri Th anasilp Ron Bown Lorena Purissimo Jackie Buhler JORDAN VALLEY WATER CONSERVANCY DISTRICT Jordan Valley Water Conservancy District South West West Jordan UT www.jvwcd.org\n";
+        String text2 = "Water Conservation Plans for Industrial or Mining Use.\n" +
+                "a A water conservation plan for industrial or mining uses of water must provide information in response to each of the following elements.\n" +
+                "If the plan does not provide information for each requirement, the industrial or mining water user shall include in the plan an explanation of why the requirement is not applicable.\n" +
+                "1 a description of the use of the water in the production process, including how the water is diverted and transported from the source's of supply, how the water is utilized in the production process, and the estimated quantity of water consumed in the production process and therefore unavailable for reuse, discharge, or other means of disposal 2 specific, quantified five-year and ten-year targets for water savings and the basis for the development of such goals.\n" +
+                "The goals established by industrial or mining water users under this paragraph are not enforceable 3 a description of the device's and or methods within an accuracy of plus or minus 5.0 to be used in order to measure and account for the amount of water diverted from the source of supply 4 leak-detection, repair, and accounting for water loss in the water distribution system 5 application of state-of-the-art equipment and or process modifications to improve water use efficiency and 6 any other water conservation practice, method, or technique which the user shows to be appropriate for achieving the stated goal or goals of the water conservation plan.\n" +
+                "b An industrial or mining water user shall review and update its water conservation plan, as appropriate, based on an assessment of previous five-year and tenyear targets and any other new or updated information.\n" +
+                "The industrial or mining water user shall review and update the next revision of its water conservation plan every five years to coincide with the regional water planning group.\n" +
+                "Adopted November 14, 2012 Effective December 6, 2012 288.4.\n" +
+                "Redacted.\n" +
+                "Texas Commission on Environmental Quality Page 9 Chapter 288 - Water Conservation Plans, Drought Contingency Plans, Guidelines and Requirements a A water conservation plan for agricultural use of water must provide information in response to the following subsections.\n" +
+                "If the plan does not provide information for each requirement, the agricultural water user must include in the plan an explanation of why the requirement is not applicable.\n" +
+                "1 For an individual agricultural user other than irrigation A a description of the use of the water in the production process, including how the water is diverted and transported from the source's of supply, how the water is utilized in the production process, and the estimated quantity of water consumed in the production process and therefore unavailable for reuse, discharge, or other means of disposal B specific, quantified five-year and ten-year targets for water savings and the basis for the development of such goals.\n" +
+                "The goals established by agricultural water users under this subparagraph are not enforceable C a description of the device's and or methods within an accuracy of plus or minus 5.0 to be used in order to measure and account for the amount of water diverted from the source of supply D leak-detection, repair, and accounting for water loss in the water distribution system E application of state-of-the-art equipment and or process modifications to improve water use efficiency and F any other water conservation practice, method, or technique which the user shows to be appropriate for achieving the stated goal or goals of the water conservation plan.\n" +
+                "2 For an individual irrigation user A a description of the irrigation production process which shall include, but is not limited to, the type of crops and acreage of each crop to be irrigated, monthly irrigation diversions, any seasonal or annual crop rotation, and soil types of the land to be irrigated B a description of the irrigation method, or system, and equipment including pumps, flow rates, plans, and or sketches of the system layout Texas Commission on Environmental Quality Page 10 Chapter 288 - Water Conservation Plans, Drought Contingency Plans, Guidelines and Requirements C a description of the device's and or methods, within an accuracy of plus or minus 5.0 , to be used in order to measure and account for the amount of water diverted from the source of supply D specific, quantified five-year and ten-year targets for water savings including, where appropriate, quantitative goals for irrigation water use efficiency and a pollution abatement and prevention plan.\n" +
+                "The goals established by an individual irrigation water user under this subparagraph are not enforceable E water-conserving irrigation equipment and application system or method including, but not limited to, surge irrigation, low pressure sprinkler, drip irrigation, and nonleaking pipe F leak-detection, repair, and water-loss control G scheduling the timing and or measuring the amount of water applied for example, soil moisture monitoring H land improvements for retaining or reducing runoff, and increasing the infiltration of rain and irrigation water including, but not limited to, land leveling, furrow diking, terracing, and weed control I tailwater recovery and reuse and J any other water conservation practice, method, or technique which the user shows to be appropriate for preventing waste and achieving conservation.\n" +
+                "3 For a system providing agricultural water to more than one user A a system inventory for the supplier's i structural facilities including the supplier's water storage, conveyance, and delivery structures ii management practices, including the supplier's operating rules and regulations, water pricing policy, and a description of practices and or devices used to account for water deliveries and iii a user profile including square miles of the service area, the number of customers taking delivery of water by the system, the types of crops, the Texas Commission on Environmental Quality Page 11 Chapter 288 - Water Conservation Plans, Drought Contingency Plans, Guidelines and Requirements types of irrigation systems, the types of drainage systems, and total acreage under irrigation, both historical and projected B specific, quantified five-year and ten-year targets for water savings including maximum allowable losses for the storage and distribution system.\n" +
+                "The goals established by a system providing agricultural water to more than one user under this subparagraph are not enforceable C a description of the practice's and or device's which will be utilized to measure and account for the amount of water diverted from the source's of supply D a monitoring and record management program of water deliveries, sales, and losses E a leak-detection, repair, and water loss control program F a program to assist customers in the development of on-farm water conservation and pollution prevention plans and or measures G a requirement in every wholesale water supply contract entered into or renewed after official adoption of the plan by either ordinance, resolution, or tariff , and including any contract extension, that each successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements in this chapter.\n" +
+                "If the customer intends to resell the water, the contract between the initial supplier and customer must provide that the contract for the resale of the water must have water conservation requirements so that each successive customer in the resale of the water will be required to implement water conservation measures in accordance with applicable provisions of this chapter H official adoption of the water conservation plan and goals, by ordinance, rule, resolution, or tariff, indicating that the plan reflects official policy of the supplier I any other water conservation practice, method, or technique which the supplier shows to be appropriate for achieving conservation and J documentation of coordination with the regional water planning groups, in order to ensure consistency with appropriate approved regional water plans.\n" +
+                "b A water conservation plan prepared in accordance with the rules of the United States Department of Agriculture Natural Resource Conservation Service, the Texas Texas Commission on Environmental Quality Page 12 Chapter 288 - Water Conservation Plans, Drought Contingency Plans, Guidelines and Requirements State Soil and Water Conservation Board, or other federal or state agency and substantially meeting the requirements of this section and other applicable commission rules may be submitted to meet application requirements in accordance with a memorandum of understanding between the commission and that agency.\n" +
+                "c An agricultural water user shall review and update its water conservation plan, as appropriate, based on an assessment of previous five-year and ten-year targets and any other new or updated information.\n" +
+                "An agricultural water user shall review and update the next revision of its water conservation plan every five years to coincide with the regional water planning group.\n" +
+                "Adopted November 14, 2012 Effective December 6, 2012 288.5.\n" +
+                "Water Conservation Plans for Wholesale Water Suppliers.\n" +
+                "A water conservation plan for a wholesale water supplier must provide information in response to each of the following paragraphs.\n" +
+                "If the plan does not provide information for each requirement, the wholesale water supplier shall include in the plan an explanation of why the requirement is not applicable.\n" +
+                "Redacted.\n" +
+                "All water conservation plans for wholesale water suppliers must include the following elements A a description of the wholesaler's service area, including population and customer data, water use data, water supply system data, and wastewater data B specific, quantified five-year and ten-year targets for water savings including, where appropriate, target goals for municipal use in gallons per capita per day for the wholesaler's service area, maximum acceptable water loss, and the basis for the development of these goals.\n" +
+                "The goals established by wholesale water suppliers under this subparagraph are not enforceable C a description as to which practice's and or device swill be utilized to measure and account for the amount of water diverted from the source's of supply D a monitoring and record management program for determining water deliveries, sales, and losses E a program of metering and leak detection and repair for the wholesaler's water storage, delivery, and distribution system Texas Commission on Environmental Quality Page 13 Chapter 288 - Water Conservation Plans, Drought Contingency Plans, Guidelines and Requirements F a requirement in every water supply contract entered into or renewed after official adoption of the water conservation plan, and including any contract extension, that each successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements of this chapter.\n" +
+                "If the customer intends to resell the water, then the contract between the initial supplier and customer must provide that the contract for the resale of the water must have water conservation requirements so that each successive customer in the resale of the water will be required to implement water conservation measures in accordance with applicable provisions of this chapter G a reservoir systems operations plan, if applicable, providing for the coordinated operation of reservoirs owned by the applicant within a common watershed or river basin.\n" +
+                "The reservoir systems operations plans shall include optimization of water supplies as one of the significant goals of the plan H a means for implementation and enforcement, which shall be evidenced by a copy of the ordinance, rule, resolution, or tariff, indicating official adoption of the water conservation plan by the water supplier and a description of the authority by which the water supplier will implement and enforce the conservation plan and I documentation of coordination with the regional water planning groups for the service area of the wholesale water supplier in order to ensure consistency with the appropriate approved regional water plans.\n" +
+                "2 Additional conservation strategies.\n" +
+                "Any combination of the following strategies shall be selected by the water wholesaler, in addition to the minimum requirements of paragraph 1 of this section, if they are necessary in order to achieve the stated water conservation goals of the plan.\n" +
+                "The commission may require by commission order that any of the following strategies be implemented by the water supplier if the commission determines that the strategies are necessary in order for the conservation plan to be achieved A conservation-oriented water rates and water rate structures such as uniform or increasing block rate schedules, and or seasonal rates, but not flat rate or decreasing block rates B a program to assist agricultural customers in the development of conservation pollution prevention and abatement plans C a program for reuse and or recycling of wastewater and or graywater and Texas Commission on Environmental Quality Page 14 Chapter 288 - Water Conservation Plans, Drought Contingency Plans, Guidelines and Requirements D any other water conservation practice, method, or technique which the wholesaler shows to be appropriate for achieving the stated goal or goals of the water conservation plan.\n" +
+                "3 Review and update requirements.\n" +
+                "The wholesale water supplier shall review and update its water conservation plan, as appropriate, based on an assessment of previous five-year and ten-year targets and any other new or updated information.\n" +
+                "A wholesale water supplier shall review and update the next revision of its water conservation plan every five years to coincide with the regional water planning group.\n" +
+                "Adopted November 14, 2012 Effective December 6, 2012 288.6.\n" +
+                "Water Conservation Plans for Any Other Purpose or Use.\n" +
+                "A water conservation plan for any other purpose or use not covered in this subchapter shall provide information where applicable about those practices, techniques, and technologies that will be used to reduce the consumption of water, prevent or reduce the loss or waste of water, maintain or improve the efficiency in the use of water, increase the recycling and reuse of water, or prevent the pollution of water.\n" +
+                "Adopted April 5, 2000 Effective April 27, 2000 288.7.\n" +
+                "Plans Submitted With a Water Right Application for New or Additional State Water.\n" +
+                "a A water conservation plan submitted with an application for a new or additional appropriation of water must include data and information which 1 supports the applicant's proposed use of water with consideration of the water conservation goals of the water conservation plan 2 evaluates conservation as an alternative to the proposed appropriation and 3 evaluates any other feasible alternative to new water development including, but not limited to, waste prevention, recycling and reuse, water transfer and marketing, regionalization, and optimum water management practices and procedures.\n" +
+                "b It shall be the burden of proof of the applicant to demonstrate that no feasible alternative to the proposed appropriation exists and that the requested amount of appropriation is necessary and reasonable for the proposed use.\n" +
+                "Redacted.\n" +
+                "Redacted.\n" +
+                "Dallas.\n" +
+                "Redacted.\n" +
+                "Redacted.\n" +
+                "09 2013 Fiscal Period Begin mm yyyy Period End mm yyyy J Calendar Period Begin mm yyyy Period End mm yyyy Check all of the following that apply to your entity LI Receive financial assistance of $500,000 or more from TWDB Have 3,300 or more retail connections RI Have a water right with TCEQ Page 1 of 9 4 Retail Customer Categories Residential Single Family Residential Multi-family Industrial Commercial Institutional.\n" +
+                "Agricultural Recommended Customer Categories for classifying your customerwateruse.\n" +
+                "Fordefinitions, refer to d c i M ry Cpn.\n" +
+                "7 it 1.\n" +
+                "For this reporting period, select the 171 Residential Single Family 171 Residential Multi-family Industrial cate ory's used to classify customer water use I Commercial E1 tien-a - RI gruai 2.\n" +
+                "For this reporting period, enter the gallons of metered retail water used by each customer category.\n" +
+                "If the Customer Category does not apply, enter zero or leave blank, Residential Single Family - Residential Multi-family Industrial Commercial.\n" +
+                "Redacted.\n" +
+                "Residential lndustnaL - Commercial Institutional Agricultural Total Retail Water Metered Page 2 of 9 Total Gallons During the Reporting Period Water Produced Water from permitted sources such as rivers, lakes, streams, and wells, Same as line 14 of the 144,321,717,172 water loss audit.\n" +
+                "Wholesale Water Imported Purchased wholesale water transferred into the system.\n" +
+                "Same as line 15 of the water o loss audit.\n" +
+                "Wholesale Water Exported Wholesale water sold or transferred out of the system.\n" +
+                "Same as line l6of the 0 water loss audit.\n" +
+                "- System Input Total water supplied to system and 144 321 717.172available for retail use.\n" +
+                "Produced Imported Exported System Input Total Retail Water Metered 122,768,307,000 Other Authorized Consumption Water that is authorized for other uses such as the following This water may be metered or unmetered.\n" +
+                "Same as the total of lines 19, 20, and 21 of the water loss audit.\n" +
+                "- back flushing - line flushing I ,.\n" +
+                "JLR.J,.\n" +
+                "JtL1,JJV - storage tank cleaning - municipal golf courses parks - fire department use - municipal government offices Total Authorized Use All water that has been authorized for use 130,268,847,000 Total Retail Water Other Authorized consumption Total Authorized Use Apparent Losses Water that has been consumed but not properly measured or billed.\n" +
+                "Same as line 28 of the water loss audit.\n" +
+                "485,103,343 Includes losses due to customer meter accuracy, systematic data discrepancy, unauthorized consumption such as theft Real Losses Physical losses from the distribution system prior to reaching the customer destination.\n" +
+                "Same as line 29 of the water loss audit.\n" +
+                "873,100.000 Includes phycical losses from system or mains, reported breaks and leaks, or storage overflow Unidentified Water Losses Unreported losses not known 12,694 666 829or quantified.\n" +
+                "System Input Total Authorized Use Apparent Losses Real Losses Unidentified Water Losses 14,052,870,172 Total Water Loss Apparent Real Unidcnt5ied Total Water Loss Page 3 of 9 Targets and Goals Provide the specific and quantified five and ten-year targets as listed in your current Water Conservation Plan.\n" +
+                "Target dates and numbers should match your current Water Conservation Plan.\n" +
+                "1 f Target for Target for Achieve Date T Water l.oss Water Loss Percentagea a expressed in GPCD expressed in percentage Five-year targetdate 196 28 10 2019 Ten-year targetdate 195 27 10 2024 Gallons Per Capita er Day GPCD and Water Loss Provide current GPCD and water loss totals.\n" +
+                "To see if you are making progress towards your stated goals, compare these totals to the above targets and goals.\n" +
+                "Provide the population and residential water use of your service area.\n" +
+                "PermanentTotal System Input in Gallons.\n" +
+                "i Total GPCDPopulation 144,321,717,172 2,427,010 163 Water Produced Wholesale Imported - Wholesale Exported System Input Permanent Population - 365 1.\n" +
+                "Permanent Population is the total permanent population of the service area, including single Family, multi-family, and group quarter populations.\n" +
+                "Residential Use in Gallons Residential 1 Residential GPCD Single Family Multi-family Population 98 43,311 542000 1,213,600 Residential Use - Residential Population 365 1 Residential Population is the total residential population of the service area, including only single family and multifamily populations.\n" +
+                "Permanent Water Loss Total Water Loss Population GPCD Percent2 14,052,870,172 2,427,010 16 10 Apparent Real Unidentified Total Water Loss 1 Total Water Loss Permanent Population 365 Water Loss GPCD 2 Total Water Loss Total System Input x 100 Water Loss Percentage Page 4 of 9 rgrjm cz t's As you complete this section, review your utility's water conservation plan to see if you are making progress towards meeting your stated goals.\n" +
+                "2014 1.\n" +
+                "What year did your entity adopt or revise the most recent Water Conservation Plan 2.\n" +
+                "Does The Plan incorporate Benerr nt Prt Yes No 3.\n" +
+                "Using the table below select the types of Best Management Practices or water conservation strategies actively administered during this reporting period and estimate the savings incurred in implementing water conservation activities and programs.\n" +
+                "Leave fields blank if unknown.\n" +
+                "Redacted.\n" +
+                "Regulatory and Enforcement Prohibition on Wasting Water Other, please describe 31.929.810.000 Total Gallons of Water Saved - 32,000,456,000 4.\n" +
+                "For this reporting period, provide the estimated gallons of direct or indirect reuse activities.\n" +
+                "Reuse Activity Estimated Volume in gallons On-site irri ation.\n" +
+                "Redacted.\n" +
+                "I. Industrial.\n" +
+                "Redacted.\n" +
+                "55,562,000 A ricultural.\n" +
+                "Other, please describe Nonpotable water uses for 4 200 000 000 on-site irrigation, plant Total Volume of Reuse 4,255,562,000 5.\n" +
+                "For this reporting period, estimate the savings from water conservation activities and programs.\n" +
+                "Gallons Gallons Total Volume of Dollar Value Saved Conserved Recycled Reused Water Saved1 of Water Saved2 32,000,456,000 4,255,562,000 36,256,018,000 $ 25,125,408 1, Estimated Gallons Saved Conserved Estimated Gallons Recycled Reused Total Volume Saved 2 Estimate this value by taking into account water savings, the Cost of treatment or purchase of water and deferred capital costs due to conservation, Page 6 of 9 6.\n" +
+                "During this reporting period, did your rates or rate structure change Yes Select the type of rate pricing structures used.\n" +
+                "Check all that apply.\n" +
+                "QN0 Uniform Rates Flat Rates ZI Inclining Inverted Block Rates Li L Declining Block Rates U Seasonal Rates Water Budget Based Rates Excess Use Rates Drought Demand Rates Tailored Rates Surcharge - usage demand Surcharge - seasonal Surcharge - drought Other, please describe 7, For this reporting period, select the public awareness or educational activities used.\n" +
+                "Redacted.\n" +
+                "During this reporting period, how many leaks were repaired in the system or at service connections 503 Select the main cause's of water loss in your system.\n" +
+                "Leaks and breaks Unmetered utility or city uses Master meter problems Customer meter problems Record and data problems Other Other 2.\n" +
+                "For this reporting period, provide the following information regarding meter repair Type of Meter Total Number Total Tested Total Repaired Total Replaced Production 310 018 5 556 5,556 20,075Meters 30,594 1,314 1,314 2,595 MeterslY2or 279,424 4,242 4,242 23,472smaller 3.\n" +
+                "Does your system have automated meter reading Yes No Page 8 of 9 1.\n" +
+                "in your opinion, how would you rank the effectiveness of your conservation activities Residential Customers Industrial Customers 0 Institutional Customers 0 Commercial Customers Agricultural Customers 2.\n" +
+                "During the reporting period, did you implement your Drought Contingency Plan Q Yes No If yes, how many days were water use restrictions in effect If es, check the reason's for implementing your Drought Contingency Plan.\n" +
+                "Redacted.\n" +
+                "Select the areas for which you would like to receive more technical assistance Best Management Practices Drought Contingency Plans Landscape Irrigation Leak Detection and Equipment Rainwater Harvesting Rate Structures SUBMIT Educational Resources Water Conservation Annual Reports Water Conservation Plans Water 10 Know Your Water Water Loss Audits Recycling and Reuse Customer Classification Less Than Somewhat Highly Effective Effective Effective 0 0 0 a 0 0 Does Not Apply 0 0 0 0 0 Page 9 of 9 Water Conservation Plan Annual Report Wholesale Water Supplier Name of Entity City of Dallas Water Utilities 0570004 Public Water Supply Identification Number PWS ID P0001 CCN Number 12468 etc..\n" +
+                "Redacted.\n" +
+                "Dallas.\n" +
+                "Redacted.\n" +
+                "Water Conservation Form Completed By Title 3.11.14 Date orting Period check only one 10 2012 09 2013 C Fiscal Period Begin mm yyyy Period End mm yyyy Calendar Period Begin mm yyyy Period End mm yyyy Check all that apply Received financial assistance of $500,000 or more from TWDB Have 3,300 or more retail connections Have a surface water right with TCEQ Page lof 5 1.\n" +
+                "For this reporting period, provide the total volume of wholesale water exported transferred or sold 55741239OOO gallons 2.\n" +
+                "For this reporting period, does your billing accounting system have the capability to classify customers into the Wholesale Customer Categories 0 Yes No 3, For this reporting period, select the category's used to calculate wholesale customer water usage Municipal Industrial Commercial Institutional Agricultural 4.\n" +
+                "For this reporting year, enter the gallons of WHOLESALE water exported transferred or sold.\n" +
+                "Enter zero if a Customer Category does not apply.\n" +
+                "Gallons Exported Number of Wholesale Customer Category transferred or sold Customers Municipal 55,741239,OOO Industrial 0 Commercial 0 Institutional 0 Agricultural 0 Total 55741,239,OOO 0 Wholesale Customer Cateaories Municipal Industrial Commercial Institutional Agricultural Recon mended Cud mer C feg r m Fur assy rg c fr e waMr ve.\n" +
+                "deb s, refer c 1 Page 2 of 5 Total Gallons During the Reporting Period Water Produced Water from permitted sources such as rivers, lakes, streams, and wells.\n" +
+                "142,878,500,000 Wholesale Water Imported Purchased wholesale water transferred into the system.\n" +
+                "0 System input Total water supplied to system and available 142,878,500,000 for use.\n" +
+                "Produced Imported System Input Wholesale Water Exported Wholesale water sold or transferred out of the system.\n" +
+                "55,741,239,000 152,715,7231 Wholesale Water Exported 365 Gallons Per Day Population Estimated total population for municipal customers.\n" +
+                "1,213,410 Municipal Gallons Per Capita Per Day 126 Municipal Exported Municipal Population 365 Municipal Gallons Per Capita Per Day Provide the specific and quantified five and ten-year targets as listed in your most current Water Conservation Plan.\n" +
+                "Date to Achieve Specified and Quantified Targets Target Five-yeartarget 2019 196 Ten-year target 2024 195 Page 3of5 1.\n" +
+                "Water Conservation Plan What year did your entity adopt or revise their most recent Water Conservation Plan 2014 Does The Plan incorporate BetM pntPractic ctice Yes No 2.\n" +
+                "Water Conservation Programs Has our entity implemented any type of water conservation activity or program Yes No If yes, select the type's of Best Management Practices or water conservation strategies implemented during this reporting period.\n" +
+                "Redacted.\n" +
+                "3.\n" +
+                "Recycle Reuse Water or Wastewater Effluent For this reporting period, provide direct and indirect reuse activities.\n" +
+                "Reuse Activity I Estimated Volume in gallons On-site irrigation Plant washdown Chlorination de-chlorination Industrial Landscape irrgation park golf courses 55562000 Agricultural OtherL please describe Non-potable water uses for on-site irr 4200000000 Estimated Volume of Reuse 4255,562O00 Page 4 of 5 4.\n" +
+                "Water Savings For this reporting period, estimate the savings that resulted from water conservation activities and programs.\n" +
+                "Redacted.\n" +
+                "Program Effectiveness In your opinion, how would you rank the overall effectiveness of your conservation programs and activities Less Than Effective p Somewhat Effective Highly Effective Does Not Apply c 6.\n" +
+                "What might your entity do to improve the effectiveness of your water conservation program 7.\n" +
+                "Select the areas for which you would like to receive technical assistance Agricultural Best Management Practices Wholesale Best Management Practices Industrial Best Management Practices Drought Contingency Plans Landscape Efficient Systems Leak Detection and Equipment Educational Resources SUBMIT Water Conservation Plans Water lQ Know Your Water Water Loss Audits Rainwater Harvesting Systems Recycling and Reuse PageS of 5 TCEQ-20646 rev. 09-18-2013 Page 2 of 11 Please check all of the following that apply to your entity A surface water right holder of 1,000 acre-feet year or more for non-irrigation uses A surface water right holder of 10,000 acre-feet year or more for irrigation uses Important If your entity meets the following description, please skip page 3 and go directly to page 4.\n" +
+                "Your entity is a Wholesale Public Water Supplier that ONLY provides wholesale water services for public consumption.\n" +
+                "For example, you only provide wholesale water toother municipalities or water districts.\n" +
+                "TCEQ-20646 rev. 09-18-2013 Page 3 of 11 Fields that are gray are entered by the user.\n" +
+                "Select fields that are white and press F9 to updated fields.\n" +
+                "Water Use Accounting Retail Water Sold All retail water sold for public use and human consumption.\n" +
+                "Helpful Hints There are two options available for you to provide the requested information.\n" +
+                "Both options ask the same information however, the level of detail and breakdown of information differs between the two options.\n" +
+                "Please select just one option that works best for your entity and fill in the fields as completely as possible.\n" +
+                "For the five-year reporting period, enter the gallons of RETAIL water sold in each major water use category.\n" +
+                "Use only one of the following options.\n" +
+                "Redacted.\n" +
+                "Redacted.\n" +
+                "Redacted.\n" +
+                "Single Family Multi-Family 136,360,220,000 Commercial Please select all of the sectors that your account for as Commercial.\n" +
+                "Commercial Multi-Family Industrial Institutional 174,853,715,000 Industrial Please select all of the sectors that your account for as Industrial.\n" +
+                "Industrial Commercial Institutional 25,321,252,000 Other Please select all of the sectors that your account for as Other.\n" +
+                "Commercial Multi-Family Industrial Institutional 287,066,794,000 TOTAL Retail Water Sold 1 Total Billed Volume 623,601,981,000.00 1.\n" +
+                "Res Com Ind Other Retail Water Sold TCEQ-20646 rev. 09-18-2013 Page 4 of 11 Wholesale Water Exported Wholesale water sold or transferred out of the distribution system.\n" +
+                "For the five-year reporting period, enter the gallons of WHOLESALE water exported to each major water use category.\n" +
+                "1.\n" +
+                "Mun Agr Ind Com Ins Wholesale Water Exported Water Use Category Gallons of Exported Wholesale Water Municipal Customers 0 Agricultural Customers Industrial Customers Commercial Customers Institutional Customers TOTAL Wholesale Water Exported 1 0.00 TCEQ-20646 rev. 09-18-2013 Page 5 of 11 System Data Total Gallons During the Five-Year Reporting Period Water Produced Volume produced from own sources 733,356,000000 Wholesale Water Imported Purchased wholesale water imported from other sources into the distribution system 0 Wholesale Water Exported Wholesale water sold or transferred out of the distribution system Insert Total Volume calculated on Page 4 0 TOTAL System Input Total water supplied to the infrastructure 733,356,000,000.00 Produced Imported Exported System Input Retail Water Sold All retail water sold for public use and human consumption Insert Total Residential Use from Option 1 or Option 2 calculated on Page 3 623,601,981,000 Other Consumption Authorized for Use but not Sold - back flushing water-line flushing - storage tank cleaning - golf courses - fire department use - parks - municipal government offices 46,231,500,000 TOTAL Authorized Water Use All water that has been authorized for use or consumption.\n" +
+                "669,833,481,000.00 Retail Water Sold Other Consumption Total Authorized Apparent Losses Water that has been consumed but not properly measured Includes customer meter accuracy, systematic data discrepancy, unauthorized consumption such as theft 1,559,004,953 Real Losses Physical losses from the distribution system prior to reaching the customer destination Includes physical losses from system or mains, reported breaks and leaks, storage overflow 3,490,000,000 Unidentified Water Losses 58,473,514,047.00 System Input- Total Authorized - Apparent Losses - Real Losses Unidentified Water Losses TOTAL Water Loss 63,522,519,000.00 Apparent Real Unidentified Total Water Loss Fields that are gray are entered by the user.\n" +
+                "Select fields that are white and hit F9 to updated fields.\n" +
+                "TCEQ-20646 rev. 09-18-2013 Page 6 of 11 In the table below, please provide the specific and quantified five and ten-year targets for water savings listed in your water conservation plan.\n" +
+                "Date Target for Total GPCD Target for Water Loss expressed in GPCD Target for Water Loss Percentage expressed in Percentage Five-year target date 9 30 2019 203 20 10 Ten-year target date 9 30 2024 195 20 10 Are targets in the water conservation plan being met Yes No If these targets are not being met, provide an explanation as to why, including any progress on these targets Click hereto enter text.\n" +
+                "Gallons per Capita per Day GPCD and Water Loss Compare your current gpcd and water loss to the above targets and goals set in your previous water conservation plan.\n" +
+                "Redacted.\n" +
+                "This includes single family, multi-family, and group quarter populations.\n" +
+                "Total Residential Use Permanent Population Residential GPCD 224,713,902,900 1,213,600 101.46 Residential Use Residential Population 5 365 Residential Population is the total residential population of the service area including single multi-family population.\n" +
+                "Fields that are gray are entered by the user.\n" +
+                "Select fields that are white and hit F9 to update fields.\n" +
+                "TCEQ-20646 rev. 09-18-2013 Page 7 of 11 Fields that are gray are entered by the user.\n" +
+                "Select fields that are white and hit F9 to updated fields.\n" +
+                "Total Water Loss Total System Input in Gallons Permanent Population Water Loss calculated in GPCD 1 Percent 2 63,522,519,000 Apparent Real Unidentified Total Water Loss 623,601,981,000.00 Water Produced Wholesale Imported - Wholesale Exported 1,213,600 28.68 10 1.\n" +
+                "Redacted.\n" +
+                "Total Water Loss Total System Input x 100 Water Loss Percentage Water Conservation Programs and Activities As you complete this section, please review your water conservation plan to see if you are making progress towards meeting your stated goals.\n" +
+                "1.\n" +
+                "Water Conservation Plan What year did your entity adopt, or revise, their most recent water conservation plan 2010 Does the plan incorporate Best Management Practices Yes No 2.\n" +
+                "Water Conservation Programs For the reporting period, please select the types of activities and programs that have been actively administered, and estimate the expense and savings that incurred in implementing the conservation activities and programs for the past five years.\n" +
+                "Redacted.\n" +
+                "Reuse Water or Wastewater Effluent For the reporting period, please provide the following data regarding the types of direct and indirect reuse activities that were administered for the past five years Reuse Activity Estimated Volume in gallons On-site irrigation Plant washdown Chlorination de-chlorination Industrial Landscape irrigation parks, golf courses 311,039,067 Agricultural Other, please describe Non-potable water uses for onsite irrigation, plant washdown and other processes.\n" +
+                "18,510,000,000 TCEQ-20646 rev. 09-18-2013 Page 9 of 11 Estimated Volume of Recycled or Reuse 18,821,039,067 4.\n" +
+                "Water Savings For the five-year reporting period, estimate the total savings that resulted from your overall water conservation activities and programs Estimated Gallons Saved Total from Conservation Programs Table Estimated Gallons Recycled or Reused Total from Reuse Table Total Volume of Water Saved 1 Dollar Value of Water Saved 2 116,862,000,000 18,821,039,067 135,683,039,067 $105,055,000 1.\n" +
+                "Estimated Gallons Saved Estimated Gallons Recycled or Reused Total Volume Saved 2.\n" +
+                "Estimate this value by taking into account water savings, the cost of treatment or purchase of your water, and any deferred capital costs due to conservation.\n" +
+                "5.\n" +
+                "Conservation Pricing Conservation Rate Structures During the five-year reporting period, have your rates or rate structure changed Yes No Please indicate the type of rate pricing structures that you use Uniform rates Water Budget Based rates Surcharge - seasonal Flat rates Excess Use Rates Surcharge - drought Inclining Inverted Block rates Drought Demand rates Surcharge - usage demand Declining Block rates Tailored rates Seasonal rates 6.\n" +
+                "Public Awareness and Education Program For the five-year reporting period, please check the appropriate boxes regarding any public awareness and educational activities that your entity has provided Implemented Number Unit Example Brochures Distributed 10,000 year Example Educational School Programs 50 students month Brochures Distributed 319,351 Messages Provided on Utility Bills 15,948,000 Press Releases 24 TV Public Service Announcements 16,055 Radio Public Service Announcements 13,537 Educational School Programs 80,422 participants Displays, Exhibits, and Presentations 1,047 TCEQ-20646 rev. 09-18-2013 Page 10 of 11 Community Events 283 Social Media campaigns 14 Facility Tours 5 Other Print Advertisements 323 7.\n" +
+                "Leak Detection During the five-year reporting period, how many leaks were repaired in the system or at service connections 66,106 Please check the appropriate boxes regarding the main cause of water loss in your system during the reporting period Leaks and breaks Un-metered utility or city uses Master meter problems Customer meter problems Record and data problems Other Other 8.\n" +
+                "Universal Metering and Meter Repair For the five-year reporting period, please provide the following information regarding meter repair Total Number Total Tested Total Repaired Total inInIReplaced Production Meters 310,018 41,017 41,017 82,034 Meters larger than 1 30,594 7,872 7,872 15,744 Meters 1 or smaller 279,424 33,145 33,145 66,290 Does your system have automated meter reading Yes No TCEQ-20646 rev. 09-18-2013 Page 11 of 11 9.\n" +
+                "Conservation Communication Effectiveness In your opinion, how would you rank the effectiveness of your conservation activities in reaching the following types of customers for the past five years 10.\n" +
+                "Drought Contingency and Emergency Water Demand Management During the five-year reporting period, did you implement your Drought Contingency Plan Yes No If yes, indicate the number of days that your water use restrictions were in effect 133 If yes, please check all the appropriate reasons for your drought contingency efforts going into effect.\n" +
+                "Water Supply Shortage Equipment Failure High Seasonal Demand Impaired Infrastructure Capacity Issues Other If you have any questions on how to fill out this form or about the Water Conservation program, please contact us at 512 239-4691.\n" +
+                "Individuals are entitled to request and review their personal information that the agency gathers on its forms.\n" +
+                "They may also have any errors in their information corrected.\n" +
+                "To review such information, contact us at 512-239-3282.\n" +
+                "Do not have activities or programs that target this type customer.\n" +
+                "Less Than Effective Somewhat Effective Highly Effective Residential Customers Industrial Customers Institutional Customers Commercial Customers Agricultural Customers";
 
         InformationExtractor extractor = new InformationExtractor();
         extractor.getEntityRelations(text2, null, null, null);

@@ -3,53 +3,46 @@ package nlp;
 import edu.stanford.nlp.coref.CorefCoreAnnotations;
 import edu.stanford.nlp.coref.data.CorefChain;
 import edu.stanford.nlp.pipeline.Annotation;
-import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.Collection;
+import java.util.Map;
 
-public class CorefTask {
+public class CorefTask extends StanfordNLPTask {
     private final static Logger logger = LogManager.getLogger(CorefTask.class);
-    private StanfordCoreNLP pipeline;
-    private Collection<CorefChain> corefs;
-    private boolean isDone;
-    private int lineStart;
+    private StanfordCoreNLPWithThreadControl pipeline;
+    private Collection<CorefChain> corefChains;
 
-    public CorefTask(StanfordCoreNLP pipeline, int lineStart) {
+    public CorefTask(StanfordCoreNLPWithThreadControl pipeline, int lineStart) {
         this.pipeline = pipeline;
-        corefs = null;
-        isDone = false;
         this.lineStart = lineStart;
+        corefChains = null;
+        activated = false;
     }
 
-    public void resolve(String text) {
+    public void enqueue(String text) {
         Annotation annotation = new Annotation(text);
-        logger.info("Coref: begin resolving coreferences for " + lineStart);
-        pipeline.annotate(annotation, this::processAnnotation);
+        myThread = pipeline.annotateWithThreadControl(annotation, this::activate, this::evaluateCorefs);
     }
 
-    private void processAnnotation(Annotation annotation) {
-        isDone = true;
-        try {
+    public void evaluateCorefs(Annotation annotation) {
+        done = true;
+        Map<Integer, CorefChain> coreMap = annotation.get(CorefCoreAnnotations.CorefChainAnnotation.class);
+        if (coreMap != null) {
+            corefChains = coreMap.values();
             logger.info("Coref: finished resolving coreferences for " + lineStart);
-            corefs = annotation.get(CorefCoreAnnotations.CorefChainAnnotation.class).values();
-            logger.info("Coref: retrieved coreference annotations for  " + lineStart);
-        } catch (Exception e) {
-            corefs = new ArrayList<>();
         }
     }
 
-    public Collection<CorefChain> getCorefs() {
-        return corefs;
+    public void activate(Instant start) {
+        logger.info("Coref: begin resolving coreferences for " + lineStart);
+        this.startTime = start;
+        activated = true;
     }
 
-    public boolean isDone() {
-        return isDone;
-    }
-
-    public int getLineStart() {
-        return lineStart;
+    public Collection<CorefChain> getCorefChains() {
+        return corefChains;
     }
 }
