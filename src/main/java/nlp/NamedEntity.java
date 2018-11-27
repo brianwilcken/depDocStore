@@ -2,10 +2,11 @@ package nlp;
 
 import org.apache.solr.common.SolrDocument;
 import opennlp.tools.util.Span;
+import solrapi.model.IndexedObject;
 
 import java.util.UUID;
 
-public class NamedEntity {
+public class NamedEntity extends IndexedObject {
     private String entity;
     private int line;
     private Span span;
@@ -16,6 +17,10 @@ public class NamedEntity {
         this.span = span;
         this.line = line;
         id = UUID.randomUUID().toString();
+    }
+
+    public NamedEntity(SolrDocument doc) {
+        ConsumeSolr(doc);
     }
 
     public SolrDocument mutate(String docId) {
@@ -44,6 +49,10 @@ public class NamedEntity {
 
     public String getId() {
         return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getEntity() {

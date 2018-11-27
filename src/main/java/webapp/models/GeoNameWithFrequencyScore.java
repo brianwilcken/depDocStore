@@ -5,16 +5,27 @@ import com.bericotech.clavin.gazetteer.FeatureCode;
 import com.bericotech.clavin.gazetteer.GeoName;
 import org.apache.commons.math3.ml.clustering.Clusterable;
 import org.apache.solr.common.SolrDocument;
+import solrapi.model.IndexedObject;
 
-public class GeoNameWithFrequencyScore implements Clusterable {
+public class GeoNameWithFrequencyScore extends IndexedObject implements Clusterable  {
     private GeoName geoName;
     private int freqScore;
     private int adminDiv;
+
+    private String docId;
+    private String name;
+    private double latitude;
+    private double longitude;
+    private String id;
 
     public GeoNameWithFrequencyScore(GeoName geoName, int freqScore, int adminDiv) {
         this.geoName = geoName;
         this.freqScore = freqScore;
         this.adminDiv = adminDiv;
+    }
+
+    public GeoNameWithFrequencyScore(SolrDocument doc) {
+        ConsumeSolr(doc);
     }
 
     public SolrDocument mutate(String docId) {
@@ -117,5 +128,45 @@ public class GeoNameWithFrequencyScore implements Clusterable {
     @Override
     public double[] getPoint() {
         return new double[] { getGeoName().getLatitude(), getGeoName().getLongitude() };
+    }
+
+    public String getDocId() {
+        return docId;
+    }
+
+    public void setDocId(String docId) {
+        this.docId = docId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }

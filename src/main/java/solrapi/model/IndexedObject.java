@@ -17,7 +17,7 @@ public abstract class IndexedObject {
                 String fieldName = p.getName();
                 Object value = doc.get(fieldName);
                 try {
-                    if (value instanceof String || value instanceof Long || value instanceof Boolean) {
+                    if (value instanceof String || value instanceof Long || value instanceof Boolean || value instanceof Double) {
                         BeanUtils.setProperty(this, fieldName, value);
                     } else if (value instanceof List) {
                         List<String> lst = (List<String>)value;
