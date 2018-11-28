@@ -97,7 +97,7 @@ public class Neo4jClient {
     public Dependency addDependency(Facility dependentFacility, Facility providingFacility, String relation) {
         Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
 
-        List<Dependency> dependencies = Lists.newArrayList(session.query(Dependency.class, "MATCH p=(f:Facility)-[r:Dependent_On]->(g:Facility) WHERE f.UUID = \"" + dependentFacility.getUUID() + "\" AND r.relation = \"" + relation + "\" RETURN r", Collections.EMPTY_MAP));
+        List<Dependency> dependencies = Lists.newArrayList(session.query(Dependency.class, "MATCH p=(f:Facility)-[r:Dependent_On]->(g:Facility) WHERE f.UUID = \"" + dependentFacility.getUUID() + "\" AND g.UUID = \"" + providingFacility.getUUID() + "\" AND r.relation = \"" + relation + "\" RETURN r", Collections.EMPTY_MAP));
 
         if (dependencies.size() == 0) {
             Dependency dependency = new Dependency();
