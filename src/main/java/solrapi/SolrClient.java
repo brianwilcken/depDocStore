@@ -13,6 +13,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import common.Tools;
+import edu.stanford.nlp.util.CoreMap;
+import nlp.NLPTools;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -256,6 +258,12 @@ public class SolrClient {
 		return query;
 	}
 
+	public SolrQuery getDoccatDataQuery(SolrQuery query) {
+		query.setQuery("parsed:*");
+
+		return query;
+	}
+
 	public static SolrQuery getWaterDataQuery(SolrQuery query) {
 		query.setQuery("annotated:* AND category:Water");
 
@@ -274,11 +282,20 @@ public class SolrClient {
 		return query;
 	}
 
+	public void formatForDoccatModelTraining(SolrDocument doc, FileOutputStream fos) throws IOException {
+		String parsed = doc.get("parsed").toString();
+		String category = doc.get("category").toString();
+		String output = category + "\t" + NLPTools.normalizeText(parsed);
+		fos.write(output.getBytes(Charset.forName("Cp1252")));
+	}
+
 	public void formatForNERModelTraining(SolrDocument doc, FileOutputStream fos) throws IOException {
-		String[] lines = ((String)doc.get("annotated")).split("\r\n");
-		List<String> annotatedLines = Arrays.stream(lines).filter(p -> p.contains("<START:")).collect(Collectors.toList());
+		List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(doc.get("annotated").toString());
+		String[] sentences = sentencesList.stream().map(p -> p.toString()).toArray(String[]::new);
+		List<String> annotatedLines = Arrays.stream(sentences).filter(p -> p.contains("<START:")).collect(Collectors.toList());
 		String onlyAnnotated = String.join("\r\n", annotatedLines);
 		fos.write(onlyAnnotated.getBytes(Charset.forName("Cp1252")));
+		fos.write(System.lineSeparator().getBytes());
 	}
 
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {

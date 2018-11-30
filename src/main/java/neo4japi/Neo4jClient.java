@@ -2,16 +2,14 @@ package neo4japi;
 
 import com.google.common.collect.Lists;
 import geoparsing.LocationResolver;
-import neo4japi.domain.Dependency;
-import neo4japi.domain.Document;
-import neo4japi.domain.Facility;
-import neo4japi.domain.Reference;
+import neo4japi.domain.*;
 import neo4japi.service.DocumentService;
 import neo4japi.service.DocumentServiceImpl;
 import neo4japi.service.FacilityService;
 import neo4japi.service.FacilityServiceImpl;
 import nlp.EntityRelation;
 import nlp.NLPTools;
+import nlp.NamedEntity;
 import org.apache.commons.math3.ml.clustering.Clusterable;
 import org.apache.solr.common.SolrDocument;
 import org.neo4j.ogm.cypher.BooleanOperator;
@@ -19,7 +17,6 @@ import org.neo4j.ogm.cypher.ComparisonOperator;
 import org.neo4j.ogm.cypher.Filter;
 import org.neo4j.ogm.cypher.Filters;
 import org.neo4j.ogm.session.Session;
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter;
 import webapp.models.GeoNameWithFrequencyScore;
 
 import java.util.*;
@@ -34,9 +31,18 @@ public class Neo4jClient {
         documentService = new DocumentServiceImpl();
     }
 
-//    public static void main(String[] args) {
-//        Neo4jClient client = new Neo4jClient();
-//
+    public static void main(String[] args) {
+        Neo4jClient client = new Neo4jClient();
+
+        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
+        //Collection<DataModelNode> dataModelNodes = session.loadAll(DataModelNode.class);
+
+        List<DataModelNode> dataModelNodes = Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode) WHERE n.name = \"Coal\" RETURN n", Collections.EMPTY_MAP));
+
+        for (DataModelNode node : dataModelNodes) {
+            System.out.println(node.getName());
+        }
+
 //        SolrDocument solrDoc = new SolrDocument();
 //        solrDoc.setField("filename", "facility_document.pdf");
 //        solrDoc.setField("id", "test");
@@ -56,7 +62,7 @@ public class Neo4jClient {
 //
 //        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
 //        session.save(doc);
-//    }
+    }
 
     public Document addDocument(SolrDocument doc) {
         //verify the document does not already exist in the database
@@ -76,15 +82,17 @@ public class Neo4jClient {
 
     public void addDependencies(Document doc, List<GeoNameWithFrequencyScore> geoNames, List<EntityRelation> relations) {
         GeoNameWithFrequencyScore optimalGeoLocation = LocationResolver.getOptimalGeoLocation(geoNames);
-        List<Dependency> dependencies = relations.stream()
-                .map(p -> p.mutateForNeo4j(optimalGeoLocation, geoNames))
-                .collect(Collectors.toList());
+        Map<EntityRelation, Dependency> dependencies = relations.stream()
+                .collect(Collectors.toMap(p -> p, p -> p.mutateForNeo4j(optimalGeoLocation, geoNames)));
 
-        for (Dependency dependency : dependencies) {
-            Facility dependentFacility = addFacility(dependency.getDependentFacility(), geoNames);
-            Facility providingFacility = addFacility(dependency.getProvidingFacility(), geoNames);
+        for (Map.Entry<EntityRelation, Dependency> dependency : dependencies.entrySet()) {
+            Facility dependentFacility = addFacility(dependency.getValue().getDependentFacility(), geoNames);
+            Facility providingFacility = addFacility(dependency.getValue().getProvidingFacility(), geoNames);
 
-            addDependency(dependentFacility, providingFacility, dependency.getRelation());
+            addDependency(dependentFacility, providingFacility, dependency.getValue().getRelation());
+
+            addDataModelFacilityRelation(dependency.getKey().getSubjectEntity(), dependentFacility);
+            addDataModelFacilityRelation(dependency.getKey().getObjectEntity(), providingFacility);
 
             doc.getFacilities().add(dependentFacility);
             doc.getFacilities().add(providingFacility);
@@ -109,6 +117,56 @@ public class Neo4jClient {
             return dependency;
         } else {
             return dependencies.get(0);
+        }
+    }
+
+    public DataModelRelation addDataModelDocumentRelation(SolrDocument solrDoc, Document doc) {
+        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
+        String category = solrDoc.get("category").toString();
+
+        //get the DataModelNode that corresponds with the solr document's category
+        List<DataModelNode> dataModelNodes = Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode) WHERE n.name = \"" + category + "\" RETURN n", Collections.EMPTY_MAP));
+
+        if (dataModelNodes.size() > 0) {
+            DataModelNode dataModelNode = dataModelNodes.get(0);
+
+            List<DataModelRelation> relations = Lists.newArrayList(session.query(DataModelRelation.class, "MATCH p=(d:Document)-[r:IsDataModelNode]->(n:DataModelNode) WHERE d.UUID = \"" + doc.getUUID() + "\" AND n.UUID = \"" + dataModelNode.getUUID() + "\" RETURN r", Collections.EMPTY_MAP));
+
+            if (relations.size() == 0) {
+                DataModelRelation relation = new DataModelRelation(doc, dataModelNode);
+
+                session.save(relation);
+                return relation;
+            } else {
+                return relations.get(0);
+            }
+        } else {
+            return null;
+        }
+    }
+
+    public DataModelRelation addDataModelFacilityRelation(NamedEntity entity, Facility facility) {
+        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
+        String type = entity.getSpan().getType().replace("_", " ");
+
+        //get the DataModelNode that corresponds with the named entity's type
+        List<DataModelNode> dataModelNodes = Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode) WHERE n.name = \"" + type + "\" RETURN n", Collections.EMPTY_MAP));
+
+        if (dataModelNodes.size() > 0) {
+            DataModelNode dataModelNode = dataModelNodes.get(0);
+
+            List<DataModelRelation> relations = Lists.newArrayList(session.query(DataModelRelation.class, "MATCH p=(f:Facility)-[r:IsDataModelNode]->(n:DataModelNode) WHERE f.UUID = \"" + facility.getUUID() + "\" AND n.UUID = \"" + dataModelNode.getUUID() + "\" RETURN r", Collections.EMPTY_MAP));
+
+            if (relations.size() == 0) {
+                DataModelRelation relation = new DataModelRelation(facility, dataModelNode);
+
+                session.save(relation);
+                return relation;
+            } else {
+                return relations.get(0);
+            }
+        } else {
+            return null;
         }
     }
 

@@ -170,68 +170,68 @@ public class NamedEntityRecognizer {
     private SentenceModel sentModel;
     private TokenizerModel tokenizerModel;
     private SolrClient client;
-    private StanfordCoreNLP pipeline;
+    //private StanfordCoreNLP pipeline;
 
     public NamedEntityRecognizer(SolrClient client) {
-        Properties props = new Properties();
-        props.setProperty("annotators", "tokenize,ssplit,pos,lemma,ner");
-        props.setProperty("threads", "4");
-        pipeline = new StanfordCoreNLP(props);
+//        Properties props = new Properties();
+//        props.setProperty("annotators", "tokenize,ssplit,pos,lemma,ner");
+//        props.setProperty("threads", "4");
+//        pipeline = new StanfordCoreNLP(props);
 
         sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
         tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
         this.client = client;
     }
 
-    public List<NamedEntity> detectNamedEntitiesStanford(String document) {
-        Annotation annotation = pipeline.process(document);
-        List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
-        List<NamedEntity> namedEntities = new ArrayList<>();
-
-        boolean inEntity = false;
-        String currentEntity = "";
-        String currentEntityType = "";
-        for (int i = 0; i < sentences.size(); i++) {
-            CoreMap sentence = sentences.get(i);
-            for (CoreLabel token : sentence.get(CoreAnnotations.TokensAnnotation.class)) {
-                String ne = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
-
-                if (!inEntity) {
-                    if (!"O".equals(ne)) {
-                        inEntity = true;
-                        currentEntity = "";
-                        currentEntityType = ne;
-                    }
-                }
-                if (inEntity) {
-                    if ("O".equals(ne)) {
-                        inEntity = false;
-                        switch (currentEntityType) {
-                            case "PERSON":
-                                System.out.println("Extracted Person - " + currentEntity.trim());
-                                break;
-                            case "ORGANIZATION":
-                                namedEntities.add(new NamedEntity(currentEntity.trim(), null, i));
-                                System.out.println("Extracted Organization - " + currentEntity.trim());
-                                break;
-                            case "LOCATION":
-                                namedEntities.add(new NamedEntity(currentEntity.trim(), null, i));
-                                System.out.println("Extracted Location - " + currentEntity.trim());
-                                break;
-                            case "DATE":
-                                System.out.println("Extracted Date " + currentEntity.trim());
-                                break;
-                        }
-                    } else {
-                        currentEntity += " " + token.originalText();
-                    }
-
-                }
-            }
-        }
-
-        return namedEntities;
-    }
+//    public List<NamedEntity> detectNamedEntitiesStanford(String document) {
+//        Annotation annotation = pipeline.process(document);
+//        List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
+//        List<NamedEntity> namedEntities = new ArrayList<>();
+//
+//        boolean inEntity = false;
+//        String currentEntity = "";
+//        String currentEntityType = "";
+//        for (int i = 0; i < sentences.size(); i++) {
+//            CoreMap sentence = sentences.get(i);
+//            for (CoreLabel token : sentence.get(CoreAnnotations.TokensAnnotation.class)) {
+//                String ne = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
+//
+//                if (!inEntity) {
+//                    if (!"O".equals(ne)) {
+//                        inEntity = true;
+//                        currentEntity = "";
+//                        currentEntityType = ne;
+//                    }
+//                }
+//                if (inEntity) {
+//                    if ("O".equals(ne)) {
+//                        inEntity = false;
+//                        switch (currentEntityType) {
+//                            case "PERSON":
+//                                System.out.println("Extracted Person - " + currentEntity.trim());
+//                                break;
+//                            case "ORGANIZATION":
+//                                namedEntities.add(new NamedEntity(currentEntity.trim(), null, i));
+//                                System.out.println("Extracted Organization - " + currentEntity.trim());
+//                                break;
+//                            case "LOCATION":
+//                                namedEntities.add(new NamedEntity(currentEntity.trim(), null, i));
+//                                System.out.println("Extracted Location - " + currentEntity.trim());
+//                                break;
+//                            case "DATE":
+//                                System.out.println("Extracted Date " + currentEntity.trim());
+//                                break;
+//                        }
+//                    } else {
+//                        currentEntity += " " + token.originalText();
+//                    }
+//
+//                }
+//            }
+//        }
+//
+//        return namedEntities;
+//    }
 
     public List<NamedEntity> detectNamedEntities(String document, String category, double threshold) throws IOException {
         List<CoreMap> sentences = NLPTools.detectSentencesStanford(document);

@@ -21,6 +21,7 @@ public class NamedEntity extends IndexedObject {
 
     public NamedEntity(SolrDocument doc) {
         ConsumeSolr(doc);
+        span = new Span(Integer.parseInt(doc.get("start").toString()), Integer.parseInt(doc.get("end").toString()), doc.get("type").toString());
     }
 
     public SolrDocument mutate(String docId) {
@@ -31,6 +32,7 @@ public class NamedEntity extends IndexedObject {
         doc.addField("line", line);
         doc.addField("start", span.getStart());
         doc.addField("end", span.getEnd());
+        doc.addField("type", span.getType());
 
         return doc;
     }

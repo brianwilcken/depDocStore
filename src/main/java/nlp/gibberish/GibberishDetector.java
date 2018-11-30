@@ -3,6 +3,7 @@ package nlp.gibberish;
 import common.Tools;
 import nlp.NLPTools;
 import nlp.NamedEntityRecognizer;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +17,7 @@ import java.util.Map;
  * @author sfiszman
  *
  */
+@Component
 public class GibberishDetector {
 	
 	private final Map<Character, Integer> alphabetPositionMap = new HashMap<Character, Integer>();

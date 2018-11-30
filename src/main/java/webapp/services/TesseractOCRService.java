@@ -7,10 +7,12 @@ import net.sourceforge.tess4j.TesseractException;
 import nlp.gibberish.GibberishDetector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.awt.*;
 import java.io.File;
 import java.util.List;
@@ -21,8 +23,24 @@ public class TesseractOCRService {
 
     final static Logger logger = LogManager.getLogger(TesseractOCRService.class);
 
+    @Autowired
+    private GibberishDetector detector;
+
+    @Autowired
+    private WorkExecutorHeartbeatService workExecutorHeartbeatService;
+
+    public TesseractOCRService() {
+        //This setting speeds up Tesseract OCR
+        System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
+    }
+
+    @PostConstruct
+    public void startHeartbeatMonitor() {
+        workExecutorHeartbeatService.process("tesseractProcessExecutor", 1000, 32);
+    }
+
     @Async("tesseractProcessExecutor")
-    public Future<Boolean> process(File tiffFile, int page, Rectangle rect, List<String> lsOutput, GibberishDetector detector) {
+    public Future<Boolean> process(File tiffFile, int page, Rectangle rect, List<String> lsOutput) {
         try {
             if (tiffFile.exists()) {
                 Tesseract tesseract = new Tesseract();

@@ -64,17 +64,17 @@ public class IndexedDocument extends IndexedObject {
         }
     }
 
-    public String[] GetDocCatTokens(TokenizerModel model, Stemmer stemmer) {
-        String normalized = getNormalizedDocCatString(stemmer);
+    public String[] GetDocCatTokens(TokenizerModel model) {
+        String normalized = getNormalizedDocCatString();
         String[] tokens = NLPTools.detectTokens(model, normalized);
 
         return tokens;
     }
 
-    private String getNormalizedDocCatString(Stemmer stemmer) {
+    private String getNormalizedDocCatString() {
         String docCatStr = docText.replace("\r", " ").replace("\n", " ");
 
-        return NLPTools.normalizeText(stemmer, docCatStr);
+        return NLPTools.normalizeText(docCatStr);
     }
 
     public void updateLastUpdatedDate() {
@@ -82,7 +82,7 @@ public class IndexedDocument extends IndexedObject {
     }
 
     public String GetModelTrainingForm() {
-        return category + "\t" + getNormalizedDocCatString(new PorterStemmer());
+        return category + "\t" + getNormalizedDocCatString();
     }
 
     public String GetClusteringForm() {

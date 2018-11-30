@@ -13,6 +13,7 @@ import edu.stanford.nlp.util.CoreMap;
 import opennlp.tools.ml.EventTrainer;
 import opennlp.tools.sentdetect.SentenceDetectorME;
 import opennlp.tools.sentdetect.SentenceModel;
+import opennlp.tools.stemmer.PorterStemmer;
 import opennlp.tools.stemmer.Stemmer;
 import opennlp.tools.tokenize.TokenizerME;
 import opennlp.tools.tokenize.TokenizerModel;
@@ -47,6 +48,128 @@ public class NLPTools {
         mlParams.put(TrainingParameters.CUTOFF_PARAM, cutoff);
 
         return mlParams;
+    }
+
+    public static final class TrainingParameterTracker {
+        private int iStart = 25; //Starting iterations
+        private int iStep = 5; //Iteration step size
+        private int iStop = 100; //Max iterations
+        private int iSize = (iStop - iStart)/iStep + 1;
+
+        private int cStart = 1; //Starting cutoff
+        private int cStep = 1; //Cutoff step size
+        private int cStop = 9; //Max cutoff
+        private int cSize = (cStop - cStart)/cStep + 1;
+
+        private OptimizationTuple current;
+        private int coordI;
+        private int coordC;
+
+        private OptimizationTuple[][] grid; //keeps track of performance measures for each i/c pair
+
+        private void makeGrid() {
+            grid = new OptimizationTuple[iSize][cSize];
+
+            for (int i = 0; i < iSize; i++) {
+                for (int c = 0; c < cSize; c++) {
+                    int iParam = iStart + (iStep * i);
+                    int cParam = cStart + (cStep * c);
+                    grid[i][c] = new OptimizationTuple(iParam, cParam);
+                }
+            }
+        }
+
+        public TrainingParameterTracker() {
+            makeGrid();
+            coordI = 0;
+            coordC = 0;
+            current = null;
+        }
+
+        public Boolean hasNext() {
+            if (current == null) {
+                return true;
+            }
+            return coordI <= (iSize - 1) || coordC <= (cSize - 1);
+        }
+
+        private void testLimitForOptimization() {
+            double threshold = 0.01; //must be at least 1% improvement since previous step in order to continue
+            int prevI = coordI - 1;
+            int prevI2 = coordI - 2;
+            double dPdi = 0;
+            Boolean iCalc = false;
+            int prevC = coordC - 1;
+            int prevC2 = coordC - 2;
+            double dPdc = 0;
+            Boolean cCalc = false;
+
+
+            if (prevI >= 0 && prevI2 >= 0) {
+                //calculate the 1st derivative dP/di.
+                OptimizationTuple prev = grid[prevI][coordC];
+                OptimizationTuple prev2 = grid[prevI2][coordC];
+                dPdi = (prev.P - prev2.P)/prevI;
+                iCalc = true;
+
+            }
+
+            if (prevC >= 0 && prevC2 >= 0) {
+                //calculate the 1st derivative dP/dc.
+                OptimizationTuple prev = grid[coordI][prevC];
+                OptimizationTuple prev2 = grid[coordI][prevC2];
+                dPdc = (prev.P - prev2.P)/prevC;
+                cCalc = true;
+            }
+
+            //A negative derivative here is a good indication of overfitting.
+            if (iCalc && cCalc) {
+                //calculate the 2nd 2D derivative d2P/didc
+                double d2Pdidc = dPdi * dPdc;
+                //If the 2nd 2D derivative is less than threshold this is a good indication that further
+                //optimization will yield diminishing returns.  It's time to stop optimizing.
+                if (d2Pdidc < 0 || d2Pdidc < threshold) {
+                    coordI = iSize;
+                    coordC = cSize;
+                }
+            }
+            else if (iCalc && !cCalc) {
+                //If dP/di<threshold then increment coordC and reset coordI to 0.
+                if (dPdi < 0 || dPdi < threshold) {
+                    ++coordC;
+                    coordI = 0;
+                }
+            }
+        }
+
+        public OptimizationTuple getNext() {
+            testLimitForOptimization();
+            if (coordI <= (iSize - 1)) {
+                current = grid[coordI++][coordC];
+            } else if (++coordC <= (cSize - 1)){
+                coordI = 0;
+                current = grid[coordI][coordC];
+            }
+            return current;
+        }
+
+        public OptimizationTuple getBest() {
+            OptimizationTuple best = null;
+
+            for (int i = 0; i < iSize; i++) {
+                for (int c = 0; c < cSize; c++) {
+                    if (best == null) {
+                        best = grid[i][c];
+                        continue;
+                    }
+                    OptimizationTuple current = grid[i][c];
+                    if (best.P < current.P) {
+                        best = current;
+                    }
+                }
+            }
+            return best;
+        }
     }
 
     public static <T> T getModel(Class<T> clazz, ClassPathResource modelResource) {
@@ -230,8 +353,10 @@ public class NLPTools {
         return (longerLength - levenshteinDistance.apply(longer, shorter)) / (double) longerLength;
     }
 
-    public static String normalizeText(Stemmer stemmer, String text) {
+    public static String normalizeText(String text) {
         try {
+            text = text.replace("\r", " ").replace("\n", " ");
+            Stemmer stemmer = new PorterStemmer();
             //produce a token stream for use by the stopword filters
             StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
             TokenStream stream = analyzer.tokenStream("", text);

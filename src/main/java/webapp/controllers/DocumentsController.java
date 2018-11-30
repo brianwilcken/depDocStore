@@ -1,18 +1,14 @@
 package webapp.controllers;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Strings;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import common.TextExtractor;
 import common.Tools;
 import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
 import neo4japi.Neo4jClient;
-import neo4japi.domain.Dependency;
 import neo4japi.domain.Document;
-import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.util.PdfBoxUtilities;
 import nlp.*;
-import nlp.gibberish.GibberishDetector;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,17 +27,16 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import solrapi.SolrClient;
 import solrapi.model.IndexedDocumentsQueryParams;
-import webapp.components.ApplicationContextProvider;
 import webapp.models.GeoNameWithFrequencyScore;
 import webapp.models.JsonResponse;
 import webapp.services.*;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -58,11 +53,8 @@ public class DocumentsController {
     private DocumentCategorizer categorizer;
     private NamedEntityRecognizer recognizer;
     private final LocationResolver locationResolver;
-    //private final InformationExtractor informationExtractor;
-    private GibberishDetector detector;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
-    private static String tessdata = Tools.getProperty("tess4j.path");
 
     final static Logger logger = LogManager.getLogger(DocumentsController.class);
 
@@ -73,51 +65,31 @@ public class DocumentsController {
     private NERModelTrainingService nerModelTrainingService;
 
     @Autowired
-    private TesseractOCRService tesseractOCRService;
+    private DoccatModelTrainingService doccatModelTrainingService;
 
     @Autowired
-    private PDFProcessingService pdfProcessingService;
-
-    @Autowired
-    private WorkExecutorHeartbeatService workExecutorHeartbeatService;
-
-    @Autowired
-    private HttpServletRequest context;
-
-//    @Autowired
-//    private CoreferenceResolver coreferenceResolver;
+    private ResourceURLLookupService resourceURLLookupService;
 
     public DocumentsController() {
         solrClient = new SolrClient(Tools.getProperty("solr.url"));
         mongoClient = new DocStoreMongoClient(Tools.getProperty("mongodb.url"));
         neo4jClient = new Neo4jClient();
-        categorizer = new DocumentCategorizer();
+        categorizer = new DocumentCategorizer(solrClient);
         recognizer = new NamedEntityRecognizer(solrClient);
         locationResolver = new LocationResolver();
-        detector = new GibberishDetector();
-        //informationExtractor = new InformationExtractor();
-
-        //This setting speeds up Tesseract OCR
-        System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
-    }
-
-    @PostConstruct
-    public void startHeartbeatMonitor() {
-        workExecutorHeartbeatService.process("pdfProcessExecutor", 1000, 4);
-        workExecutorHeartbeatService.process("tesseractProcessExecutor", 1000, 32);
     }
 
     @RequestMapping(method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> getDocuments(IndexedDocumentsQueryParams params) {
-        logger.info(context.getRemoteAddr() + " -> " + "In getDocuments method");
+        logger.info("In getDocuments method");
         try {
             SolrQuery.SortClause sort = new SolrQuery.SortClause("lastUpdated", "desc");
             SolrDocumentList docs = solrClient.QuerySolrDocuments(params.getQuery(), params.getQueryRows(), params.getQueryStart(), sort, params.getFilterQueries());
             JsonResponse response = Tools.formJsonResponse(docs, params.getQueryTimeStamp());
-            logger.info(context.getRemoteAddr() + " -> " + "Returning documents");
+            logger.info("Returning documents");
             return ResponseEntity.ok().body(response);
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null, params.getQueryTimeStamp()));
         }
@@ -125,14 +97,14 @@ public class DocumentsController {
 
     @RequestMapping(value="/entities/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> getDocumentNamedEntities(@PathVariable(name="id") String id) {
-        logger.info(context.getRemoteAddr() + " -> " + "In getDocumentNamedEntities method");
+        logger.info("In getDocumentNamedEntities method");
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("docId:" + id + " AND entity:*", 1000000, 0, null);
             JsonResponse response = Tools.formJsonResponse(docs);
-            logger.info(context.getRemoteAddr() + " -> " + "Returning entities");
+            logger.info("Returning entities");
             return ResponseEntity.ok().body(response);
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
@@ -140,7 +112,7 @@ public class DocumentsController {
 
     @RequestMapping(value="/annotate/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> getAutoAnnotatedDocument(@PathVariable(name="id") String id, int threshold) {
-        logger.info(context.getRemoteAddr() + " -> " + "In autoAnnotate method");
+        logger.info("In autoAnnotate method");
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
             if (!docs.isEmpty()) {
@@ -154,7 +126,7 @@ public class DocumentsController {
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
@@ -162,12 +134,41 @@ public class DocumentsController {
 
     @RequestMapping(value="/trainNER", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> trainNERModel(String category) {
-        logger.info(context.getRemoteAddr() + " -> " + "In trainNERModel method");
+        logger.info("In trainNERModel method");
         try {
             nerModelTrainingService.process(this, category);
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/trainDoccat", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> trainDoccatModel() {
+        logger.info("In trainDoccatModel method");
+        try {
+            doccatModelTrainingService.process(this);
+            return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/url", method=RequestMethod.POST, consumes=MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> queueResourceURL(@RequestParam Map<String, Object> metadata, @RequestParam("url") String urlString) {
+        try {
+            URL url = new URL(urlString);
+            logger.info("Queueing resource URL for retrieval");
+            resourceURLLookupService.process(url, metadata);
+            return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+        } catch (MalformedURLException e){
+            return ResponseEntity.badRequest().body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
@@ -176,11 +177,22 @@ public class DocumentsController {
     @RequestMapping(method=RequestMethod.POST, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> createDocument(@RequestPart("metadata") Map<String, Object> metadata, @RequestPart("file") MultipartFile document) {
         try {
-            logger.info(context.getRemoteAddr() + " -> " + "Storing new document");
+            logger.info("Storing new document");
             String filename = document.getOriginalFilename();
             File uploadedFile = Tools.WriteFileToDisk(temporaryFileRepo + filename, document.getInputStream());
 
-            logger.info(context.getRemoteAddr() + " -> " + "Document stored");
+            logger.info("Document stored");
+
+            return processNewDocument(filename, metadata, uploadedFile);
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    public ResponseEntity<JsonResponse> processNewDocument(String filename, Map<String, Object> metadata, File uploadedFile) {
+        try {
             SolrDocumentList docs = new SolrDocumentList();
 
             SolrDocument doc = new SolrDocument();
@@ -189,38 +201,31 @@ public class DocumentsController {
             doc.addField("filename", filename);
             metadata.entrySet().stream().forEach(p -> doc.addField(p.getKey(), p.getValue()));
 
-            logger.info(context.getRemoteAddr() + " -> " + "Metadata added to document");
+            logger.info("Metadata added to document");
             String timestamp = Tools.getFormattedDateTimeString(Instant.now());
             doc.addField("created", timestamp);
             doc.addField("lastUpdated", timestamp);
+            logger.info("timestamp added");
 
-            logger.info(context.getRemoteAddr() + " -> " + "timestamp added");
-            String contentType = Files.probeContentType(uploadedFile.toPath());
-            logger.info(context.getRemoteAddr() + " -> " + "uploaded file type: " + contentType);
-            if (contentType.compareTo("application/pdf") == 0) {
-                logger.info(context.getRemoteAddr() + " -> " + "pdf document detected");
-                String docText = Tools.extractPDFText(uploadedFile, detector, pdfProcessingService, tesseractOCRService);
-                doc.addField("docText", docText);
+            String docText = TextExtractor.extractText(uploadedFile);
+            doc.addField("docText", docText);
 
-                if (Strings.isNullOrEmpty(docText)) {
-                    return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
-                }
-
-                docs = runPDFNLPPipeline(docText, docId, doc);
+            if (Strings.isNullOrEmpty(docText)) {
+                return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
             }
 
-            logger.info(context.getRemoteAddr() + " -> " + "storing file to MongoDB");
+            docs = runNLPPipeline(docText, docId, doc);
+
+            logger.info("storing file to MongoDB");
             ObjectId fileId = mongoClient.StoreFile(uploadedFile);
             doc.addField("docStoreId", fileId.toString());
 
-            logger.info(context.getRemoteAddr() + " -> " + "storing data to Solr");
+            logger.info("storing data to Solr");
             docs.add(doc);
             solrClient.indexDocuments(docs);
             cleanupService.process();
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
-            Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
     }
@@ -242,37 +247,34 @@ public class DocumentsController {
                     doc.replace("docStoreId", fileId.toString());
                     doc.replace("filename", filename);
 
-                    String contentType = Files.probeContentType(uploadedFile.toPath());
-                    if (contentType.compareTo("application/pdf") == 0) {
-                        String docText = Tools.extractPDFText(uploadedFile, detector, pdfProcessingService, tesseractOCRService);
-                        if (doc.containsKey("docText")) {
-                            doc.replace("docText", docText);
-                        } else {
-                            doc.addField("docText", docText);
-                        }
-
-                        SolrDocumentList solrDocs = runPDFNLPPipeline(docText, id, doc);
-                        solrClient.indexDocuments(solrDocs);
+                    String docText = TextExtractor.extractText(uploadedFile);
+                    if (doc.containsKey("docText")) {
+                        doc.replace("docText", docText);
+                    } else {
+                        doc.addField("docText", docText);
                     }
+
+                    SolrDocumentList solrDocs = runNLPPipeline(docText, id, doc);
+                    solrClient.indexDocuments(solrDocs);
                 }
 
                 String timestamp = Tools.getFormattedDateTimeString(Instant.now());
                 doc.replace("lastUpdated", timestamp);
 
-                logger.info(context.getRemoteAddr() + " -> " + "storing data to Solr");
+                logger.info("storing data to Solr");
                 solrClient.indexDocument(doc);
                 cleanupService.process();
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
     }
 
-    private SolrDocumentList runPDFNLPPipeline(String docText, String id, SolrDocument doc) throws SolrServerException, IOException {
+    private SolrDocumentList runNLPPipeline(String docText, String id, SolrDocument doc) throws SolrServerException, IOException {
         SolrDocumentList docs = new SolrDocumentList();
 
         String parsed = recognizer.deepCleanText(docText);
@@ -281,8 +283,8 @@ public class DocumentsController {
         } else {
             doc.addField("parsed", parsed);
         }
-        String category = Tools.removeUTF8BOM(categorizer.detectCategory(parsed));
-        logger.info(context.getRemoteAddr() + " -> " + "category detected: " + category);
+        String category = Tools.removeUTF8BOM(categorizer.detectCategory(parsed, 0));
+        logger.info("category detected: " + category);
         if (doc.containsKey("category")) {
             doc.replace("category", category);
         } else {
@@ -307,7 +309,7 @@ public class DocumentsController {
     }
 
     private void resolveDocumentRelations(String id, SolrDocument doc, SolrDocumentList docs, String parsed, List<NamedEntity> entities) {
-        logger.info(context.getRemoteAddr() + " -> " + "resolving locations");
+        logger.info("resolving locations");
         List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed, id);
         List<SolrDocument> locDocs = geoNames.stream()
                 .map(p -> p.mutate(id))
@@ -317,7 +319,7 @@ public class DocumentsController {
         if (entities.size() > 0 && geoNames.size() > 0) {
             List<Coreference> coreferences = processCoreferences(docs, parsed, id, entities);
 
-            logger.info(context.getRemoteAddr() + " -> " + "resolving entity relations");
+            logger.info("resolving entity relations");
             InformationExtractor informationExtractor = new InformationExtractor();
             List<EntityRelation> entityRelations = informationExtractor.getEntityRelations(parsed, id, entities, coreferences);
             List<SolrDocument> relDocs = entityRelations.stream()
@@ -327,13 +329,14 @@ public class DocumentsController {
 
             if (geoNames.size() > 0) {
                 Document n4jdoc = neo4jClient.addDocument(doc);
+                neo4jClient.addDataModelDocumentRelation(doc, n4jdoc);
                 neo4jClient.addDependencies(n4jdoc, geoNames, entityRelations);
             }
         }
     }
 
     private List<Coreference> processCoreferences(SolrDocumentList docs, String parsed, String id, List<NamedEntity> entities) {
-        logger.info(context.getRemoteAddr() + " -> " + "resolving coreferences");
+        logger.info("resolving coreferences");
         CoreferenceResolver coreferenceResolver = new CoreferenceResolver();
         List<Coreference> coreferences = coreferenceResolver.getCoreferencesFromDocument(parsed, id, entities);
         List<SolrDocument> corefDocs = coreferences.stream()
@@ -392,7 +395,7 @@ public class DocumentsController {
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
@@ -410,8 +413,8 @@ public class DocumentsController {
                 if (ext.equalsIgnoreCase("pdf")) {
                     solrClient.deleteDocuments("docId:" + id);
                     String docText = doc.get("docText").toString();
-                    SolrDocumentList solrDocs = runPDFNLPPipeline(docText, id, doc);
-                    logger.info(context.getRemoteAddr() + " -> " + "storing data to Solr");
+                    SolrDocumentList solrDocs = runNLPPipeline(docText, id, doc);
+                    logger.info("storing data to Solr");
                     solrClient.indexDocuments(solrDocs);
                     solrClient.indexDocument(doc);
                 }
@@ -420,7 +423,7 @@ public class DocumentsController {
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
@@ -447,7 +450,7 @@ public class DocumentsController {
                     SolrDocumentList relDocs = new SolrDocumentList();
                     resolveDocumentRelations(id, doc, relDocs, parsed, entities);
 
-                    logger.info(context.getRemoteAddr() + " -> " + "storing data to Solr");
+                    logger.info("storing data to Solr");
                     solrClient.indexDocuments(relDocs);
                 }
 
@@ -455,7 +458,7 @@ public class DocumentsController {
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
@@ -463,6 +466,10 @@ public class DocumentsController {
 
     public void initiateNERModelTraining(String category) {
         recognizer.trainNERModel(category);
+    }
+
+    public void initiateDoccatModelTraining() {
+        categorizer.trainDoccatModel();
     }
 
     @RequestMapping(value="/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)
@@ -480,7 +487,7 @@ public class DocumentsController {
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
         } catch (Exception e) {
-            logger.error(context.getRemoteAddr() + " -> " + e);
+            logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
@@ -488,7 +495,7 @@ public class DocumentsController {
 
     @RequestMapping(value="/{fileId}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<InputStreamResource> downloadDocument(@PathVariable(name="fileId") String fileId) {
-        logger.info(context.getRemoteAddr() + " -> " + "In downloadDocument method");
+        logger.info("In downloadDocument method");
 
         GridFSFile fsFile = mongoClient.GetFileMetadata(fileId);
         logger.info("downloading file: " + fsFile.getFilename());

@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 @EnableWebMvc
 @Configuration
-@ComponentScan(basePackages = {"webapp.components", "webapp.services", "webapp.controllers", "nlp"})
+@ComponentScan(basePackages = {"webapp.components", "webapp.services", "webapp.controllers", "nlp", "nlp.gibberish"})
 @EnableAsync
 public class WebConfig implements WebMvcConfigurer, AsyncConfigurer {
 

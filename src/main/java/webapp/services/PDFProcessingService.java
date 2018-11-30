@@ -18,12 +18,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import webapp.components.ApplicationContextProvider;
 
+import javax.annotation.PostConstruct;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
@@ -43,8 +45,22 @@ public class PDFProcessingService {
     private static String tessdata = Tools.getProperty("tess4j.path");
     private static Leptonica leptInstance = Leptonica.INSTANCE;
 
+    @Autowired
+    private GibberishDetector detector;
+
+    @Autowired
+    private TesseractOCRService tesseractOCRService;
+
+    @Autowired
+    private WorkExecutorHeartbeatService workExecutorHeartbeatService;
+
+    @PostConstruct
+    public void startHeartbeatMonitor() {
+        workExecutorHeartbeatService.process("pdfProcessExecutor", 1000, 4);
+    }
+    
     @Async("pdfProcessExecutor")
-    public Future<String> process(File pdfFile, PDDocument pdDoc, int i, GibberishDetector detector, TesseractOCRService tesseractOCRService) {
+    public Future<String> process(File pdfFile, PDDocument pdDoc, int i) {
         Tesseract tesseract = new Tesseract();
         tesseract.setDatapath(tessdata);
         final double pdfGibberishThreshold = 0.75; //set this threshold very high to avoid using OCR whenever possible
@@ -99,7 +115,7 @@ public class PDFProcessingService {
                         //The page likely contains a map or an engineering schematic.  It may be possible to extract
                         //more information from the page by piecewise analysis.
                         logger.info("Begin processing for file " + binFile.getName() + " page " + i + " as a map or engineering schematic.");
-                        output = doOCROnMap(binFile, i, detector, tesseractOCRService);
+                        output = doOCROnMap(binFile, i);
                         double outputGibberish = detector.getPercentGibberish(output);
 
                         logger.info("Map OCR processing for file " + binFile.getName() + " for page " + i + " percent gibberish: " + outputGibberish);
@@ -107,7 +123,7 @@ public class PDFProcessingService {
                             //As a final attempt, remove lines from the image and try extraction again.
                             logger.info("Map OCR processing for file " + binFile.getName() + " for page " + i + " percent gibberish exceeds maximum allowable amount.  Attempt line removal to declutter image, and try OCR again.");
                             removeLines(tiffFile);
-                            String noLinesOutput = doOCROnMap(tiffFile, i, detector, tesseractOCRService);
+                            String noLinesOutput = doOCROnMap(tiffFile, i);
                             double noLinesGibberish = detector.getPercentGibberish(noLinesOutput);
 
                             logger.info("Decluttered Map OCR processing for file " + tiffFile.getName() + " for page " + i + " percent gibberish: " + outputGibberish);
@@ -166,7 +182,7 @@ public class PDFProcessingService {
         return posOutput.toString();
     }
 
-    private String doOCROnMap(File tiffFile, int page, GibberishDetector detector, TesseractOCRService tesseractOCRService) {
+    private String doOCROnMap(File tiffFile, int page) {
         CopyOnWriteArrayList<String> allOutput = new CopyOnWriteArrayList<>();
 
         //rotate 90 degrees clockwise and extract data
@@ -189,14 +205,14 @@ public class PDFProcessingService {
         List<Future<Boolean>> tasks = new ArrayList<>();
 
         logger.info("Perform OCR for file " + tiffFile.getName() + " on page " + page + " using rectangles");
-        doOCRByRectangles(tasks, tesseractOCRService, tiffFile, page, rect, minWidth, minHeight, allOutput, detector);
+        doOCRByRectangles(tasks, tiffFile, page, rect, minWidth, minHeight, allOutput);
 
         Rectangle convRect = new Rectangle(ul, new Dimension(width / 6, height / 6));
         int widthStep = width / 12;
         int heightStep = height / 12;
 
         logger.info("Perform OCR for file " + tiffFile.getName() + " on page " + page + " using box convolution");
-        doOCRByConvolution(tasks, tesseractOCRService, tiffFile, page, convRect, width, height, widthStep, heightStep, allOutput, detector);
+        doOCRByConvolution(tasks, tiffFile, page, convRect, width, height, widthStep, heightStep, allOutput);
 
         //Track all OCR threads
         while(tasks.stream().anyMatch(p -> !p.isDone())) {
@@ -261,7 +277,7 @@ public class PDFProcessingService {
         return output;
     }
 
-    private void doOCRByRectangles(List<Future<Boolean>> tasks, TesseractOCRService tesseractOCRService, File tiffFile, int page, Rectangle rect, int minWidth, int minHeight, List<String> rectOutput, GibberishDetector detector) {
+    private void doOCRByRectangles(List<Future<Boolean>> tasks, File tiffFile, int page, Rectangle rect, int minWidth, int minHeight, List<String> rectOutput) {
         Dimension size = rect.getSize();
         Dimension halfSize = new Dimension(size.width / 2, size.height / 2);
         if (halfSize.width >= minWidth && halfSize.height >= minHeight) {
@@ -276,23 +292,22 @@ public class PDFProcessingService {
             Rectangle rlr = new Rectangle(lr, halfSize);
 
             logger.info("queue rectangle OCR processing task for file " + tiffFile.getName() + " for page " + page + ", rectangle: (" + rect.getX() + ", " + rect.getY() + ") with size: " + rect.width + "x" + rect.height + " pixels");
-            Future<Boolean> result = tesseractOCRService.process(tiffFile, page, rect, rectOutput, detector);
+            Future<Boolean> result = tesseractOCRService.process(tiffFile, page, rect, rectOutput);
             tasks.add(result);
 
-            doOCRByRectangles(tasks, tesseractOCRService, tiffFile, page, rul, minWidth, minHeight, rectOutput, detector);
-            doOCRByRectangles(tasks, tesseractOCRService, tiffFile, page, rll, minWidth, minHeight, rectOutput, detector);
-            doOCRByRectangles(tasks, tesseractOCRService, tiffFile, page, rur, minWidth, minHeight, rectOutput, detector);
-            doOCRByRectangles(tasks, tesseractOCRService, tiffFile, page, rlr, minWidth, minHeight, rectOutput, detector);
+            doOCRByRectangles(tasks, tiffFile, page, rul, minWidth, minHeight, rectOutput);
+            doOCRByRectangles(tasks, tiffFile, page, rll, minWidth, minHeight, rectOutput);
+            doOCRByRectangles(tasks, tiffFile, page, rur, minWidth, minHeight, rectOutput);
+            doOCRByRectangles(tasks, tiffFile, page, rlr, minWidth, minHeight, rectOutput);
         }
     }
 
-    private void doOCRByConvolution(List<Future<Boolean>> tasks, TesseractOCRService tesseractOCRService, File tiffFile, int page, Rectangle rect, int imgWidth, int imgHeight, int widthStep, int heightStep,
-                                           List<String> convOutput, GibberishDetector detector) {
+    private void doOCRByConvolution(List<Future<Boolean>> tasks, File tiffFile, int page, Rectangle rect, int imgWidth, int imgHeight, int widthStep, int heightStep, List<String> convOutput) {
         while(rect.y <= (imgHeight - rect.height)) {
             while(rect.x <= (imgWidth - rect.width)) {
                 Rectangle convRect = new Rectangle(rect.getLocation(), rect.getSize());
                 logger.info("queue convolution OCR processing task for file " + tiffFile.getName() + " for page " + page + ", rectangle: (" + rect.getX() + ", " + rect.getY() + ") with size: " + rect.width + "x" + rect.height + " pixels");
-                Future<Boolean> result = tesseractOCRService.process(tiffFile, page, convRect, convOutput, detector);
+                Future<Boolean> result = tesseractOCRService.process(tiffFile, page, convRect, convOutput);
                 tasks.add(result);
                 rect.x += widthStep;
             }
