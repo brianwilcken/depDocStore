@@ -99,7 +99,7 @@ public class NamedEntityRecognizer {
     }
 
     public List<NamedEntity> extractNamedEntities(String annotated) {
-        Pattern docPattern = Pattern.compile(" ?<START:.+?<END> ?");
+        Pattern docPattern = Pattern.compile(" ?<START:.+?<END>");
         Pattern entityTypePattern = Pattern.compile("(?<=:).+?(?=>)");
 
         List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(annotated);
@@ -115,7 +115,7 @@ public class NamedEntityRecognizer {
                 int annotatedStart = sentMatcher.start();
                 int annotatedEnd = sentMatcher.end();
                 List<CoreLabel> spanTokens = tokens.stream()
-                        .filter(p -> (annotatedStart == 0 || p.beginPosition() > annotatedStart) && p.endPosition() < annotatedEnd)
+                        .filter(p -> (annotatedStart == 0 || p.beginPosition() > annotatedStart) && p.endPosition() <= annotatedEnd)
                         .collect(Collectors.toList());
                 CoreLabel startToken = spanTokens.get(0);
                 Matcher typeMatcher = entityTypePattern.matcher(startToken.value());
@@ -140,13 +140,36 @@ public class NamedEntityRecognizer {
         return entities;
     }
 
+    /*Required Categories for initial implementation:
+    Electricity
+    Natural_Gas
+    Petroleum
+    Water
+    Wastewater_System
+    Recycled_Water_System
+     */
+
+    private static final Map<String, List<String>> dictionaries;
+    static
+    {
+        dictionaries = new HashMap<>();
+        dictionaries.put("Water", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.water"), Dictionary.class)));
+        dictionaries.put("Wastewater_System", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.wastewater"), Dictionary.class)));
+        dictionaries.put("Electricity", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.power"), Dictionary.class)));
+        dictionaries.put("Petroleum", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.petro"), Dictionary.class)));
+        dictionaries.put("Natural_Gas", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.natgas"), Dictionary.class)));
+    }
+
     private static final Map<String, String> models;
     static
     {
         models = new HashMap<>();
         models.put("Water", Tools.getProperty("nlp.waterNerModel"));
-        models.put("Wastewater", Tools.getProperty("nlp.wastewaterNerModel"));
+        models.put("Wastewater_System", Tools.getProperty("nlp.wastewaterNerModel"));
+        models.put("Recycled_Water_System", Tools.getProperty("nlp.recycledWaterNerModel"));
         models.put("Electricity", Tools.getProperty("nlp.electricityNerModel"));
+        models.put("Petroleum", Tools.getProperty("nlp.petroleumNerModel"));
+        models.put("Natural_Gas", Tools.getProperty("nlp.naturalGasNerModel"));
     }
 
     private static final Map<String, String> trainingFiles;
@@ -154,8 +177,11 @@ public class NamedEntityRecognizer {
     {
         trainingFiles = new HashMap<>();
         trainingFiles.put("Water", Tools.getProperty("nlp.waterNerTrainingFile"));
-        trainingFiles.put("Wastewater", Tools.getProperty("nlp.wastewaterNerTrainingFile"));
+        trainingFiles.put("Wastewater_System", Tools.getProperty("nlp.wastewaterNerTrainingFile"));
+        trainingFiles.put("Recycled_Water_System", Tools.getProperty("nlp.recycledWaterNerTrainingFile"));
         trainingFiles.put("Electricity", Tools.getProperty("nlp.electricityNerTrainingFile"));
+        trainingFiles.put("Petroleum", Tools.getProperty("nlp.petroleumNerTrainingFile"));
+        trainingFiles.put("Natural_Gas", Tools.getProperty("nlp.naturalGasNerTrainingFile"));
     }
 
     private static final Map<String, Function<SolrQuery, SolrQuery>> dataGetters;
@@ -163,8 +189,11 @@ public class NamedEntityRecognizer {
     {
         dataGetters = new HashMap<>();
         dataGetters.put("Water", SolrClient::getWaterDataQuery);
-        dataGetters.put("Wastewater", SolrClient::getWastewaterDataQuery);
+        dataGetters.put("Wastewater_System", SolrClient::getWastewaterDataQuery);
+        dataGetters.put("Recycled_Water_System", SolrClient::getRecycledWaterDataQuery);
         dataGetters.put("Electricity", SolrClient::getElectricityDataQuery);
+        dataGetters.put("Petroleum", SolrClient::getPetroleumDataQuery);
+        dataGetters.put("Natural_Gas", SolrClient::getNaturalGasDataQuery);
     }
 
     private SentenceModel sentModel;
@@ -260,7 +289,9 @@ public class NamedEntityRecognizer {
                         String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
                         String entity = String.join(" ", entityParts);
                         if (prob > threshold) {
-                            namedEntities.add(new NamedEntity(entity, span, s));
+                            NamedEntity namedEntity = new NamedEntity(entity, span, s);
+                            curateNamedEntityType(category, namedEntity);
+                            namedEntities.add(namedEntity);
                         }
                     }
                 }
@@ -276,6 +307,32 @@ public class NamedEntityRecognizer {
                 return namedEntities; //this collection will be empty
             }
         }
+    }
+
+    public void curateNamedEntityType(String category, NamedEntity namedEntity) {
+        if (dictionaries.containsKey(category)) {
+            List<String> dict = dictionaries.get(category);
+            //Case 1: the category-specific dictionary contains a token combination that matches at least part of the entity name
+            if (!dictionaryMatchesEntity(namedEntity, dict)) {
+                //Case 2: some other category dictionary may contain a term that matches part of the entity name
+                for (String key : dictionaries.keySet()) {
+                    if (!key.equals(category)) {
+                        List<String> otherDict = dictionaries.get(key);
+                        if (dictionaryMatchesEntity(namedEntity, otherDict)) {
+                            Span span = namedEntity.getSpan();
+                            Span newSpan = new Span(span.getStart(), span.getEnd(), key, span.getProb());
+                            namedEntity.setSpan(newSpan);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean dictionaryMatchesEntity(NamedEntity namedEntity, List<String> dict) {
+        long matches = dict.stream().filter(p -> namedEntity.getEntity().toLowerCase().contains(p.toLowerCase())).count();
+
+        return matches > 0;
     }
 
     public String deepCleanText(String document) {

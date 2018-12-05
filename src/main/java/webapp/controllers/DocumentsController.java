@@ -159,12 +159,25 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/url", method=RequestMethod.POST, consumes=MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> queueResourceURL(@RequestParam Map<String, Object> metadata, @RequestParam("url") String urlString) {
+    public ResponseEntity<JsonResponse> loadResourceURL(@RequestParam Map<String, Object> metadata, @RequestParam("url") String urlString) {
         try {
             URL url = new URL(urlString);
-            logger.info("Queueing resource URL for retrieval");
-            resourceURLLookupService.process(url, metadata);
-            return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+            logger.info("Loading resource from URL");
+            String docId = UUID.randomUUID().toString();
+            metadata.put("id", docId);
+            if (metadata.containsKey("async")) {
+                metadata.remove("async"); //remove the async flag otherwise this will be part of the saved document
+                resourceURLLookupService.processAsync(url, metadata);
+                return ResponseEntity.ok().body(Tools.formJsonResponse(docId));
+            } else {
+                resourceURLLookupService.process(url, metadata);
+                SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + docId, 1000, 0, null);
+                if (!docs.isEmpty()) {
+                    return ResponseEntity.ok().body(Tools.formJsonResponse(docs.get(0)));
+                } else {
+                    return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
+                }
+            }
         } catch (MalformedURLException e){
             return ResponseEntity.badRequest().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
@@ -196,8 +209,13 @@ public class DocumentsController {
             SolrDocumentList docs = new SolrDocumentList();
 
             SolrDocument doc = new SolrDocument();
-            String docId = UUID.randomUUID().toString();
-            doc.addField("id", docId);
+            String docId = null;
+            if (!metadata.containsKey("id")) {
+                docId = UUID.randomUUID().toString();
+                doc.addField("id", docId);
+            } else {
+                docId = metadata.get("id").toString();
+            }
             doc.addField("filename", filename);
             metadata.entrySet().stream().forEach(p -> doc.addField(p.getKey(), p.getValue()));
 
@@ -348,7 +366,7 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/metadata/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("metadata") Map<String, Object> metadata) {
+    public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("metadata") Map<String, Object> metadata, @RequestPart("doNLP") boolean doNLP) {
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
             if (!docs.isEmpty()) {
@@ -373,7 +391,7 @@ public class DocumentsController {
                 solrClient.indexDocument(doc);
 
                 //any user-entered changes to the annotated document must initiate an overhaul of the underlying dependency data
-                if (metadata.keySet().contains("annotated")) {
+                if (doNLP && metadata.keySet().contains("annotated")) {
                     String annotated = metadata.get("annotated").toString();
                     List<NamedEntity> entities = recognizer.extractNamedEntities(annotated);
 
@@ -388,9 +406,6 @@ public class DocumentsController {
                     solrClient.indexDocuments(solrDocs);
                 }
 
-//                if (metadata.keySet().contains("annotated")) {
-//                    nerModelTrainingService.process(this, (String)doc.get("category"));
-//                }
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
@@ -407,10 +422,7 @@ public class DocumentsController {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
-                String filename = doc.get("filename").toString();
-                String ext = FilenameUtils.getExtension(filename);
-
-                if (ext.equalsIgnoreCase("pdf")) {
+                if (doc.containsKey("docText")) {
                     solrClient.deleteDocuments("docId:" + id);
                     String docText = doc.get("docText").toString();
                     SolrDocumentList solrDocs = runNLPPipeline(docText, id, doc);
@@ -435,10 +447,7 @@ public class DocumentsController {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
-                String filename = doc.get("filename").toString();
-                String ext = FilenameUtils.getExtension(filename);
-
-                if (ext.equalsIgnoreCase("pdf")) {
+                if (doc.containsKey("parsed")) {
                     //remove all Solr entries for corefs and relations
                     solrClient.deleteDocuments("docId:" + id + " AND -entity:*");
 
@@ -482,6 +491,7 @@ public class DocumentsController {
                     String fileId = doc.get("docStoreId").toString();
                     mongoClient.DeleteFile(fileId);
                 }
+                solrClient.deleteDocuments("docId:" + id);
                 solrClient.deleteDocuments("id:" + id);
                 return ResponseEntity.status(HttpStatus.NO_CONTENT).body(Tools.formJsonResponse(null));
             }

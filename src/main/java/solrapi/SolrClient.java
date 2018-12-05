@@ -271,13 +271,31 @@ public class SolrClient {
 	}
 
 	public static SolrQuery getWastewaterDataQuery(SolrQuery query) {
-		query.setQuery("annotated:* AND category:Wastewater");
+		query.setQuery("annotated:* AND category:Wastewater_System");
+
+		return query;
+	}
+
+	public static SolrQuery getRecycledWaterDataQuery(SolrQuery query) {
+		query.setQuery("annotated:* AND category:Recycled_Water_System");
 
 		return query;
 	}
 
 	public static SolrQuery getElectricityDataQuery(SolrQuery query) {
 		query.setQuery("annotated:* AND category:Electricity");
+
+		return query;
+	}
+
+	public static SolrQuery getPetroleumDataQuery(SolrQuery query) {
+		query.setQuery("annotated:* AND category:Petroleum");
+
+		return query;
+	}
+
+	public static SolrQuery getNaturalGasDataQuery(SolrQuery query) {
+		query.setQuery("annotated:* AND category:Natural_Gas");
 
 		return query;
 	}

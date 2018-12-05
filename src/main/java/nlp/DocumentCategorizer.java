@@ -71,7 +71,7 @@ public class DocumentCategorizer {
 
     private String[] GetDocCatTokens(String document) {
         String normalized = NLPTools.normalizeText(document);
-        String[] tokens = NLPTools.detectTokens(tokenizerModel, normalized);
+        String[] tokens = NLPTools.detectTokens(normalized);
 
         return tokens;
     }

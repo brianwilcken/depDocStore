@@ -21,7 +21,7 @@ public class TextExtractor {
 
     final static Logger logger = LogManager.getLogger(TextExtractor.class);
 
-    private static Map<String, Function<File, String>> extractors;
+    private static final Map<String, Function<File, String>> extractors;
 
     static {
         extractors = new HashMap<>();
@@ -29,6 +29,15 @@ public class TextExtractor {
         extractors.put("text/plain", TextExtractor::extractPlainText);
         extractors.put("application/msword", TextExtractor::extractDocText);
         extractors.put("application/vnd.openxmlformats-officedocument.wordprocessingml.document", TextExtractor::extractDocxText);
+    }
+
+    public static boolean canExtractText(File file) {
+        try {
+            String contentType = Files.probeContentType(file.toPath());
+            return extractors.containsKey(contentType);
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     public static String extractText(File file) {

@@ -53,6 +53,10 @@ public class ResourceURLLookupService {
     private DocumentsController controller;
 
     @Async("processExecutor")
+    public void processAsync(URL url, Map<String, Object> metadata) {
+        process(url, metadata);
+    }
+
     public void process(URL url, Map<String, Object> metadata) {
         try {
             String filename = FilenameUtils.getName(url.getPath());

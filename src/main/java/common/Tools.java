@@ -19,11 +19,13 @@ import com.google.common.base.Strings;
 import com.sun.jna.ptr.FloatByReference;
 import com.sun.jna.ptr.PointerByReference;
 import edu.stanford.nlp.ling.TaggedWord;
+import edu.stanford.nlp.util.StringUtils;
 import net.sourceforge.lept4j.*;
 import net.sourceforge.lept4j.util.LeptUtils;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import net.sourceforge.tess4j.util.PdfBoxUtilities;
+import nlp.Dictionary;
 import nlp.NLPTools;
 import nlp.NamedEntityRecognizer;
 import nlp.gibberish.GibberishDetector;
@@ -53,6 +55,10 @@ import webapp.components.ApplicationContextProvider;
 import webapp.models.JsonResponse;
 import webapp.services.PDFProcessingService;
 import webapp.services.TesseractOCRService;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
 
 public class Tools {
 
@@ -297,5 +303,28 @@ public class Tools {
 		parsedText = parsedText.replaceAll("(?<=[a-z])-\\s(?=[a-z])", "");
 
 		return parsedText;
+	}
+
+	public static <T> T loadXML(String xmlPath, Class<T> type) {
+		try {
+			ClassPathResource resource = new ClassPathResource(xmlPath);
+			JAXBContext jaxbContext = JAXBContext.newInstance(type);
+			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+			T obj = (T) unmarshaller.unmarshal(resource.getInputStream());
+			return obj;
+		} catch (JAXBException | IOException e) {
+			return null;
+		}
+	}
+
+	public static List<String> extractEntriesFromDictionary(Dictionary dict) {
+		List<String> entries = dict.getEntry().stream().map(p -> StringUtils.join(p.getToken(), " ")).collect(Collectors.toList());
+
+		return entries;
+	}
+
+	public static void main(String[] args) {
+		Dictionary waterDict = loadXML("E:\\code\\dependency\\depDocStore\\src\\main\\resources\\nlp\\ner-dict\\water.xml", Dictionary.class);
+		System.out.println();
 	}
 }
