@@ -133,10 +133,15 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/trainNER", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> trainNERModel(String category) {
+    public ResponseEntity<JsonResponse> trainNERModel(String category, boolean doAsync) {
         logger.info("In trainNERModel method");
         try {
-            nerModelTrainingService.process(this, category);
+            if (!doAsync) {
+                nerModelTrainingService.process(this, category);
+            } else {
+                nerModelTrainingService.processAsync(this, category);
+            }
+
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
             logger.error(e);
@@ -146,11 +151,16 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/trainDoccat", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> trainDoccatModel() {
+    public ResponseEntity<JsonResponse> trainDoccatModel(boolean doAsync) {
         logger.info("In trainDoccatModel method");
         try {
-            doccatModelTrainingService.process(this);
-            return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+            if (!doAsync) {
+                double accuracy = doccatModelTrainingService.process(this);
+                return ResponseEntity.ok().body(Tools.formJsonResponse(accuracy));
+            } else {
+                doccatModelTrainingService.processAsync(this);
+                return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+            }
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
@@ -229,7 +239,6 @@ public class DocumentsController {
             doc.addField("docText", docText);
 
             if (Strings.isNullOrEmpty(docText)) {
-                return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
             }
 
             docs = runNLPPipeline(docText, docId, doc);
@@ -473,12 +482,12 @@ public class DocumentsController {
         }
     }
 
-    public void initiateNERModelTraining(String category) {
+    public void initiateNERModelTraining(String category) throws IOException {
         recognizer.trainNERModel(category);
     }
 
-    public void initiateDoccatModelTraining() {
-        categorizer.trainDoccatModel();
+    public double initiateDoccatModelTraining() throws IOException {
+        return categorizer.trainDoccatModel();
     }
 
     @RequestMapping(value="/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)

@@ -299,7 +299,11 @@ public class NamedEntityRecognizer {
             return namedEntities;
         } catch (IOException e) {
             if(numTries.length == 0) {
-                trainNERModel(category); //model may not yet exist, but maybe there is data to train it...
+                try {
+                    trainNERModel(category); //model may not yet exist, but maybe there is data to train it...
+                } catch (IOException e1) {
+                    logger.error(e.getMessage(), e1);
+                }
                 return detectNamedEntities(sentences, category, threshold, 1);
             } else {
                 //no model training data available...
@@ -360,30 +364,25 @@ public class NamedEntityRecognizer {
         return sentences;
     }
 
-    public void trainNERModel(String category) {
-        try {
-            String trainingFile = trainingFiles.get(category);
+    public void trainNERModel(String category) throws IOException {
+        String trainingFile = trainingFiles.get(category);
 
-            client.writeTrainingDataToFile(trainingFile, dataGetters.get(category), client::formatForNERModelTraining);
-            ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
+        client.writeTrainingDataToFile(trainingFile, dataGetters.get(category), client::formatForNERModelTraining);
+        ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
 
-            TokenNameFinderModel model;
+        TokenNameFinderModel model;
 
-            TrainingParameters params = new TrainingParameters();
-            params.put(TrainingParameters.ITERATIONS_PARAM, 300);
-            params.put(TrainingParameters.CUTOFF_PARAM, 1);
+        TrainingParameters params = new TrainingParameters();
+        params.put(TrainingParameters.ITERATIONS_PARAM, 300);
+        params.put(TrainingParameters.CUTOFF_PARAM, 1);
 
-            try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
-                model = NameFinderME.train("en", null, sampleStream, params,
-                        TokenNameFinderFactory.create(null, null, Collections.emptyMap(), new BioCodec()));
-            }
+        try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
+            model = NameFinderME.train("en", null, sampleStream, params,
+                    TokenNameFinderFactory.create(null, null, Collections.emptyMap(), new BioCodec()));
+        }
 
-            try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(models.get(category)))) {
-                model.serialize(modelOut);
-            }
-
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
+        try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(models.get(category)))) {
+            model.serialize(modelOut);
         }
     }
 

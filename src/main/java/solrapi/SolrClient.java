@@ -55,7 +55,9 @@ public class SolrClient {
 		//client.writeTrainingDataToFile(Tools.getProperty("nlp.waterNerTrainingFile"), client::getWaterDataQuery, client::formatForNERModelTraining);
 
 		//retrieveAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
-		updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
+		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
+
+		client.writeTrainingDataToFile("data/clustering.csv", client::getDoccatDataQuery, client::formatForClustering);
 	}
 
 	private static void retrieveAnnotatedData(SolrClient client, String id) {
@@ -314,6 +316,16 @@ public class SolrClient {
 		String onlyAnnotated = String.join("\r\n", annotatedLines);
 		fos.write(onlyAnnotated.getBytes(Charset.forName("Cp1252")));
 		fos.write(System.lineSeparator().getBytes());
+	}
+
+	public void formatForClustering(SolrDocument doc, FileOutputStream fos) throws IOException {
+		String id = doc.get("id").toString();
+		String filename = doc.get("filename").toString();
+		String parsed = doc.get("parsed").toString();
+		String clusteringStr = id + "," + filename.replace(",", "") + "," + parsed.replace(",", "");
+		clusteringStr = clusteringStr.replace("\r", " ")
+				.replace("\n", " ");
+		fos.write(clusteringStr.getBytes(Charset.forName("Cp1252")));
 	}
 
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {

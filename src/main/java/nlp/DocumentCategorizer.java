@@ -126,7 +126,7 @@ public class DocumentCategorizer {
         return best;
     }
 
-    public double trainDoccatModel() {
+    public double trainDoccatModel() throws IOException {
         double modelAccuracy;
         DoccatModel model;
         try {
@@ -146,7 +146,7 @@ public class DocumentCategorizer {
             try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(Tools.getProperty("nlp.doccatModel")))) {
                 model.serialize(modelOut);
             }
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             logger.error(e.getMessage(), e);
             modelAccuracy = -1;
         }
