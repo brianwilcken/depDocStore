@@ -99,7 +99,7 @@ public class DocumentsController {
     public ResponseEntity<JsonResponse> getDocumentNamedEntities(@PathVariable(name="id") String id) {
         logger.info("In getDocumentNamedEntities method");
         try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("docId:" + id + " AND entity:*", 1000000, 0, null);
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("docId:" + id + " AND (entity:* OR name:*)", 1000000, 0, null);
             JsonResponse response = Tools.formJsonResponse(docs);
             logger.info("Returning entities");
             return ResponseEntity.ok().body(response);
