@@ -84,7 +84,7 @@ public class DocumentsController {
         logger.info("In getDocuments method");
         try {
             SolrQuery.SortClause sort = new SolrQuery.SortClause("lastUpdated", "desc");
-            SolrDocumentList docs = solrClient.QuerySolrDocuments(params.getQuery(), params.getQueryRows(), params.getQueryStart(), sort, params.getFilterQueries());
+            SolrDocumentList docs = solrClient.QuerySolrDocuments(params.getQuery(), params.getQueryRows(), params.getQueryStart(), sort, params.getFields(), params.getFilterQueries());
             JsonResponse response = Tools.formJsonResponse(docs, params.getQueryTimeStamp());
             logger.info("Returning documents");
             return ResponseEntity.ok().body(response);
@@ -99,7 +99,7 @@ public class DocumentsController {
     public ResponseEntity<JsonResponse> getDocumentNamedEntities(@PathVariable(name="id") String id) {
         logger.info("In getDocumentNamedEntities method");
         try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("docId:" + id + " AND (entity:* OR name:*)", 1000000, 0, null);
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("docId:" + id + " AND (entity:* OR name:*)", 1000000, 0, null, null);
             JsonResponse response = Tools.formJsonResponse(docs);
             logger.info("Returning entities");
             return ResponseEntity.ok().body(response);
@@ -114,7 +114,7 @@ public class DocumentsController {
     public ResponseEntity<JsonResponse> getAutoAnnotatedDocument(@PathVariable(name="id") String id, int threshold) {
         logger.info("In autoAnnotate method");
         try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
 
@@ -181,7 +181,7 @@ public class DocumentsController {
                 return ResponseEntity.ok().body(Tools.formJsonResponse(docId));
             } else {
                 resourceURLLookupService.process(url, metadata);
-                SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + docId, 1000, 0, null);
+                SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + docId, 1000, 0, null, null);
                 if (!docs.isEmpty()) {
                     return ResponseEntity.ok().body(Tools.formJsonResponse(docs.get(0)));
                 } else {
@@ -260,7 +260,7 @@ public class DocumentsController {
     @RequestMapping(value="/file/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("file") MultipartFile document) {
         try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             solrClient.deleteDocuments("docId:" + id);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
@@ -377,7 +377,7 @@ public class DocumentsController {
     @RequestMapping(value="/metadata/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("metadata") Map<String, Object> metadata, @RequestPart("doNLP") boolean doNLP) {
         try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US);
@@ -428,7 +428,7 @@ public class DocumentsController {
     @RequestMapping(value="/reprocess/{id}", method=RequestMethod.PUT, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> reprocessDocument(@PathVariable(name="id") String id) {
         try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
                 if (doc.containsKey("docText")) {
@@ -453,7 +453,7 @@ public class DocumentsController {
     @RequestMapping(value="/relations/{id}", method=RequestMethod.PUT, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> reprocessDocumentRelations(@PathVariable(name="id") String id) {
         try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
                 if (doc.containsKey("parsed")) {
@@ -461,7 +461,7 @@ public class DocumentsController {
                     solrClient.deleteDocuments("docId:" + id + " AND -entity:*");
 
                     //Pull in the Solr documents for named entities and for locations
-                    List<NamedEntity> entities = solrClient.QueryIndexedDocuments(NamedEntity.class, "docId: " + id + " AND entity:*", 100000, 0, null);
+                    List<NamedEntity> entities = solrClient.QueryIndexedDocuments(NamedEntity.class, "docId: " + id + " AND entity:*", 100000, 0, null, null);
 
                     String parsed = doc.get("parsed").toString();
 
@@ -493,7 +493,7 @@ public class DocumentsController {
     @RequestMapping(value="/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> deleteDocument(@PathVariable(name="id") String id) {
         try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null);
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
                 if (doc.containsKey("docStoreId")) {

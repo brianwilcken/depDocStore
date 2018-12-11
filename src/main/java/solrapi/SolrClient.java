@@ -62,7 +62,7 @@ public class SolrClient {
 
 	private static void retrieveAnnotatedData(SolrClient client, String id) {
 		try {
-			SolrDocumentList docs = client.QuerySolrDocuments("id:" + id, 1, 0, null);
+			SolrDocumentList docs = client.QuerySolrDocuments("id:" + id, 1, 0, null, null);
 			SolrDocument doc = docs.get(0);
 
 			String annotated = (String)doc.get("annotated");
@@ -76,7 +76,7 @@ public class SolrClient {
 	private static void updateAnnotatedData(SolrClient client, String id) {
 		String annotated = Tools.GetFileString("data/annotated.txt");
 		try {
-			SolrDocumentList docs = client.QuerySolrDocuments("id:" + id, 1, 0, null);
+			SolrDocumentList docs = client.QuerySolrDocuments("id:" + id, 1, 0, null, null);
 			SolrDocument doc = docs.get(0);
 			if (doc.containsKey("annotated")) {
 				doc.replace("annotated", annotated);
@@ -189,7 +189,7 @@ public class SolrClient {
 		}
 	}
 
-	public SolrDocumentList QuerySolrDocuments(String queryStr, int rows, int start, SortClause sort, String... filterQueries) throws SolrServerException {
+	public SolrDocumentList QuerySolrDocuments(String queryStr, int rows, int start, SortClause sort, String[] fields, String... filterQueries) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setQuery(queryStr);
 		if (filterQueries != null) {
@@ -199,8 +199,9 @@ public class SolrClient {
 		query.setStart(start);
 		if (sort != null) {
 			query.setSort(sort);
-		} else {
-
+		}
+		if (fields != null) {
+			query.setFields(fields);
 		}
 		try {
 			SolrDocumentList response = client.query(COLLECTION, query).getResults();
@@ -211,7 +212,7 @@ public class SolrClient {
 		}
 	}
 
-	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, int start, SortClause sort, String... filterQueries) throws SolrServerException {
+	public <T> List<T> QueryIndexedDocuments(Class<T> clazz, String queryStr, int rows, int start, SortClause sort, String[] fields, String... filterQueries) throws SolrServerException {
 		SolrQuery query = new SolrQuery();
 		query.setQuery(queryStr);
 		if (filterQueries != null) {
@@ -330,7 +331,7 @@ public class SolrClient {
 
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
 		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
-		SolrDocumentList docs = QuerySolrDocuments(queryStr, rows, 0, null, filterQueries);
+		SolrDocumentList docs = QuerySolrDocuments(queryStr, rows, 0, null, null, filterQueries);
 		try {
 			String output = writer.writeValueAsString(docs);
 			File file = new File(filePath);

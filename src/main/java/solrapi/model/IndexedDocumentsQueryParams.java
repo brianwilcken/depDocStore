@@ -13,6 +13,8 @@ public class IndexedDocumentsQueryParams extends IndexedDocumentsQuery {
     private int[] rows;
     private int[] page;
     private String[] docText;
+    private String[] id;
+    private String[] fields;
 
     public String getQuery() {
         return getTimeRangeQuery("created", startDate, endDate, numDaysPrevious);
@@ -22,6 +24,7 @@ public class IndexedDocumentsQueryParams extends IndexedDocumentsQuery {
         List<String> fqs = new ArrayList<String>();
 
         fqs.add(getFilterQuery("docText", docText));
+        fqs.add(getFilterQuery("id", id));
 
         return fqs.toArray(new String[fqs.size()]);
     }
@@ -78,12 +81,28 @@ public class IndexedDocumentsQueryParams extends IndexedDocumentsQuery {
         this.page = page;
     }
 
+    public String[] getId() {
+        return id;
+    }
+
+    public void setId(String[] id) {
+        this.id = id;
+    }
+
     public String[] getDocText() {
         return docText;
     }
 
     public void setDocText(String[] docText) {
         this.docText = docText;
+    }
+
+    public String[] getFields() {
+        return fields;
+    }
+
+    public void setFields(String[] fields) {
+        this.fields = fields;
     }
 }
 

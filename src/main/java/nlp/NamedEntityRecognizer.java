@@ -50,7 +50,7 @@ public class NamedEntityRecognizer {
 
     private static void autoAnnotateAllForCategory(SolrClient client, NamedEntityRecognizer namedEntityRecognizer, String category) {
         try {
-            SolrDocumentList docs = client.QuerySolrDocuments("category:" + category + " AND -annotated:*", 1000, 0, null);
+            SolrDocumentList docs = client.QuerySolrDocuments("category:" + category + " AND -annotated:*", 1000, 0, null, null);
             for (SolrDocument doc : docs) {
                 String document = (String)doc.get("parsed");
                 List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, category, 0.5);
