@@ -70,6 +70,9 @@ public class DocumentsController {
     @Autowired
     private ResourceURLLookupService resourceURLLookupService;
 
+    @Autowired
+    private WebCrawlerService webCrawlerService;
+
     public DocumentsController() {
         solrClient = new SolrClient(Tools.getProperty("solr.url"));
         mongoClient = new DocStoreMongoClient(Tools.getProperty("mongodb.url"));
@@ -188,6 +191,25 @@ public class DocumentsController {
                     return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
                 }
             }
+        } catch (MalformedURLException e){
+            return ResponseEntity.badRequest().body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/crawl", method=RequestMethod.POST, consumes=MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> crawlResourceURL(@RequestParam Map<String, Object> metadata, @RequestParam("url") String urlString) {
+        try {
+            logger.info("crawling URL");
+            if (metadata.containsKey("async")) {
+                webCrawlerService.processAsync(urlString);
+            } else {
+                webCrawlerService.process(urlString);
+            }
+            return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (MalformedURLException e){
             return ResponseEntity.badRequest().body(Tools.formJsonResponse(null));
         } catch (Exception e) {

@@ -21,7 +21,7 @@ public class TextExtractor {
 
     final static Logger logger = LogManager.getLogger(TextExtractor.class);
 
-    private static final Map<String, Function<File, String>> extractors;
+    public static final Map<String, Function<File, String>> extractors;
 
     static {
         extractors = new HashMap<>();
