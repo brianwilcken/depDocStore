@@ -216,10 +216,13 @@
 				<erInterval>60000</erInterval>
 				<dcInterval>60000</dcInterval>
 				<wsInterval>15000</wsInterval>
+				<neo4j.url>http://localhost:7474</neo4j.url>
+				<neo4j.username>neo4j</neo4j.username>
+				<neo4j.password>r4MQ9i6$e</neo4j.password>
 			</properties>
 		</profile>
 		<profile>
-			<id>localDevWithRemoteSolr</id>
+			<id>develop</id>
 			<activation>
 				<property>
 					<name>env</name>
@@ -229,7 +232,7 @@
 			<properties>
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
-				<index.url>http://ipgdevgis:8983/solr</index.url>
+				<index.url>http://localhost:8983/solr</index.url>
 				<mongo.url>mongodb://localhost:27017</mongo.url>
 				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<useProxy>false</useProxy>
@@ -241,6 +244,9 @@
                 <erInterval>3600000</erInterval>
                 <dcInterval>900000</dcInterval>
 				<wsInterval>15000</wsInterval>
+				<neo4j.url>http://localhost:7474</neo4j.url>
+				<neo4j.username>neo4j</neo4j.username>
+				<neo4j.password>inl2018#</neo4j.password>
 			</properties>
 		</profile>
 		<profile>
@@ -300,6 +306,7 @@
 		<filters>
 			<filter>src/main/resources/log4j2.xml</filter>
 			<filter>src/main/resources/application.properties</filter>
+			<filter>src/main/resources/ogm.properties</filter>
 		</filters>
 		<resources>
 			<resource>

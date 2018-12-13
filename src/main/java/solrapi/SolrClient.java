@@ -267,6 +267,15 @@ public class SolrClient {
 		return query;
 	}
 
+	public static Function<SolrQuery, SolrQuery> getCategorySpecificDataQuery(final String category) {
+		Function<SolrQuery, SolrQuery> func = query -> {
+			query.setQuery("annotated:* AND category:" + category);
+
+			return query;
+		};
+		return func;
+	}
+
 	public static SolrQuery getWaterDataQuery(SolrQuery query) {
 		query.setQuery("annotated:* AND category:Water");
 

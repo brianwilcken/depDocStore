@@ -160,44 +160,8 @@ public class NamedEntityRecognizer {
         dictionaries.put("Natural_Gas", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.natgas"), Dictionary.class)));
     }
 
-    private static final Map<String, String> models;
-    static
-    {
-        models = new HashMap<>();
-        models.put("Water", Tools.getProperty("nlp.waterNerModel"));
-        models.put("Wastewater_System", Tools.getProperty("nlp.wastewaterNerModel"));
-        models.put("Recycled_Water_System", Tools.getProperty("nlp.recycledWaterNerModel"));
-        models.put("Electricity", Tools.getProperty("nlp.electricityNerModel"));
-        models.put("Petroleum", Tools.getProperty("nlp.petroleumNerModel"));
-        models.put("Natural_Gas", Tools.getProperty("nlp.naturalGasNerModel"));
-    }
-
-    private static final Map<String, String> trainingFiles;
-    static
-    {
-        trainingFiles = new HashMap<>();
-        trainingFiles.put("Water", Tools.getProperty("nlp.waterNerTrainingFile"));
-        trainingFiles.put("Wastewater_System", Tools.getProperty("nlp.wastewaterNerTrainingFile"));
-        trainingFiles.put("Recycled_Water_System", Tools.getProperty("nlp.recycledWaterNerTrainingFile"));
-        trainingFiles.put("Electricity", Tools.getProperty("nlp.electricityNerTrainingFile"));
-        trainingFiles.put("Petroleum", Tools.getProperty("nlp.petroleumNerTrainingFile"));
-        trainingFiles.put("Natural_Gas", Tools.getProperty("nlp.naturalGasNerTrainingFile"));
-    }
-
-    private static final Map<String, Function<SolrQuery, SolrQuery>> dataGetters;
-    static
-    {
-        dataGetters = new HashMap<>();
-        dataGetters.put("Water", SolrClient::getWaterDataQuery);
-        dataGetters.put("Wastewater_System", SolrClient::getWastewaterDataQuery);
-        dataGetters.put("Recycled_Water_System", SolrClient::getRecycledWaterDataQuery);
-        dataGetters.put("Electricity", SolrClient::getElectricityDataQuery);
-        dataGetters.put("Petroleum", SolrClient::getPetroleumDataQuery);
-        dataGetters.put("Natural_Gas", SolrClient::getNaturalGasDataQuery);
-    }
-
     private SentenceModel sentModel;
-    private TokenizerModel tokenizerModel;
+    //private TokenizerModel tokenizerModel;
     private SolrClient client;
     //private StanfordCoreNLP pipeline;
 
@@ -208,7 +172,7 @@ public class NamedEntityRecognizer {
 //        pipeline = new StanfordCoreNLP(props);
 
         sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
-        tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
+        //tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
         this.client = client;
     }
 
@@ -271,28 +235,27 @@ public class NamedEntityRecognizer {
     public List<NamedEntity> detectNamedEntities(List<CoreMap> sentences, String category, double threshold, int... numTries) {
         List<NamedEntity> namedEntities = new ArrayList<>();
         try {
-            if (models.containsKey(category)) {
-                TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, models.get(category));
-                NameFinderME nameFinder = new NameFinderME(model);
+            String modelFile = getModelFilePath(category);
+            TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
+            NameFinderME nameFinder = new NameFinderME(model);
 
-                for (int s = 0; s < sentences.size(); s++) {
-                    String sentence = sentences.get(s).toString();
-                    List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
-                    String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
-                    Span[] nameSpans = nameFinder.find(tokensArr);
-                    double[] probs = nameFinder.probs(nameSpans);
-                    for (int i = 0; i < nameSpans.length; i++) {
-                        double prob = probs[i];
-                        Span span = nameSpans[i];
-                        int start = span.getStart();
-                        int end = span.getEnd();
-                        String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
-                        String entity = String.join(" ", entityParts);
-                        if (prob > threshold) {
-                            NamedEntity namedEntity = new NamedEntity(entity, span, s);
-                            curateNamedEntityType(category, namedEntity);
-                            namedEntities.add(namedEntity);
-                        }
+            for (int s = 0; s < sentences.size(); s++) {
+                String sentence = sentences.get(s).toString();
+                List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+                String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
+                Span[] nameSpans = nameFinder.find(tokensArr);
+                double[] probs = nameFinder.probs(nameSpans);
+                for (int i = 0; i < nameSpans.length; i++) {
+                    double prob = probs[i];
+                    Span span = nameSpans[i];
+                    int start = span.getStart();
+                    int end = span.getEnd();
+                    String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
+                    String entity = String.join(" ", entityParts);
+                    if (prob > threshold) {
+                        NamedEntity namedEntity = new NamedEntity(entity, span, s);
+                        curateNamedEntityType(category, namedEntity);
+                        namedEntities.add(namedEntity);
                     }
                 }
             }
@@ -365,9 +328,10 @@ public class NamedEntityRecognizer {
     }
 
     public void trainNERModel(String category) throws IOException {
-        String trainingFile = trainingFiles.get(category);
+        String trainingFile = getTrainingFilePath(category);
+        String modelFile = getModelFilePath(category);
 
-        client.writeTrainingDataToFile(trainingFile, dataGetters.get(category), client::formatForNERModelTraining);
+        client.writeTrainingDataToFile(trainingFile, client.getCategorySpecificDataQuery(category), client::formatForNERModelTraining);
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
 
         TokenNameFinderModel model;
@@ -381,9 +345,19 @@ public class NamedEntityRecognizer {
                     TokenNameFinderFactory.create(null, null, Collections.emptyMap(), new BioCodec()));
         }
 
-        try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(models.get(category)))) {
+        try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(modelFile))) {
             model.serialize(modelOut);
         }
+    }
+
+    private String getModelFilePath(String category) {
+        String modelFile = "data/" + category + ".bin";
+        return modelFile;
+    }
+
+    private String getTrainingFilePath(String category) {
+        String trainingFile = "data/" + category + ".train";
+        return trainingFile;
     }
 
     public static void main(String[] args) {
