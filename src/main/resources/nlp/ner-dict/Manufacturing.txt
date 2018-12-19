@@ -1,0 +1,9 @@
+fabrication
+fuel
+manufacturing
+nuclear
+olefin
+petrochemical
+plant
+plastic
+product

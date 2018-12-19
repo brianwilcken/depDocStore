@@ -13,6 +13,7 @@ import opennlp.tools.tokenize.TokenizerModel;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.Span;
 import opennlp.tools.util.TrainingParameters;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang.ArrayUtils;
@@ -140,24 +141,25 @@ public class NamedEntityRecognizer {
         return entities;
     }
 
-    /*Required Categories for initial implementation:
-    Electricity
-    Natural_Gas
-    Petroleum
-    Water
-    Wastewater_System
-    Recycled_Water_System
-     */
-
     private static final Map<String, List<String>> dictionaries;
     static
     {
         dictionaries = new HashMap<>();
-        dictionaries.put("Water", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.water"), Dictionary.class)));
-        dictionaries.put("Wastewater_System", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.wastewater"), Dictionary.class)));
-        dictionaries.put("Electricity", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.power"), Dictionary.class)));
-        dictionaries.put("Petroleum", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.petro"), Dictionary.class)));
-        dictionaries.put("Natural_Gas", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("nlp.dict.natgas"), Dictionary.class)));
+        try {
+            String dictDir = "nlp/ner-dict";
+            ClassPathResource resource = new ClassPathResource(dictDir);
+            File[] dictFiles = resource.getFile().listFiles();
+
+            for (int i = 0; i < dictFiles.length; i++) {
+                File dictFile = dictFiles[i];
+                String category = FilenameUtils.getBaseName(dictFile.getName());
+                String wordsText = Tools.getResource("nlp/ner-dict/" + category + ".txt");
+                List<String> dictionary = Arrays.asList(wordsText.split("\\n"));
+                dictionaries.put("Water", dictionary);
+            }
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+        }
     }
 
     private SentenceModel sentModel;

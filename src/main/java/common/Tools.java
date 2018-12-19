@@ -25,7 +25,6 @@ import net.sourceforge.lept4j.util.LeptUtils;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import net.sourceforge.tess4j.util.PdfBoxUtilities;
-import nlp.Dictionary;
 import nlp.NLPTools;
 import nlp.NamedEntityRecognizer;
 import nlp.gibberish.GibberishDetector;
@@ -315,16 +314,5 @@ public class Tools {
 		} catch (JAXBException | IOException e) {
 			return null;
 		}
-	}
-
-	public static List<String> extractEntriesFromDictionary(Dictionary dict) {
-		List<String> entries = dict.getEntry().stream().map(p -> StringUtils.join(p.getToken(), " ")).collect(Collectors.toList());
-
-		return entries;
-	}
-
-	public static void main(String[] args) {
-		Dictionary waterDict = loadXML("E:\\code\\dependency\\depDocStore\\src\\main\\resources\\nlp\\ner-dict\\water.xml", Dictionary.class);
-		System.out.println();
 	}
 }
