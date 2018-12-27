@@ -155,7 +155,7 @@ public class NamedEntityRecognizer {
                 String category = FilenameUtils.getBaseName(dictFile.getName());
                 String wordsText = Tools.getResource("nlp/ner-dict/" + category + ".txt");
                 List<String> dictionary = Arrays.asList(wordsText.split("\\n"));
-                dictionaries.put("Water", dictionary);
+                dictionaries.put(category, dictionary);
             }
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
