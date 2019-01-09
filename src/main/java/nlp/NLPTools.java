@@ -34,6 +34,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -299,6 +300,87 @@ public class NLPTools {
         TokenizerModel model = getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
 
         return detectTokens(model, input);
+    }
+
+    public static List<NamedEntity> extractNamedEntities(String annotated) {
+        Pattern docPattern = Pattern.compile(" ?<START:.+?<END>");
+        Pattern entityTypePattern = Pattern.compile("(?<=:).+?(?=>)");
+
+        List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(annotated);
+        String[] sentences = sentencesList.stream().map(p -> p.toString()).toArray(String[]::new);
+
+        List<NamedEntity> entities = new ArrayList<>();
+        for (int i = 0; i < sentences.length; i++) {
+            String sentence = sentences[i];
+            List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+            Matcher sentMatcher = docPattern.matcher(sentence);
+            int tagTokenNum = 0;
+            while(sentMatcher.find()) {
+                int annotatedStart = sentMatcher.start();
+                int annotatedEnd = sentMatcher.end();
+                List<CoreLabel> spanTokens = tokens.stream()
+                        .filter(p -> (annotatedStart == 0 || p.beginPosition() > annotatedStart) && p.endPosition() <= annotatedEnd)
+                        .collect(Collectors.toList());
+                CoreLabel startToken = spanTokens.get(0);
+                Matcher typeMatcher = entityTypePattern.matcher(startToken.value());
+                String type = null;
+                if (typeMatcher.find()) {
+                    type = startToken.value().substring(typeMatcher.start(), typeMatcher.end());
+                }
+                List<CoreLabel> entityTokens = spanTokens.subList(1, spanTokens.size() - 1); // extract just the tokens that comprise the entity
+
+                String[] entityTokensArr = entityTokens.stream().map(p -> p.toString()).toArray(String[]::new);
+                String entity = String.join(" ", entityTokensArr);
+                int tokenIndexDecrement = 1 + 2 * tagTokenNum;
+                int spanStart = entityTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - tokenIndexDecrement - 1; //subtract two token indices for every entity to accomodate for start/end tags
+                int spanEnd = entityTokens.get(entityTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - tokenIndexDecrement;
+                Span span = new Span(spanStart, spanEnd, type);
+                NamedEntity namedEntity = new NamedEntity(entity, span, i);
+                entities.add(namedEntity);
+                tagTokenNum++;
+            }
+        }
+
+        return entities;
+    }
+
+    public static String autoAnnotate(String document, List<NamedEntity> entities) {
+        List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(document);
+        String[] sentences = sentencesList.stream().map(p -> p.toString()).toArray(String[]::new);
+        if (!entities.isEmpty()) {
+            Map<Integer, List<NamedEntity>> lineEntities = entities.stream()
+                    .collect(Collectors.groupingBy(p -> p.getLine()));
+
+            for (int s = 0; s < sentences.length; s++) {
+                String sentence = sentences[s];
+                if (lineEntities.containsKey(s)) {
+                    sentences[s] = autoAnnotateSentence(sentence, lineEntities.get(s));
+                }
+            }
+            document = String.join("\r\n", sentences);
+            document = fixFormattingAfterAnnotation(document);
+        } else {
+            document = String.join("\r\n", sentences);
+        }
+        return document;
+    }
+
+    public static String autoAnnotateSentence(String sentence, List<NamedEntity> lineEntities) {
+        List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+        String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
+        for (NamedEntity namedEntity : lineEntities) {
+            namedEntity.autoAnnotate(tokensArr);
+        }
+        sentence = String.join(" ", tokensArr);
+        return sentence;
+    }
+
+    public static String fixFormattingAfterAnnotation(String text) {
+        text = text.replaceAll(" {2,}", " "); //ensure there are no multi-spaces that could disrupt model training
+        //remove random spaces that are an artifact of the tokenization process
+        text = text.replaceAll("(\\b (?=,)|(?<=\\.) (?=,)|\\b (?=\\.)|(?<=,) (?=\\.)|\\b (?='))", "");
+
+        return text;
     }
 
     public static List<CoreLabel> detectTokensStanford(String input) {

@@ -241,6 +241,11 @@ public class Tools {
 		void apply(T t, U u) throws Exception;
 	}
 
+	@FunctionalInterface
+	public interface CheckedTriConsumer<V, T, U> {
+		void apply(V v, T t, U u) throws Exception;
+	}
+
 	public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
 		Set<Object> seen = ConcurrentHashMap.newKeySet();
 		return t -> seen.add(keyExtractor.apply(t));

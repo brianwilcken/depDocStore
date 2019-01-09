@@ -1,6 +1,8 @@
 package nlp;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import common.Tools;
 import opennlp.tools.cmdline.doccat.DoccatFineGrainedReportListener;
@@ -12,11 +14,12 @@ import org.apache.logging.log4j.Logger;
 import opennlp.tools.tokenize.TokenizerModel;
 import org.springframework.core.io.ClassPathResource;
 import solrapi.SolrClient;
-import solrapi.SolrConstants;
 
 public class DocumentCategorizer {
 
     final static Logger logger = LogManager.getLogger(DocumentCategorizer.class);
+
+    private static final double CATEGORY_THRESHOLD = 0.01;
 
     private DoccatModel model;
     private DocumentCategorizerME categorizer;
@@ -43,24 +46,28 @@ public class DocumentCategorizer {
     Recycled_Water_System
      */
 
-    public String detectCategory(String document, int... numTries) throws IOException {
+    public List<String> detectBestCategories(String document, int... numTries) throws IOException {
         try {
             DoccatModel model = NLPTools.getModel(DoccatModel.class, Tools.getProperty("nlp.doccatModel"));
             DocumentCategorizerME categorizer = new DocumentCategorizerME(model);
-            TokenizerModel tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
 
             String[] docCatTokens = GetDocCatTokens(document);
 
             //Categorize
             double[] outcomes = categorizer.categorize(docCatTokens);
-            String category = categorizer.getBestCategory(outcomes);
+            List<String> categories = new ArrayList<>();
+            for (int i = 0; i < outcomes.length; i++) {
+                if (outcomes[i] >= CATEGORY_THRESHOLD) {
+                    categories.add(Tools.removeUTF8BOM(categorizer.getCategory(i)));
+                }
+            }
 
-            return category;
+            return categories;
         } catch (IOException e) {
             //model may not exist
             if(numTries.length == 0) {
                 trainDoccatModel();
-                return detectCategory(document, 1);
+                return detectBestCategories(document, 1);
             } else {
                 //something is very wrong!
                 logger.fatal(e.getMessage(), e);
@@ -85,7 +92,7 @@ public class DocumentCategorizer {
                 OptimizationTuple optimizationTuple = tracker.getNext();
 
                 String doccatTrainingFile = Tools.getProperty("nlp.doccatTrainingFile") + optimizationTuple.i + optimizationTuple.c;
-                solrClient.writeTrainingDataToFile(doccatTrainingFile, solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining);
+                solrClient.writeTrainingDataToFile(doccatTrainingFile, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining);
 
                 ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(doccatTrainingFile);
 
@@ -132,7 +139,7 @@ public class DocumentCategorizer {
         try {
             //Write training data to file
             String optimalTrainingFile = Tools.getProperty("nlp.doccatTrainingFile");
-            solrClient.writeTrainingDataToFile(optimalTrainingFile, solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining);
+            solrClient.writeTrainingDataToFile(optimalTrainingFile, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining);
 
             //Use optimized iterations/cutoff to train model
             OptimizationTuple best = readTrainingParametersFromFile();

@@ -9,7 +9,6 @@ import mongoapi.DocStoreMongoClient;
 import neo4japi.Neo4jClient;
 import neo4japi.domain.Document;
 import nlp.*;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -31,7 +30,6 @@ import webapp.models.GeoNameWithFrequencyScore;
 import webapp.models.JsonResponse;
 import webapp.services.*;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -122,8 +120,9 @@ public class DocumentsController {
                 SolrDocument doc = docs.get(0);
 
                 double dblThreshold = (double)threshold / (double)100;
-                List<NamedEntity> entities = recognizer.detectNamedEntities(doc.get("parsed").toString(), doc.get("category").toString(), dblThreshold);
-                String annotated = recognizer.autoAnnotate(doc.get("parsed").toString(), entities);
+                List<String> categories = (List<String>)doc.get("category");
+                List<NamedEntity> entities = recognizer.detectNamedEntities(doc.get("parsed").toString(), categories, dblThreshold);
+                String annotated = NLPTools.autoAnnotate(doc.get("parsed").toString(), entities);
 
                 return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
             }
@@ -136,13 +135,13 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/trainNER", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> trainNERModel(String category, boolean doAsync) {
+    public ResponseEntity<JsonResponse> trainNERModel(String[] category, boolean doAsync) {
         logger.info("In trainNERModel method");
         try {
             if (!doAsync) {
-                nerModelTrainingService.process(this, category);
+                nerModelTrainingService.process(this, Arrays.asList(category));
             } else {
-                nerModelTrainingService.processAsync(this, category);
+                nerModelTrainingService.processAsync(this, Arrays.asList(category));
             }
 
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
@@ -332,15 +331,15 @@ public class DocumentsController {
         } else {
             doc.addField("parsed", parsed);
         }
-        String category = Tools.removeUTF8BOM(categorizer.detectCategory(parsed, 0));
-        logger.info("category detected: " + category);
+        List<String> categories = categorizer.detectBestCategories(parsed, 0);
+        logger.info("categories detected: " + categories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse(""));
         if (doc.containsKey("category")) {
-            doc.replace("category", category);
+            doc.replace("category", categories);
         } else {
-            doc.addField("category", category);
+            doc.addField("category", categories);
         }
-        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, category, 0.5);
-        String annotated = recognizer.autoAnnotate(parsed, entities);
+        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, 0.5);
+        String annotated = NLPTools.autoAnnotate(parsed, entities);
         if (doc.containsKey("annotated")) {
             doc.replace("annotated", annotated);
         } else {
@@ -424,7 +423,7 @@ public class DocumentsController {
                 //any user-entered changes to the annotated document must initiate an overhaul of the underlying dependency data
                 if (doNLP && metadata.keySet().contains("annotated")) {
                     String annotated = metadata.get("annotated").toString();
-                    List<NamedEntity> entities = recognizer.extractNamedEntities(annotated);
+                    List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
 
                     //must reprocess document
                     solrClient.deleteDocuments("docId:" + id);
@@ -504,8 +503,10 @@ public class DocumentsController {
         }
     }
 
-    public void initiateNERModelTraining(String category) throws IOException {
-        recognizer.trainNERModel(category);
+    public void initiateNERModelTraining(List<String> categories) throws IOException {
+        for (String category : categories) {
+            recognizer.trainNERModel(category);
+        }
     }
 
     public double initiateDoccatModelTraining() throws IOException {

@@ -6,15 +6,18 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import common.FacilityTypes;
 import common.Tools;
 import edu.stanford.nlp.util.CoreMap;
 import nlp.NLPTools;
+import nlp.NamedEntity;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -57,7 +60,15 @@ public class SolrClient {
 		//retrieveAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
-		client.writeTrainingDataToFile("data/clustering.csv", client::getDoccatDataQuery, client::formatForClustering);
+		//client.writeTrainingDataToFile("data/clustering.csv", client::getDoccatDataQuery, client::formatForClustering);
+
+		try {
+			logger.info("Begin dependency data export");
+			client.WriteDataToFile("data/depData.json", "filename:*", 1000000);
+			logger.info("Dependency data export complete");
+		} catch (SolrServerException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private static void retrieveAnnotatedData(SolrClient client, String id) {
@@ -87,6 +98,23 @@ public class SolrClient {
 			client.indexDocument(doc);
 		} catch (SolrServerException e) {
 			e.printStackTrace();
+		}
+	}
+
+	public void UpdateDocumentsFromJsonFile(String filePath) throws SolrServerException {
+		String file = Tools.GetFileString(filePath, "Cp1252");
+		try {
+			SolrDocument[] docs = mapper.readValue(file, SolrDocument[].class);
+			List<SolrDocument> docsList = Arrays.asList(docs);
+			for (SolrDocument doc : docsList) {
+				String created = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long)doc.get("created")));
+				String lastUpdated = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long)doc.get("lastUpdated")));
+				doc.replace("created", created);
+				doc.replace("lastUpdated", lastUpdated);
+			}
+			indexDocuments(docsList);
+		} catch (IOException e) {
+			logger.error(e.getMessage(), e);
 		}
 	}
 	
@@ -312,23 +340,57 @@ public class SolrClient {
 		return query;
 	}
 
-	public void formatForDoccatModelTraining(SolrDocument doc, FileOutputStream fos) throws IOException {
+	public void formatForDoccatModelTraining(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
 		String parsed = doc.get("parsed").toString();
-		String category = doc.get("category").toString();
-		String output = category + "\t" + NLPTools.normalizeText(parsed);
+		String normalized = NLPTools.normalizeText(parsed);
+		List<String> categories = (List<String>)doc.get("category");
+		String output = categories.stream().map(category -> category + "\t" + normalized).reduce((p1, p2) -> p1 + System.lineSeparator() + p2).orElse("");
 		fos.write(output.getBytes(Charset.forName("Cp1252")));
 	}
 
-	public void formatForNERModelTraining(SolrDocument doc, FileOutputStream fos) throws IOException {
-		List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(doc.get("annotated").toString());
+	public void formatForNERModelTraining(String category, SolrDocument doc, FileOutputStream fos) throws IOException {
+		final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
+		String annotated = doc.get("annotated").toString();
+		List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
+		Map<Integer, List<NamedEntity>> lineEntities = entities.stream()
+				.collect(Collectors.groupingBy(p -> p.getLine()));
+
+		List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(annotated);
 		String[] sentences = sentencesList.stream().map(p -> p.toString()).toArray(String[]::new);
-		List<String> annotatedLines = Arrays.stream(sentences).filter(p -> p.contains("<START:")).collect(Collectors.toList());
-		String onlyAnnotated = String.join("\r\n", annotatedLines);
-		fos.write(onlyAnnotated.getBytes(Charset.forName("Cp1252")));
-		fos.write(System.lineSeparator().getBytes());
+
+		List<String> annotatedLinesForCategory = new ArrayList<>();
+
+		for (int s = 0; s < sentences.length; s++) {
+			if (lineEntities.containsKey(s)) {
+				for (NamedEntity entity : lineEntities.get(s)) {
+					if (facilityTypes.contains(entity.getSpan().getType())) {
+						//the current sentence contains a valid entity annotation based on the model training category
+						String sentence = sentences[s];
+						//first remove all annotations to ensure that only category-specific annotations are included in the training data
+						sentence = sentence.replaceAll(" ?<START:.+?> ", "").replaceAll(" <END> ", "");
+						List<NamedEntity> validLineEntities = lineEntities.get(s).stream()
+								.filter(p -> facilityTypes.contains(p.getSpan().getType()))
+								.collect(Collectors.toList());
+						String annotatedLine = NLPTools.autoAnnotateSentence(sentence, validLineEntities);
+						String formattedLine = NLPTools.fixFormattingAfterAnnotation(annotatedLine);
+
+						annotatedLinesForCategory.add(formattedLine);
+						break;
+					}
+				}
+			}
+		}
+
+		//List<String> annotatedLines = Arrays.stream(sentences).filter(p -> p.contains("<START:")).collect(Collectors.toList());
+
+		if (annotatedLinesForCategory.size() > 0) {
+			String onlyAnnotated = String.join("\r\n", annotatedLinesForCategory);
+			fos.write(onlyAnnotated.getBytes(Charset.forName("Cp1252")));
+			fos.write(System.lineSeparator().getBytes());
+		}
 	}
 
-	public void formatForClustering(SolrDocument doc, FileOutputStream fos) throws IOException {
+	public void formatForClustering(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
 		String id = doc.get("id").toString();
 		String filename = doc.get("filename").toString();
 		String parsed = doc.get("parsed").toString();
@@ -351,8 +413,8 @@ public class SolrClient {
 		}
 	}
 
-	public void writeTrainingDataToFile(String trainingFilePath, Function<SolrQuery, SolrQuery> queryGetter,
-										Tools.CheckedBiConsumer<SolrDocument, FileOutputStream> consumer) {
+	public void writeTrainingDataToFile(String trainingFilePath, String category, Function<SolrQuery, SolrQuery> queryGetter,
+										Tools.CheckedTriConsumer<String, SolrDocument, FileOutputStream> consumer) {
 		SolrQuery query = queryGetter.apply(new SolrQuery());
 		query.setRows(1000000);
 		try {
@@ -366,7 +428,7 @@ public class SolrClient {
 			do {
 				tmpDoc = tmpQueue.take();
 				if (!(tmpDoc instanceof StopDoc)) {
-					consumer.apply(tmpDoc, fos);
+					consumer.apply(category, tmpDoc, fos);
 					fos.write(System.lineSeparator().getBytes());
 				}
 			} while (!(tmpDoc instanceof StopDoc));

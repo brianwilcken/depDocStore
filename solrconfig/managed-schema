@@ -413,7 +413,7 @@
   <field name="_version_" type="long" indexed="false" stored="false"/>
   <field name="annotated" type="text_general" multiValued="false" indexed="true" stored="true"/>
   <field name="parsed" type="text_general" multiValued="false" indexed="true" stored="true"/>
-  <field name="category" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
+  <field name="category" type="string" multiValued="true" indexed="true" required="false" stored="true"/>
   <field name="title" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
   <field name="created" type="pdate" indexed="true" required="false" stored="false"/>
   <field name="docStoreId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>

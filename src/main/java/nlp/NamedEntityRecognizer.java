@@ -49,13 +49,13 @@ public class NamedEntityRecognizer {
 ////        }
 //    }
 
-    private static void autoAnnotateAllForCategory(SolrClient client, NamedEntityRecognizer namedEntityRecognizer, String category) {
+    private static void autoAnnotateAllForCategory(SolrClient client, NamedEntityRecognizer namedEntityRecognizer, List<String> categories) {
         try {
-            SolrDocumentList docs = client.QuerySolrDocuments("category:" + category + " AND -annotated:*", 1000, 0, null, null);
+            SolrDocumentList docs = client.QuerySolrDocuments("categories:" + categories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse("") + " AND -annotated:*", 1000, 0, null, null);
             for (SolrDocument doc : docs) {
                 String document = (String)doc.get("parsed");
-                List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, category, 0.5);
-                String annotated = namedEntityRecognizer.autoAnnotate(document, entities);
+                List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, categories, 0.5);
+                String annotated = NLPTools.autoAnnotate(document, entities);
                 if (doc.containsKey("annotated")) {
                     doc.replace("annotated", annotated);
                 } else {
@@ -68,77 +68,6 @@ public class NamedEntityRecognizer {
         } catch (SolrServerException | IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public String autoAnnotate(String document, List<NamedEntity> entities) {
-        List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(document);
-        String[] sentences = sentencesList.stream().map(p -> p.toString()).toArray(String[]::new);
-        if (!entities.isEmpty()) {
-            Map<Integer, List<NamedEntity>> lineEntities = entities.stream()
-                    .collect(Collectors.groupingBy(p -> p.getLine()));
-
-            for (int s = 0; s < sentences.length; s++) {
-                String sentence = sentences[s];
-                if (lineEntities.containsKey(s)) {
-                    List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
-                    String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
-                    for (NamedEntity namedEntity : lineEntities.get(s)) {
-                        namedEntity.autoAnnotate(tokensArr);
-                    }
-                    sentence = String.join(" ", tokensArr);
-                    sentences[s] = sentence;
-                }
-            }
-            document = String.join("\r\n", sentences);
-            document = document.replaceAll(" {2,}", " "); //ensure there are no multi-spaces that could disrupt model training
-            //remove random spaces that are an artifact of the tokenization process
-            document = document.replaceAll("(\\b (?=,)|(?<=\\.) (?=,)|\\b (?=\\.)|(?<=,) (?=\\.)|\\b (?='))", "");
-        } else {
-            document = String.join("\r\n", sentences);
-        }
-        return document;
-    }
-
-    public List<NamedEntity> extractNamedEntities(String annotated) {
-        Pattern docPattern = Pattern.compile(" ?<START:.+?<END>");
-        Pattern entityTypePattern = Pattern.compile("(?<=:).+?(?=>)");
-
-        List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(annotated);
-        String[] sentences = sentencesList.stream().map(p -> p.toString()).toArray(String[]::new);
-
-        List<NamedEntity> entities = new ArrayList<>();
-        for (int i = 0; i < sentences.length; i++) {
-            String sentence = sentences[i];
-            List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
-            Matcher sentMatcher = docPattern.matcher(sentence);
-            int tagTokenNum = 0;
-            while(sentMatcher.find()) {
-                int annotatedStart = sentMatcher.start();
-                int annotatedEnd = sentMatcher.end();
-                List<CoreLabel> spanTokens = tokens.stream()
-                        .filter(p -> (annotatedStart == 0 || p.beginPosition() > annotatedStart) && p.endPosition() <= annotatedEnd)
-                        .collect(Collectors.toList());
-                CoreLabel startToken = spanTokens.get(0);
-                Matcher typeMatcher = entityTypePattern.matcher(startToken.value());
-                String type = null;
-                if (typeMatcher.find()) {
-                    type = startToken.value().substring(typeMatcher.start(), typeMatcher.end());
-                }
-                List<CoreLabel> entityTokens = spanTokens.subList(1, spanTokens.size() - 1); // extract just the tokens that comprise the entity
-
-                String[] entityTokensArr = entityTokens.stream().map(p -> p.toString()).toArray(String[]::new);
-                String entity = String.join(" ", entityTokensArr);
-                int tokenIndexDecrement = 1 + 2 * tagTokenNum;
-                int spanStart = entityTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - tokenIndexDecrement - 1; //subtract two token indices for every entity to accomodate for start/end tags
-                int spanEnd = entityTokens.get(entityTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - tokenIndexDecrement;
-                Span span = new Span(spanStart, spanEnd, type);
-                NamedEntity namedEntity = new NamedEntity(entity, span, i);
-                entities.add(namedEntity);
-                tagTokenNum++;
-            }
-        }
-
-        return entities;
     }
 
     private static final Map<String, List<String>> dictionaries;
@@ -228,36 +157,38 @@ public class NamedEntityRecognizer {
 //        return namedEntities;
 //    }
 
-    public List<NamedEntity> detectNamedEntities(String document, String category, double threshold) throws IOException {
+    public List<NamedEntity> detectNamedEntities(String document, List<String> categories, double threshold) throws IOException {
         List<CoreMap> sentences = NLPTools.detectSentencesStanford(document);
-        List<NamedEntity> entities = detectNamedEntities(sentences, category, threshold);
+        List<NamedEntity> entities = detectNamedEntities(sentences, categories, threshold);
         return entities;
     }
 
-    public List<NamedEntity> detectNamedEntities(List<CoreMap> sentences, String category, double threshold, int... numTries) {
+    public List<NamedEntity> detectNamedEntities(List<CoreMap> sentences, List<String> categories, double threshold, int... numTries) {
         List<NamedEntity> namedEntities = new ArrayList<>();
         try {
-            String modelFile = getModelFilePath(category);
-            TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
-            NameFinderME nameFinder = new NameFinderME(model);
+            for (String category : categories) {
+                String modelFile = getModelFilePath(category);
+                TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
+                NameFinderME nameFinder = new NameFinderME(model);
 
-            for (int s = 0; s < sentences.size(); s++) {
-                String sentence = sentences.get(s).toString();
-                List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
-                String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
-                Span[] nameSpans = nameFinder.find(tokensArr);
-                double[] probs = nameFinder.probs(nameSpans);
-                for (int i = 0; i < nameSpans.length; i++) {
-                    double prob = probs[i];
-                    Span span = nameSpans[i];
-                    int start = span.getStart();
-                    int end = span.getEnd();
-                    String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
-                    String entity = String.join(" ", entityParts);
-                    if (prob > threshold) {
-                        NamedEntity namedEntity = new NamedEntity(entity, span, s);
-                        curateNamedEntityType(category, namedEntity);
-                        namedEntities.add(namedEntity);
+                for (int s = 0; s < sentences.size(); s++) {
+                    String sentence = sentences.get(s).toString();
+                    List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+                    String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
+                    Span[] nameSpans = nameFinder.find(tokensArr);
+                    double[] probs = nameFinder.probs(nameSpans);
+                    for (int i = 0; i < nameSpans.length; i++) {
+                        double prob = probs[i];
+                        Span span = nameSpans[i];
+                        int start = span.getStart();
+                        int end = span.getEnd();
+                        String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
+                        String entity = String.join(" ", entityParts);
+                        if (prob > threshold) {
+                            NamedEntity namedEntity = new NamedEntity(entity, span, s);
+                            curateNamedEntityType(category, namedEntity);
+                            namedEntities.add(namedEntity);
+                        }
                     }
                 }
             }
@@ -265,11 +196,13 @@ public class NamedEntityRecognizer {
         } catch (IOException e) {
             if(numTries.length == 0) {
                 try {
-                    trainNERModel(category); //model may not yet exist, but maybe there is data to train it...
+                    for (String category : categories) {
+                        trainNERModel(category); //model may not yet exist, but maybe there is data to train it...
+                    }
                 } catch (IOException e1) {
                     logger.error(e.getMessage(), e1);
                 }
-                return detectNamedEntities(sentences, category, threshold, 1);
+                return detectNamedEntities(sentences, categories, threshold, 1);
             } else {
                 //no model training data available...
                 logger.error(e.getMessage(), e);
@@ -333,7 +266,7 @@ public class NamedEntityRecognizer {
         String trainingFile = getTrainingFilePath(category);
         String modelFile = getModelFilePath(category);
 
-        client.writeTrainingDataToFile(trainingFile, client.getCategorySpecificDataQuery(category), client::formatForNERModelTraining);
+        client.writeTrainingDataToFile(trainingFile, category, client.getCategorySpecificDataQuery(category), client::formatForNERModelTraining);
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
 
         TokenNameFinderModel model;
@@ -447,9 +380,8 @@ public class NamedEntityRecognizer {
                 "o Method for Monitoring the Effectiveness of the Plan.\n" +
                 "City of Dallas Water Conservation Plan 7 This Water Conservation Plan sets forth a program of long-term measures under which the City of Dallas can improve the overall efficiency of water use and conserve its water resources.";
 
-        NamedEntityRecognizer recognizer = new NamedEntityRecognizer(null);
-        List<NamedEntity> entities = recognizer.extractNamedEntities(annotated);
-        String reannotated = recognizer.autoAnnotate(parsed, entities);
+        List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
+        String reannotated = NLPTools.autoAnnotate(parsed, entities);
 
         System.out.println(reannotated);
     }

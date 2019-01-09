@@ -120,26 +120,30 @@ public class Neo4jClient {
         }
     }
 
-    public DataModelRelation addDataModelDocumentRelation(SolrDocument solrDoc, Document doc) {
+    public List<DataModelRelation> addDataModelDocumentRelation(SolrDocument solrDoc, Document doc) {
         Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
-        String category = solrDoc.get("category").toString();
+        List<String> categories = (List<String>)solrDoc.get("category");
 
         //get the DataModelNode that corresponds with the solr document's category
-        List<DataModelNode> dataModelNodes = Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode) WHERE n.name = \"" + category + "\" RETURN n", Collections.EMPTY_MAP));
+        List<DataModelNode> dataModelNodes = new ArrayList<>();
+        for (String category : categories) {
+            dataModelNodes.addAll(Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode) WHERE n.name = \"" + category + "\" RETURN n", Collections.EMPTY_MAP)));
+        }
+
 
         if (dataModelNodes.size() > 0) {
-            DataModelNode dataModelNode = dataModelNodes.get(0);
+            List<DataModelRelation> relations = new ArrayList<>();
+            for (DataModelNode dataModelNode : dataModelNodes) {
+                List<DataModelRelation> nodeRelations = (Lists.newArrayList(session.query(DataModelRelation.class, "MATCH p=(d:Document)-[r:IsDataModelNode]->(n:DataModelNode) WHERE d.UUID = \"" + doc.getUUID() + "\" AND n.UUID = \"" + dataModelNode.getUUID() + "\" RETURN r", Collections.EMPTY_MAP)));
 
-            List<DataModelRelation> relations = Lists.newArrayList(session.query(DataModelRelation.class, "MATCH p=(d:Document)-[r:IsDataModelNode]->(n:DataModelNode) WHERE d.UUID = \"" + doc.getUUID() + "\" AND n.UUID = \"" + dataModelNode.getUUID() + "\" RETURN r", Collections.EMPTY_MAP));
-
-            if (relations.size() == 0) {
-                DataModelRelation relation = new DataModelRelation(doc, dataModelNode);
-
-                session.save(relation);
-                return relation;
-            } else {
-                return relations.get(0);
+                if (nodeRelations.size() == 0) {
+                    DataModelRelation relation = new DataModelRelation(doc, dataModelNode);
+                    session.save(relation);
+                }
+                relations.addAll(nodeRelations);
             }
+
+            return relations;
         } else {
             return null;
         }

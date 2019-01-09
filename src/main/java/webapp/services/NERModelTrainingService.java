@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import webapp.controllers.DocumentsController;
 
 import java.io.IOException;
+import java.util.List;
 
 @Service
 public class NERModelTrainingService {
@@ -15,20 +16,20 @@ public class NERModelTrainingService {
     private static boolean trainingInProgress = false;
 
     @Async("processExecutor")
-    public void processAsync(DocumentsController documentsController, String category) {
+    public void processAsync(DocumentsController documentsController, List<String> categories) {
         try {
-            process(documentsController, category);
+            process(documentsController, categories);
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
     }
 
-    public void process(DocumentsController documentsController, String category) throws IOException {
+    public void process(DocumentsController documentsController, List<String> categories) throws IOException {
         try {
             if (!trainingInProgress) {
                 trainingInProgress = true;
                 logger.info("Begin model training.");
-                documentsController.initiateNERModelTraining(category);
+                documentsController.initiateNERModelTraining(categories);
                 logger.info("Model training complete.");
                 trainingInProgress = false;
             }
