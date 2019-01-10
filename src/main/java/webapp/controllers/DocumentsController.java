@@ -111,6 +111,37 @@ public class DocumentsController {
         }
     }
 
+    @RequestMapping(value="/history/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getDocumentHistory(@PathVariable(name="id") String id) {
+        logger.info("In getDocumentHistory method");
+        try {
+            SolrQuery.SortClause sort = new SolrQuery.SortClause("created", "desc");
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("docId:" + id + " AND username:*", 1000000, 0, sort, new String[] {"id", "username", "created"});
+            JsonResponse response = Tools.formJsonResponse(docs);
+            logger.info("Returning document history");
+            return ResponseEntity.ok().body(response);
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/annotate/history/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getHistoricalAnnotation(@PathVariable(name="id") String id) {
+        logger.info("In getHistoricalAnnotation method");
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000000, 0, null, new String[] {"annotated"});
+            JsonResponse response = Tools.formJsonResponse(docs);
+            logger.info("Returning historical annoptation");
+            return ResponseEntity.ok().body(response);
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
     @RequestMapping(value="/annotate/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> getAutoAnnotatedDocument(@PathVariable(name="id") String id, int threshold) {
         logger.info("In autoAnnotate method");
@@ -282,7 +313,7 @@ public class DocumentsController {
     public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("file") MultipartFile document) {
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
-            solrClient.deleteDocuments("docId:" + id);
+            solrClient.deleteDocuments("docId:" + id + " AND -username:*");
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
 
@@ -420,13 +451,18 @@ public class DocumentsController {
                 doc.remove("_version_");
                 solrClient.indexDocument(doc);
 
+                SolrDocument history = getAnnotationHistoryEntry(doc);
+                if (history != null) {
+                    solrClient.indexDocument(history);
+                }
+
                 //any user-entered changes to the annotated document must initiate an overhaul of the underlying dependency data
                 if (doNLP && metadata.keySet().contains("annotated")) {
                     String annotated = metadata.get("annotated").toString();
                     List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
 
                     //must reprocess document
-                    solrClient.deleteDocuments("docId:" + id);
+                    solrClient.deleteDocuments("docId:" + id + " AND -username:*");
                     List<SolrDocument> entityDocs = entities.stream()
                             .map(p -> p.mutate(id))
                             .collect(Collectors.toList());
@@ -446,6 +482,20 @@ public class DocumentsController {
         }
     }
 
+    private SolrDocument getAnnotationHistoryEntry(SolrDocument doc) {
+        if (doc.containsKey("annotatedBy")) {
+            SolrDocument history = new SolrDocument();
+            history.addField("id", UUID.randomUUID().toString());
+            history.addField("username", doc.get("annotatedBy"));
+            history.addField("annotated", doc.get("annotated"));
+            history.addField("docId", doc.get("id"));
+            history.addField("created", doc.get("lastUpdated"));
+
+            return history;
+        }
+        return null;
+    }
+
     @RequestMapping(value="/reprocess/{id}", method=RequestMethod.PUT, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> reprocessDocument(@PathVariable(name="id") String id) {
         try {
@@ -453,7 +503,7 @@ public class DocumentsController {
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
                 if (doc.containsKey("docText")) {
-                    solrClient.deleteDocuments("docId:" + id);
+                    solrClient.deleteDocuments("docId:" + id + " AND -username:*");
                     String docText = doc.get("docText").toString();
                     SolrDocumentList solrDocs = runNLPPipeline(docText, id, doc);
                     logger.info("storing data to Solr");
@@ -479,7 +529,7 @@ public class DocumentsController {
                 SolrDocument doc = docs.get(0);
                 if (doc.containsKey("parsed")) {
                     //remove all Solr entries for corefs and relations
-                    solrClient.deleteDocuments("docId:" + id + " AND -entity:*");
+                    solrClient.deleteDocuments("docId:" + id + " AND -entity:* AND -username:*");
 
                     //Pull in the Solr documents for named entities and for locations
                     List<NamedEntity> entities = solrClient.QueryIndexedDocuments(NamedEntity.class, "docId: " + id + " AND entity:*", 100000, 0, null, null);

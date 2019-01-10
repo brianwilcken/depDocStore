@@ -432,6 +432,7 @@
   <field name="end" type="plong" multiValued="false"/>
   <field name="entity" type="strings" multiValued="false"/>
   <field name="name" type="strings" multiValued="false"/>
+  <field name="username" type="strings" multiValued="false"/>
   <field name="type" type="strings" multiValued="false"/>
   <field name="coref" type="strings" multiValued="false"/>
   <field name="relation" type="strings" multiValued="false"/>
