@@ -304,48 +304,13 @@ public class SolrClient {
 		return func;
 	}
 
-	public static SolrQuery getWaterDataQuery(SolrQuery query) {
-		query.setQuery("annotated:* AND category:Water");
-
-		return query;
-	}
-
-	public static SolrQuery getWastewaterDataQuery(SolrQuery query) {
-		query.setQuery("annotated:* AND category:Wastewater_System");
-
-		return query;
-	}
-
-	public static SolrQuery getRecycledWaterDataQuery(SolrQuery query) {
-		query.setQuery("annotated:* AND category:Recycled_Water_System");
-
-		return query;
-	}
-
-	public static SolrQuery getElectricityDataQuery(SolrQuery query) {
-		query.setQuery("annotated:* AND category:Electricity");
-
-		return query;
-	}
-
-	public static SolrQuery getPetroleumDataQuery(SolrQuery query) {
-		query.setQuery("annotated:* AND category:Petroleum");
-
-		return query;
-	}
-
-	public static SolrQuery getNaturalGasDataQuery(SolrQuery query) {
-		query.setQuery("annotated:* AND category:Natural_Gas");
-
-		return query;
-	}
-
 	public void formatForDoccatModelTraining(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
 		String parsed = doc.get("parsed").toString();
 		String normalized = NLPTools.normalizeText(parsed);
 		List<String> categories = (List<String>)doc.get("category");
 		String output = categories.stream().map(category -> category + "\t" + normalized).reduce((p1, p2) -> p1 + System.lineSeparator() + p2).orElse("");
 		fos.write(output.getBytes(Charset.forName("Cp1252")));
+		fos.write(System.lineSeparator().getBytes());
 	}
 
 	public void formatForNERModelTraining(String category, SolrDocument doc, FileOutputStream fos) throws IOException {
@@ -378,6 +343,8 @@ public class SolrClient {
 						break;
 					}
 				}
+			} else {
+				annotatedLinesForCategory.add(System.lineSeparator());
 			}
 		}
 
@@ -386,6 +353,7 @@ public class SolrClient {
 		if (annotatedLinesForCategory.size() > 0) {
 			String onlyAnnotated = String.join("\r\n", annotatedLinesForCategory);
 			fos.write(onlyAnnotated.getBytes(Charset.forName("Cp1252")));
+			fos.write(System.lineSeparator().getBytes());
 			fos.write(System.lineSeparator().getBytes());
 		}
 	}
@@ -429,7 +397,6 @@ public class SolrClient {
 				tmpDoc = tmpQueue.take();
 				if (!(tmpDoc instanceof StopDoc)) {
 					consumer.apply(category, tmpDoc, fos);
-					fos.write(System.lineSeparator().getBytes());
 				}
 			} while (!(tmpDoc instanceof StopDoc));
 

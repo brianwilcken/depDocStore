@@ -1,5 +1,6 @@
 package nlp;
 
+import com.google.common.io.Files;
 import common.Tools;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
@@ -7,6 +8,7 @@ import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.util.StringUtils;
+import opennlp.tools.dictionary.Dictionary;
 import opennlp.tools.namefind.*;
 import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.tokenize.TokenizerModel;
@@ -275,9 +277,12 @@ public class NamedEntityRecognizer {
         params.put(TrainingParameters.ITERATIONS_PARAM, 300);
         params.put(TrainingParameters.CUTOFF_PARAM, 1);
 
+        Map<String, Object> resources = new HashMap<>();
+        resources.put("ner-dict", getTrainingDictionary(category));
+
         try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
             model = NameFinderME.train("en", null, sampleStream, params,
-                    TokenNameFinderFactory.create(null, null, Collections.emptyMap(), new BioCodec()));
+                    TokenNameFinderFactory.create(null, getFeatureGeneratorBytes(), resources, new BioCodec()));
         }
 
         try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(modelFile))) {
@@ -295,94 +300,122 @@ public class NamedEntityRecognizer {
         return trainingFile;
     }
 
-    public static void main(String[] args) {
-        String annotated = "This includes all of the <START:FAC> City of Dallas <END> , 23 major wholesale treated water customers, and 4 wholesale raw water customers located in the metropolitan area surrounding Dallas.\n" +
-                "Dallas has actively procured water supplies, constructed reservoirs, and developed water treatment facilities which make it possible for DWU to provide water toits customers.\n" +
-                "In Fiscal Year FY 2012-2013, DWU delivered over 143 billion gallons of treated water.\n" +
-                "As the regional population grows, so grows water demand.\n" +
-                "To meet demand, DWU must plan for increasing the available water supply and expanding its transmission, treatment, and distribution facilities.\n" +
-                "DWU considers water conservation an integral part of this planning process.\n" +
-                " <START:FAC> The City of Dallas <END> has had a water conservation program since the early 1980s.\n" +
-                "In 2001, Dallas increased its conservation efforts with the amendment of CHAPTER 49, WATER AND WASTEWATER, of the <START:FAC> Dallas City Code <END> to include, CONSERVATION MEASURES RELATING TO LAWN AND LANDSCAPE IRRIGATION.\n" +
-                "In 2010, DWU updated its Water Conservation Five-Year Strategic Plan Strategic Plan that included phased implementation of best management practices BMPs under the following major elements 1 City Leadership and <START:FAC> Commitment Education <END> and <START:FAC> Outreach Initiatives Rebate <END> and <START:FAC> Incentive Programs The Water Conservation Plan <END> contained herein incorporates data obtained in the 2010 update of the <START:FAC> Five-Year Strategic Plan <END> .\n" +
-                "1.1 State of Texas Requirements The Texas Administrative Code Title 30, Chapter 288 30 TAC 288 requires holders of an existing permit, certified filing, or certificate of adjudication for the appropriation of surface water in the amount of 1,000 acre-feet a year or more for municipal, industrial, and other nonirrigation uses to develop, submit, and implement a water conservation plan and to update it according to a specified schedule.\n" +
-                "As such, DWU is subject to this requirement.\n" +
-                "Because DWU provides water as a municipal public and wholesale water supplier, DWU's Water Conservation 1 Alan Plummer Associates, Inc. in association with Amy Vickers Associates, Inc., CP Y, Inc., Miya Water and <START:FAC> BDS Technologies <END> , Inc., Water Conservation Five-Year Strategic Plan Update, prepared for <START:FAC> City of Dallas <END> , June 2010.\n" +
-                " <START:FAC> City of Dallas Water Conservation Plan <END> 5 Plan must include information necessary to comply with <START:FAC> Texas <END> Commission on Environmental Quality TCEQ requirements for each of these designations.2 The requirements of Subchapter A that must be included in the <START:FAC> City of Dallas Water Conservation Plan <END> are summarized below.\n" +
-                "Minimum Requirements for Municipal Public and Wholesale Water Suppliers Utility Profile Includes information regarding population and customer data, water use data including total gallons per capita per day GPCD and residential <START:FAC> GPCD <END> , water supply system data, and wastewater system data.\n" +
-                "Sections 3 and 4 Appendix A Description of the <START:FAC> Wholesaler <END> 's Service Area Includes population and customer data, water use data, water supply system data, and wastewater data.\n" +
-                "Figure 3-1 Goals Specific quantified five-year and ten-year targets for water savings to include goals for water loss programs and goals for municipal and residential use, in GPCD.\n" +
-                "The goals established by a public water supplier are not enforceable under this subparagraph.\n" +
-                "Sections 2.2 and 2.3 Accurate Metering Devices The TCEQ requires metering devices with an accuracy of plus or minus 5 percent for measuring water diverted from source supply.\n" +
-                "Section 5.1 Universal Metering, Testing, Repair, and Replacement The TCEQ requires that there be a program for universal metering of both customer and public uses of water for meter testing and repair, and for periodic meter replacement.\n" +
-                "Section 5.2 Leak Detection, Repair, and Control of Unaccounted for Water The regulations require measures to determine and control unaccounted-for water.\n" +
-                "Measures may include periodic visual inspections along distribution lines and periodic audits of the water system for illegal connections or abandoned services.\n" +
-                "Sections 5.3 and 5.4 Continuing Public Education Program TCEQ requires a continuing public education and information program regarding water conservation.\n" +
-                "Section 5.5 Non-Promotional Rate Structure Chapter 288 requires a water rate structure that is costbased and which does not encourage the excessive use of water.\n" +
-                "Section 5.8 and <START:FAC> Appendix A Reservoir Systems Operational Plan <END> This requirement is to provide a coordinated operational structure for operation of reservoirs owned by the water supply entity within a common watershed or river basin in order to optimize available water supplies.\n" +
-                "Section 5.10 Wholesale Customer Requirements The water conservation plan must include a requirement in every water supply contract entered into or renewed after official adoption of the <START:FAC> Water Conservation Plan <END> , and including any contract extension, that each 2 DWU also holds water rights to provide water for industrial use.\n" +
-                "However, since DWU uses these rights to provide water to TXU Electric as a wholesale supplier, a water conservation plan for industrial or mining use is not required.\n" +
-                " <START:FAC> City of Dallas Water Conservation Plan <END> 6 successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements of Title 30 TAC Chapter 288.\n" +
-                "Section 5.9 A Means of Implementation and Enforcement The regulations require a means to implement and enforce the <START:FAC> Water Conservation Plan <END> , as evidenced by an ordinance, resolution, or tariff, and a description of the authority by which the conservation plan is enforced.\n" +
-                "Sections 5.0 through 5.17 Coordination with Regional Water Planning Groups The water conservation plan should document the coordination with the <START:FAC> Regional Water Planning Group <END> for the service area of the public water supplier to demonstrate consistency with the appropriate approved regional water plan.\n" +
-                "Section 5.12 Additional Requirements for Cities of More than 5,000 People Program for Leak Detection, Repair, and Water Loss Accounting The plan must include a description of the program of leak detection, repair, and water loss accounting for the water transmission, storage, delivery, and distribution system.\n" +
-                "Sections 5.3 and 5.4 Record Management System The plan must include a record management system to record water pumped, water deliveries, water sales and water losses which allows for the desegregation of water sales and uses into the following user classes residential commercial public and institutional and industrial.\n" +
-                "Sections 5.4 and 5.14 Requirements for Wholesale Customers The plan must include a requirement in every wholesale water supply contract entered into or renewed after official adoption of the plan by either ordinance, resolution, or tariff, and including any contract extension, that each successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements in 30 TAC 288.\n" +
-                "If the customer intends to resell the water, the contract between the initial supplier and customer must provide that the contract for the resale of the water must have water conservation requirements so that each successive customer in the resale of the water will be required to implement water conservation measures in accordance with the provisions of 30 TAC 288.\n" +
-                "Section 5.9 Additional Conservation Strategies TCEQ Rules also list additional optional but not required conservation strategies which may be adopted by suppliers.\n" +
-                "The following optional strategies are included in this plan o Conservation-Oriented Water Rates.\n" +
-                "Section 5.8 and <START:FAC> Appendix A <END> and water rate structures such as uniform or increasing block rate schedules, and or seasonal rates, but not flat rate or decreasing block rates o Ordinances, Plumbing Codes and or Rules on Water Conservation Fixtures.\n" +
-                "Section 5.14 o Fixture Replacement Incentive Programs.\n" +
-                "Sections 5.7.1 through 5.7.3 o Reuse and or Recycling of Wastewater and or Gray Water.\n" +
-                "Sections 5.16 through 5.16.3 o Ordinance and or Programs for Landscape Water Management Sections 5.5.4 and 5.14.\n" +
-                "o Method for Monitoring the Effectiveness of the Plan.\n" +
-                " <START:FAC> City of Dallas Water Conservation Plan <END> 7 This Water Conservation Plan sets forth a program of long-term measures under which the <START:FAC> City of Dallas <END> can improve the overall efficiency of water use and conserve its water resources.";
-
-        String parsed = "This includes all of the City of Dallas, 23 major wholesale treated water customers, and 4 wholesale raw water customers located in the metropolitan area surrounding Dallas.\n" +
-                "Dallas has actively procured water supplies, constructed reservoirs, and developed water treatment facilities which make it possible for DWU to provide water toits customers.\n" +
-                "In Fiscal Year FY 2012-2013, DWU delivered over 143 billion gallons of treated water.\n" +
-                "As the regional population grows, so grows water demand.\n" +
-                "To meet demand, DWU must plan for increasing the available water supply and expanding its transmission, treatment, and distribution facilities.\n" +
-                "DWU considers water conservation an integral part of this planning process.\n" +
-                "The City of Dallas has had a water conservation program since the early 1980s.\n" +
-                "In 2001, Dallas increased its conservation efforts with the amendment of CHAPTER 49, WATER AND WASTEWATER, of the Dallas City Code to include, CONSERVATION MEASURES RELATING TO LAWN AND LANDSCAPE IRRIGATION.\n" +
-                "In 2010, DWU updated its Water Conservation Five-Year Strategic Plan Strategic Plan that included phased implementation of best management practices BMPs under the following major elements 1 City Leadership and Commitment Education and Outreach Initiatives Rebate and Incentive Programs The Water Conservation Plan contained herein incorporates data obtained in the 2010 update of the Five-Year Strategic Plan.\n" +
-                "1.1 State of Texas Requirements The Texas Administrative Code Title 30, Chapter 288 30 TAC 288 requires holders of an existing permit, certified filing, or certificate of adjudication for the appropriation of surface water in the amount of 1,000 acre-feet a year or more for municipal, industrial, and other nonirrigation uses to develop, submit, and implement a water conservation plan and to update it according to a specified schedule.\n" +
-                "As such, DWU is subject to this requirement.\n" +
-                "Because DWU provides water as a municipal public and wholesale water supplier, DWU's Water Conservation 1 Alan Plummer Associates, Inc. in association with Amy Vickers Associates, Inc., CP Y, Inc., Miya Water and BDS Technologies, Inc., Water Conservation Five-Year Strategic Plan Update, prepared for City of Dallas, June 2010.\n" +
-                "City of Dallas Water Conservation Plan 5 Plan must include information necessary to comply with Texas Commission on Environmental Quality TCEQ requirements for each of these designations.2 The requirements of Subchapter A that must be included in the City of Dallas Water Conservation Plan are summarized below.\n" +
-                "Minimum Requirements for Municipal Public and Wholesale Water Suppliers Utility Profile Includes information regarding population and customer data, water use data including total gallons per capita per day GPCD and residential GPCD , water supply system data, and wastewater system data.\n" +
-                "Sections 3 and 4 Appendix A Description of the Wholesaler's Service Area Includes population and customer data, water use data, water supply system data, and wastewater data.\n" +
-                "Figure 3-1 Goals Specific quantified five-year and ten-year targets for water savings to include goals for water loss programs and goals for municipal and residential use, in GPCD.\n" +
-                "The goals established by a public water supplier are not enforceable under this subparagraph.\n" +
-                "Sections 2.2 and 2.3 Accurate Metering Devices The TCEQ requires metering devices with an accuracy of plus or minus 5 percent for measuring water diverted from source supply.\n" +
-                "Section 5.1 Universal Metering, Testing, Repair, and Replacement The TCEQ requires that there be a program for universal metering of both customer and public uses of water for meter testing and repair, and for periodic meter replacement.\n" +
-                "Section 5.2 Leak Detection, Repair, and Control of Unaccounted for Water The regulations require measures to determine and control unaccounted-for water.\n" +
-                "Measures may include periodic visual inspections along distribution lines and periodic audits of the water system for illegal connections or abandoned services.\n" +
-                "Sections 5.3 and 5.4 Continuing Public Education Program TCEQ requires a continuing public education and information program regarding water conservation.\n" +
-                "Section 5.5 Non-Promotional Rate Structure Chapter 288 requires a water rate structure that is costbased and which does not encourage the excessive use of water.\n" +
-                "Section 5.8 and Appendix A Reservoir Systems Operational Plan This requirement is to provide a coordinated operational structure for operation of reservoirs owned by the water supply entity within a common watershed or river basin in order to optimize available water supplies.\n" +
-                "Section 5.10 Wholesale Customer Requirements The water conservation plan must include a requirement in every water supply contract entered into or renewed after official adoption of the Water Conservation Plan, and including any contract extension, that each 2 DWU also holds water rights to provide water for industrial use.\n" +
-                "However, since DWU uses these rights to provide water to TXU Electric as a wholesale supplier, a water conservation plan for industrial or mining use is not required.\n" +
-                "City of Dallas Water Conservation Plan 6 successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements of Title 30 TAC Chapter 288.\n" +
-                "Section 5.9 A Means of Implementation and Enforcement The regulations require a means to implement and enforce the Water Conservation Plan, as evidenced by an ordinance, resolution, or tariff, and a description of the authority by which the conservation plan is enforced.\n" +
-                "Sections 5.0 through 5.17 Coordination with Regional Water Planning Groups The water conservation plan should document the coordination with the Regional Water Planning Group for the service area of the public water supplier to demonstrate consistency with the appropriate approved regional water plan.\n" +
-                "Section 5.12 Additional Requirements for Cities of More than 5,000 People Program for Leak Detection, Repair, and Water Loss Accounting The plan must include a description of the program of leak detection, repair, and water loss accounting for the water transmission, storage, delivery, and distribution system.\n" +
-                "Sections 5.3 and 5.4 Record Management System The plan must include a record management system to record water pumped, water deliveries, water sales and water losses which allows for the desegregation of water sales and uses into the following user classes residential commercial public and institutional and industrial.\n" +
-                "Sections 5.4 and 5.14 Requirements for Wholesale Customers The plan must include a requirement in every wholesale water supply contract entered into or renewed after official adoption of the plan by either ordinance, resolution, or tariff , and including any contract extension, that each successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements in 30 TAC 288.\n" +
-                "If the customer intends to resell the water, the contract between the initial supplier and customer must provide that the contract for the resale of the water must have water conservation requirements so that each successive customer in the resale of the water will be required to implement water conservation measures in accordance with the provisions of 30 TAC 288.\n" +
-                "Section 5.9 Additional Conservation Strategies TCEQ Rules also list additional optional but not required conservation strategies which may be adopted by suppliers.\n" +
-                "The following optional strategies are included in this plan o Conservation-Oriented Water Rates.\n" +
-                "Section 5.8 and Appendix A and water rate structures such as uniform or increasing block rate schedules, and or seasonal rates, but not flat rate or decreasing block rates o Ordinances, Plumbing Codes and or Rules on Water Conservation Fixtures.\n" +
-                "Section 5.14 o Fixture Replacement Incentive Programs.\n" +
-                "Sections 5.7.1 through 5.7.3 o Reuse and or Recycling of Wastewater and or Gray Water.\n" +
-                "Sections 5.16 through 5.16.3 o Ordinance and or Programs for Landscape Water Management Sections 5.5.4 and 5.14.\n" +
-                "o Method for Monitoring the Effectiveness of the Plan.\n" +
-                "City of Dallas Water Conservation Plan 7 This Water Conservation Plan sets forth a program of long-term measures under which the City of Dallas can improve the overall efficiency of water use and conserve its water resources.";
-
-        List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
-        String reannotated = NLPTools.autoAnnotate(parsed, entities);
-
-        System.out.println(reannotated);
+    private Dictionary getTrainingDictionary(String category) {
+        try {
+            ClassPathResource resource = new ClassPathResource("nlp/ner-dict/" + category + ".xml");
+            InputStream in = resource.getInputStream();
+            Dictionary dict = new Dictionary(in);
+            return dict;
+        } catch (IOException e) {
+            return new Dictionary();
+        }
     }
+
+    private byte[] getFeatureGeneratorBytes() {
+        try {
+            ClassPathResource resource = new ClassPathResource("nlp/ner-features.xml");
+            byte[] featureGeneratorBytes = Files.toByteArray(resource.getFile());
+
+            return featureGeneratorBytes;
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    public static void main(String[] args) {
+        NamedEntityRecognizer recognizer = new NamedEntityRecognizer(null);
+        byte[] featureGeneratorBytes = recognizer.getFeatureGeneratorBytes();
+        System.out.println(featureGeneratorBytes.length);
+    }
+
+//    public static void main(String[] args) {
+//        String annotated = "This includes all of the <START:FAC> City of Dallas <END> , 23 major wholesale treated water customers, and 4 wholesale raw water customers located in the metropolitan area surrounding Dallas.\n" +
+//                "Dallas has actively procured water supplies, constructed reservoirs, and developed water treatment facilities which make it possible for DWU to provide water toits customers.\n" +
+//                "In Fiscal Year FY 2012-2013, DWU delivered over 143 billion gallons of treated water.\n" +
+//                "As the regional population grows, so grows water demand.\n" +
+//                "To meet demand, DWU must plan for increasing the available water supply and expanding its transmission, treatment, and distribution facilities.\n" +
+//                "DWU considers water conservation an integral part of this planning process.\n" +
+//                " <START:FAC> The City of Dallas <END> has had a water conservation program since the early 1980s.\n" +
+//                "In 2001, Dallas increased its conservation efforts with the amendment of CHAPTER 49, WATER AND WASTEWATER, of the <START:FAC> Dallas City Code <END> to include, CONSERVATION MEASURES RELATING TO LAWN AND LANDSCAPE IRRIGATION.\n" +
+//                "In 2010, DWU updated its Water Conservation Five-Year Strategic Plan Strategic Plan that included phased implementation of best management practices BMPs under the following major elements 1 City Leadership and <START:FAC> Commitment Education <END> and <START:FAC> Outreach Initiatives Rebate <END> and <START:FAC> Incentive Programs The Water Conservation Plan <END> contained herein incorporates data obtained in the 2010 update of the <START:FAC> Five-Year Strategic Plan <END> .\n" +
+//                "1.1 State of Texas Requirements The Texas Administrative Code Title 30, Chapter 288 30 TAC 288 requires holders of an existing permit, certified filing, or certificate of adjudication for the appropriation of surface water in the amount of 1,000 acre-feet a year or more for municipal, industrial, and other nonirrigation uses to develop, submit, and implement a water conservation plan and to update it according to a specified schedule.\n" +
+//                "As such, DWU is subject to this requirement.\n" +
+//                "Because DWU provides water as a municipal public and wholesale water supplier, DWU's Water Conservation 1 Alan Plummer Associates, Inc. in association with Amy Vickers Associates, Inc., CP Y, Inc., Miya Water and <START:FAC> BDS Technologies <END> , Inc., Water Conservation Five-Year Strategic Plan Update, prepared for <START:FAC> City of Dallas <END> , June 2010.\n" +
+//                " <START:FAC> City of Dallas Water Conservation Plan <END> 5 Plan must include information necessary to comply with <START:FAC> Texas <END> Commission on Environmental Quality TCEQ requirements for each of these designations.2 The requirements of Subchapter A that must be included in the <START:FAC> City of Dallas Water Conservation Plan <END> are summarized below.\n" +
+//                "Minimum Requirements for Municipal Public and Wholesale Water Suppliers Utility Profile Includes information regarding population and customer data, water use data including total gallons per capita per day GPCD and residential <START:FAC> GPCD <END> , water supply system data, and wastewater system data.\n" +
+//                "Sections 3 and 4 Appendix A Description of the <START:FAC> Wholesaler <END> 's Service Area Includes population and customer data, water use data, water supply system data, and wastewater data.\n" +
+//                "Figure 3-1 Goals Specific quantified five-year and ten-year targets for water savings to include goals for water loss programs and goals for municipal and residential use, in GPCD.\n" +
+//                "The goals established by a public water supplier are not enforceable under this subparagraph.\n" +
+//                "Sections 2.2 and 2.3 Accurate Metering Devices The TCEQ requires metering devices with an accuracy of plus or minus 5 percent for measuring water diverted from source supply.\n" +
+//                "Section 5.1 Universal Metering, Testing, Repair, and Replacement The TCEQ requires that there be a program for universal metering of both customer and public uses of water for meter testing and repair, and for periodic meter replacement.\n" +
+//                "Section 5.2 Leak Detection, Repair, and Control of Unaccounted for Water The regulations require measures to determine and control unaccounted-for water.\n" +
+//                "Measures may include periodic visual inspections along distribution lines and periodic audits of the water system for illegal connections or abandoned services.\n" +
+//                "Sections 5.3 and 5.4 Continuing Public Education Program TCEQ requires a continuing public education and information program regarding water conservation.\n" +
+//                "Section 5.5 Non-Promotional Rate Structure Chapter 288 requires a water rate structure that is costbased and which does not encourage the excessive use of water.\n" +
+//                "Section 5.8 and <START:FAC> Appendix A Reservoir Systems Operational Plan <END> This requirement is to provide a coordinated operational structure for operation of reservoirs owned by the water supply entity within a common watershed or river basin in order to optimize available water supplies.\n" +
+//                "Section 5.10 Wholesale Customer Requirements The water conservation plan must include a requirement in every water supply contract entered into or renewed after official adoption of the <START:FAC> Water Conservation Plan <END> , and including any contract extension, that each 2 DWU also holds water rights to provide water for industrial use.\n" +
+//                "However, since DWU uses these rights to provide water to TXU Electric as a wholesale supplier, a water conservation plan for industrial or mining use is not required.\n" +
+//                " <START:FAC> City of Dallas Water Conservation Plan <END> 6 successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements of Title 30 TAC Chapter 288.\n" +
+//                "Section 5.9 A Means of Implementation and Enforcement The regulations require a means to implement and enforce the <START:FAC> Water Conservation Plan <END> , as evidenced by an ordinance, resolution, or tariff, and a description of the authority by which the conservation plan is enforced.\n" +
+//                "Sections 5.0 through 5.17 Coordination with Regional Water Planning Groups The water conservation plan should document the coordination with the <START:FAC> Regional Water Planning Group <END> for the service area of the public water supplier to demonstrate consistency with the appropriate approved regional water plan.\n" +
+//                "Section 5.12 Additional Requirements for Cities of More than 5,000 People Program for Leak Detection, Repair, and Water Loss Accounting The plan must include a description of the program of leak detection, repair, and water loss accounting for the water transmission, storage, delivery, and distribution system.\n" +
+//                "Sections 5.3 and 5.4 Record Management System The plan must include a record management system to record water pumped, water deliveries, water sales and water losses which allows for the desegregation of water sales and uses into the following user classes residential commercial public and institutional and industrial.\n" +
+//                "Sections 5.4 and 5.14 Requirements for Wholesale Customers The plan must include a requirement in every wholesale water supply contract entered into or renewed after official adoption of the plan by either ordinance, resolution, or tariff, and including any contract extension, that each successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements in 30 TAC 288.\n" +
+//                "If the customer intends to resell the water, the contract between the initial supplier and customer must provide that the contract for the resale of the water must have water conservation requirements so that each successive customer in the resale of the water will be required to implement water conservation measures in accordance with the provisions of 30 TAC 288.\n" +
+//                "Section 5.9 Additional Conservation Strategies TCEQ Rules also list additional optional but not required conservation strategies which may be adopted by suppliers.\n" +
+//                "The following optional strategies are included in this plan o Conservation-Oriented Water Rates.\n" +
+//                "Section 5.8 and <START:FAC> Appendix A <END> and water rate structures such as uniform or increasing block rate schedules, and or seasonal rates, but not flat rate or decreasing block rates o Ordinances, Plumbing Codes and or Rules on Water Conservation Fixtures.\n" +
+//                "Section 5.14 o Fixture Replacement Incentive Programs.\n" +
+//                "Sections 5.7.1 through 5.7.3 o Reuse and or Recycling of Wastewater and or Gray Water.\n" +
+//                "Sections 5.16 through 5.16.3 o Ordinance and or Programs for Landscape Water Management Sections 5.5.4 and 5.14.\n" +
+//                "o Method for Monitoring the Effectiveness of the Plan.\n" +
+//                " <START:FAC> City of Dallas Water Conservation Plan <END> 7 This Water Conservation Plan sets forth a program of long-term measures under which the <START:FAC> City of Dallas <END> can improve the overall efficiency of water use and conserve its water resources.";
+//
+//        String parsed = "This includes all of the City of Dallas, 23 major wholesale treated water customers, and 4 wholesale raw water customers located in the metropolitan area surrounding Dallas.\n" +
+//                "Dallas has actively procured water supplies, constructed reservoirs, and developed water treatment facilities which make it possible for DWU to provide water toits customers.\n" +
+//                "In Fiscal Year FY 2012-2013, DWU delivered over 143 billion gallons of treated water.\n" +
+//                "As the regional population grows, so grows water demand.\n" +
+//                "To meet demand, DWU must plan for increasing the available water supply and expanding its transmission, treatment, and distribution facilities.\n" +
+//                "DWU considers water conservation an integral part of this planning process.\n" +
+//                "The City of Dallas has had a water conservation program since the early 1980s.\n" +
+//                "In 2001, Dallas increased its conservation efforts with the amendment of CHAPTER 49, WATER AND WASTEWATER, of the Dallas City Code to include, CONSERVATION MEASURES RELATING TO LAWN AND LANDSCAPE IRRIGATION.\n" +
+//                "In 2010, DWU updated its Water Conservation Five-Year Strategic Plan Strategic Plan that included phased implementation of best management practices BMPs under the following major elements 1 City Leadership and Commitment Education and Outreach Initiatives Rebate and Incentive Programs The Water Conservation Plan contained herein incorporates data obtained in the 2010 update of the Five-Year Strategic Plan.\n" +
+//                "1.1 State of Texas Requirements The Texas Administrative Code Title 30, Chapter 288 30 TAC 288 requires holders of an existing permit, certified filing, or certificate of adjudication for the appropriation of surface water in the amount of 1,000 acre-feet a year or more for municipal, industrial, and other nonirrigation uses to develop, submit, and implement a water conservation plan and to update it according to a specified schedule.\n" +
+//                "As such, DWU is subject to this requirement.\n" +
+//                "Because DWU provides water as a municipal public and wholesale water supplier, DWU's Water Conservation 1 Alan Plummer Associates, Inc. in association with Amy Vickers Associates, Inc., CP Y, Inc., Miya Water and BDS Technologies, Inc., Water Conservation Five-Year Strategic Plan Update, prepared for City of Dallas, June 2010.\n" +
+//                "City of Dallas Water Conservation Plan 5 Plan must include information necessary to comply with Texas Commission on Environmental Quality TCEQ requirements for each of these designations.2 The requirements of Subchapter A that must be included in the City of Dallas Water Conservation Plan are summarized below.\n" +
+//                "Minimum Requirements for Municipal Public and Wholesale Water Suppliers Utility Profile Includes information regarding population and customer data, water use data including total gallons per capita per day GPCD and residential GPCD , water supply system data, and wastewater system data.\n" +
+//                "Sections 3 and 4 Appendix A Description of the Wholesaler's Service Area Includes population and customer data, water use data, water supply system data, and wastewater data.\n" +
+//                "Figure 3-1 Goals Specific quantified five-year and ten-year targets for water savings to include goals for water loss programs and goals for municipal and residential use, in GPCD.\n" +
+//                "The goals established by a public water supplier are not enforceable under this subparagraph.\n" +
+//                "Sections 2.2 and 2.3 Accurate Metering Devices The TCEQ requires metering devices with an accuracy of plus or minus 5 percent for measuring water diverted from source supply.\n" +
+//                "Section 5.1 Universal Metering, Testing, Repair, and Replacement The TCEQ requires that there be a program for universal metering of both customer and public uses of water for meter testing and repair, and for periodic meter replacement.\n" +
+//                "Section 5.2 Leak Detection, Repair, and Control of Unaccounted for Water The regulations require measures to determine and control unaccounted-for water.\n" +
+//                "Measures may include periodic visual inspections along distribution lines and periodic audits of the water system for illegal connections or abandoned services.\n" +
+//                "Sections 5.3 and 5.4 Continuing Public Education Program TCEQ requires a continuing public education and information program regarding water conservation.\n" +
+//                "Section 5.5 Non-Promotional Rate Structure Chapter 288 requires a water rate structure that is costbased and which does not encourage the excessive use of water.\n" +
+//                "Section 5.8 and Appendix A Reservoir Systems Operational Plan This requirement is to provide a coordinated operational structure for operation of reservoirs owned by the water supply entity within a common watershed or river basin in order to optimize available water supplies.\n" +
+//                "Section 5.10 Wholesale Customer Requirements The water conservation plan must include a requirement in every water supply contract entered into or renewed after official adoption of the Water Conservation Plan, and including any contract extension, that each 2 DWU also holds water rights to provide water for industrial use.\n" +
+//                "However, since DWU uses these rights to provide water to TXU Electric as a wholesale supplier, a water conservation plan for industrial or mining use is not required.\n" +
+//                "City of Dallas Water Conservation Plan 6 successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements of Title 30 TAC Chapter 288.\n" +
+//                "Section 5.9 A Means of Implementation and Enforcement The regulations require a means to implement and enforce the Water Conservation Plan, as evidenced by an ordinance, resolution, or tariff, and a description of the authority by which the conservation plan is enforced.\n" +
+//                "Sections 5.0 through 5.17 Coordination with Regional Water Planning Groups The water conservation plan should document the coordination with the Regional Water Planning Group for the service area of the public water supplier to demonstrate consistency with the appropriate approved regional water plan.\n" +
+//                "Section 5.12 Additional Requirements for Cities of More than 5,000 People Program for Leak Detection, Repair, and Water Loss Accounting The plan must include a description of the program of leak detection, repair, and water loss accounting for the water transmission, storage, delivery, and distribution system.\n" +
+//                "Sections 5.3 and 5.4 Record Management System The plan must include a record management system to record water pumped, water deliveries, water sales and water losses which allows for the desegregation of water sales and uses into the following user classes residential commercial public and institutional and industrial.\n" +
+//                "Sections 5.4 and 5.14 Requirements for Wholesale Customers The plan must include a requirement in every wholesale water supply contract entered into or renewed after official adoption of the plan by either ordinance, resolution, or tariff , and including any contract extension, that each successive wholesale customer develop and implement a water conservation plan or water conservation measures using the applicable elements in 30 TAC 288.\n" +
+//                "If the customer intends to resell the water, the contract between the initial supplier and customer must provide that the contract for the resale of the water must have water conservation requirements so that each successive customer in the resale of the water will be required to implement water conservation measures in accordance with the provisions of 30 TAC 288.\n" +
+//                "Section 5.9 Additional Conservation Strategies TCEQ Rules also list additional optional but not required conservation strategies which may be adopted by suppliers.\n" +
+//                "The following optional strategies are included in this plan o Conservation-Oriented Water Rates.\n" +
+//                "Section 5.8 and Appendix A and water rate structures such as uniform or increasing block rate schedules, and or seasonal rates, but not flat rate or decreasing block rates o Ordinances, Plumbing Codes and or Rules on Water Conservation Fixtures.\n" +
+//                "Section 5.14 o Fixture Replacement Incentive Programs.\n" +
+//                "Sections 5.7.1 through 5.7.3 o Reuse and or Recycling of Wastewater and or Gray Water.\n" +
+//                "Sections 5.16 through 5.16.3 o Ordinance and or Programs for Landscape Water Management Sections 5.5.4 and 5.14.\n" +
+//                "o Method for Monitoring the Effectiveness of the Plan.\n" +
+//                "City of Dallas Water Conservation Plan 7 This Water Conservation Plan sets forth a program of long-term measures under which the City of Dallas can improve the overall efficiency of water use and conserve its water resources.";
+//
+//        List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
+//        String reannotated = NLPTools.autoAnnotate(parsed, entities);
+//
+//        System.out.println(reannotated);
+//    }
 }

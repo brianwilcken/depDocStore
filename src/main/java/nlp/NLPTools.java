@@ -383,29 +383,50 @@ public class NLPTools {
         return text;
     }
 
+    private static StanfordCoreNLP tokenPipeline;
+    private static StanfordCoreNLP getTokenPipeline() {
+        if (tokenPipeline == null) {
+            Properties props = new Properties();
+            props.setProperty("annotators", "tokenize");
+            tokenPipeline = new StanfordCoreNLP(props);
+        }
+        return tokenPipeline;
+    }
+
     public static List<CoreLabel> detectTokensStanford(String input) {
-        Properties props = new Properties();
-        props.setProperty("annotators", "tokenize");
-        StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
-        Annotation processed = pipeline.process(input);
+        Annotation processed = getTokenPipeline().process(input);
         List<CoreLabel> tokens = processed.get(CoreAnnotations.TokensAnnotation.class);
         return tokens;
     }
 
+    private static StanfordCoreNLP sentencePipeline;
+    private static StanfordCoreNLP getSentencePipeline() {
+        if (sentencePipeline == null) {
+            Properties props = new Properties();
+            props.setProperty("annotators", "tokenize,ssplit");
+            sentencePipeline = new StanfordCoreNLP(props);
+        }
+        return sentencePipeline;
+    }
+
     public static List<CoreMap> detectSentencesStanford(String input) {
-        Properties props = new Properties();
-        props.setProperty("annotators", "tokenize,ssplit");
-        StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
-        Annotation processed = pipeline.process(input);
+        Annotation processed = getSentencePipeline().process(input);
         List<CoreMap> sentences = processed.get(CoreAnnotations.SentencesAnnotation.class);
         return sentences;
     }
 
+    private static StanfordCoreNLP posPipeline;
+    private static StanfordCoreNLP getPOSPipeline() {
+        if (posPipeline == null) {
+            Properties props = new Properties();
+            props.setProperty("annotators", "tokenize,ssplit,pos");
+            posPipeline = new StanfordCoreNLP(props);
+        }
+        return posPipeline;
+    }
+
     public static List<CoreMap> detectPOSStanford(String input) {
-        Properties props = new Properties();
-        props.setProperty("annotators", "tokenize,ssplit,pos");
-        StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
-        Annotation processed = pipeline.process(input);
+        Annotation processed = getPOSPipeline().process(input);
         List<CoreMap> sentences = processed.get(CoreAnnotations.SentencesAnnotation.class);
         return sentences;
     }
@@ -477,18 +498,53 @@ public class NLPTools {
                 List<CoreLabel> tokens = sentenceAnnotations.get(i).get(CoreAnnotations.TokensAnnotation.class);
                 int numTokens = tokens.size();
                 int numNounTokens = tokens.stream()
-                        .filter(p -> p.tag().contains("NN") || p.tag().contains("CD"))
+                        .filter(p -> p.tag().contains("NN") || p.tag().contains("CD") || p.tag().contains("LS") || p.tag().contains("."))
                         .collect(Collectors.toList())
                         .size();
                 double percentNouns = (double) numNounTokens / (double) numTokens;
                 if (percentNouns > threshold) {
                     sentences.set(i, "Redacted.");
+                } else {
+                    //check for long strings of numbers or list items
+                    List<CoreLabel> numberTokens = tokens.stream().filter(p -> p.tag().contains("CD") || p.tag().contains("LS"))
+                            .filter(p -> (p.endPosition() - p.beginPosition()) > 5) //filter for just the tokens that are numeric and that are at least 5 numbers in length
+                            .collect(Collectors.toList());
+
+                    Map<Integer, List<CoreLabel>> contiguousTokens = new HashMap<>();
+
+                    int partition = 0;
+                    for (int n = 0; n < numberTokens.size() - 1; n++) {
+                        if (!contiguousTokens.containsKey(partition)) {
+                            contiguousTokens.put(partition, new ArrayList<>());
+                        }
+                        CoreLabel current = numberTokens.get(n);
+                        CoreLabel next = numberTokens.get(n + 1);
+
+                        if (next.index() - current.index() == 1) {
+                            if (!contiguousTokens.get(partition).contains(current)) {
+                                contiguousTokens.get(partition).add(current);
+                            }
+                            contiguousTokens.get(partition).add(next);
+                        } else {
+                            partition++;
+                        }
+                    }
+
+                    for (int part : contiguousTokens.keySet()) {
+                        String contiguousNumbers = contiguousTokens.get(part).stream().map(p -> p.originalText() + p.after()).reduce((c, n) -> c + n).orElse("");
+                        sentence = sentence.replace(contiguousNumbers, "");
+                    }
+
+                    sentences.set(i, sentence);
                 }
             } else {
                 sentences.set(i, "Redacted.");
             }
         }
         String text = StringUtils.join(sentences, "\r\n");
+
+        text = text.replace("Redacted.\r\n", "");
+        text = text.replace("Redacted.", "");
 
         return text;
     }

@@ -38,15 +38,19 @@ public class NamedEntity extends IndexedObject {
     }
 
     public String[] autoAnnotate(String[] tokens) {
-        int start = span.getStart();
-        int end = span.getEnd();
-        String startAnnotation = " <START:" + span.getType() +"> ";
-        String endAnnotation = " <END> ";
+        try {
+            int start = span.getStart();
+            int end = span.getEnd();
+            String startAnnotation = " <START:" + span.getType() +"> ";
+            String endAnnotation = " <END> ";
 
-        tokens[start] = startAnnotation + tokens[start];
-        tokens[end - 1] = tokens[end - 1] + endAnnotation;
+            tokens[start] = startAnnotation + tokens[start];
+            tokens[end - 1] = tokens[end - 1] + endAnnotation;
 
-        return tokens;
+            return tokens;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return null;
+        }
     }
 
     public String getId() {

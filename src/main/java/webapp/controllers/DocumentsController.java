@@ -357,6 +357,7 @@ public class DocumentsController {
         SolrDocumentList docs = new SolrDocumentList();
 
         String parsed = recognizer.deepCleanText(docText);
+        parsed = NLPTools.redactTextForNLP(NLPTools.detectPOSStanford(parsed), 0.7, 1000);
         if (doc.containsKey("parsed")) {
             doc.replace("parsed", parsed);
         } else {
