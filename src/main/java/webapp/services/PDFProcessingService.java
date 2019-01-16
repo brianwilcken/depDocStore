@@ -139,7 +139,7 @@ public class PDFProcessingService {
                     logger.error(e.getMessage(), e);
                 } catch (Exception e) {
                     logger.error(e.getMessage(), e);
-                }finally {
+                } finally {
                     //make sure the tiff file is deleted
                     if (binFile != null) {
                         logger.info("After processing page " + i + ", now deleting file: " + binFile.getName());
@@ -147,6 +147,8 @@ public class PDFProcessingService {
                     }
                     logger.info("After processing page " + i + ", now deleting file: " + tiffFile.getName());
                     tiffFile.delete();
+                    logger.info("After processing page " + i + ", now deleting file: " + pageFile.getName());
+                    pageFile.delete();
                 }
             } else {
                 logger.info("PDF processing for file " + pdfFile.getName() + " for page " + i + " complete!");

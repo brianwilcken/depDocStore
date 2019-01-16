@@ -302,7 +302,7 @@ public class DocumentsController {
             logger.info("storing data to Solr");
             docs.add(doc);
             solrClient.indexDocuments(docs);
-            cleanupService.process();
+            cleanupService.process(filename, 1);
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
@@ -317,10 +317,11 @@ public class DocumentsController {
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
 
+                String filename = null;
                 if (!document.isEmpty() && doc.containsKey("docStoreId")) { //uploaded file is being replaced
                     String oldFileId = doc.get("docStoreId").toString();
                     mongoClient.DeleteFile(oldFileId);
-                    String filename = document.getOriginalFilename();
+                    filename = document.getOriginalFilename();
                     File uploadedFile = Tools.WriteFileToDisk(temporaryFileRepo + filename, document.getInputStream());
                     ObjectId fileId = mongoClient.StoreFile(uploadedFile);
                     doc.replace("docStoreId", fileId.toString());
@@ -342,7 +343,7 @@ public class DocumentsController {
 
                 logger.info("storing data to Solr");
                 solrClient.indexDocument(doc);
-                cleanupService.process();
+                cleanupService.process(filename, 1);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
@@ -607,7 +608,7 @@ public class DocumentsController {
             respHeaders.setContentDispositionFormData("attachment", fsFile.getFilename());
 
             InputStreamResource isr = new InputStreamResource(stream);
-            cleanupService.process();
+            cleanupService.process(fsFile.getFilename(), 1);
             return new ResponseEntity<>(isr, respHeaders, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(null, null, HttpStatus.NOT_FOUND);

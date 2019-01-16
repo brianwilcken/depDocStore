@@ -19,14 +19,21 @@ public class TemporaryRepoCleanupService {
     final static Logger logger = LogManager.getLogger(TemporaryRepoCleanupService.class);
 
     @Async("processExecutor")
-    public void process() {
+    public void process(String filename, int attempt) {
         try {
-            FileUtils.cleanDirectory(temporaryFileRepo);
+            if (filename != null) {
+                logger.info("Try to delete file from temporary repo (attempt #" + attempt + "): " + filename);
+                File delFile = new File(temporaryFileRepo + "\\" + filename);
+                FileUtils.forceDelete(delFile);
+            }
         } catch (IOException e) {
+            logger.error(e.getMessage(), e);
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e1) { }
-            process();
+            if (attempt < 5) {
+                process(filename, ++attempt);
+            }
         }
     }
 }

@@ -507,7 +507,6 @@ public class NLPTools {
                 } else {
                     //check for long strings of numbers or list items
                     List<CoreLabel> numberTokens = tokens.stream().filter(p -> p.tag().contains("CD") || p.tag().contains("LS"))
-                            .filter(p -> (p.endPosition() - p.beginPosition()) > 5) //filter for just the tokens that are numeric and that are at least 5 numbers in length
                             .collect(Collectors.toList());
 
                     Map<Integer, List<CoreLabel>> contiguousTokens = new HashMap<>();
@@ -535,7 +534,18 @@ public class NLPTools {
                         sentence = sentence.replace(contiguousNumbers, "");
                     }
 
-                    sentences.set(i, sentence);
+                    //check for long sequences of connected capitalized/uncapitalized letters
+                    //if a large portion of the sentence is occupied by such sequences then the sentence can be dropped
+                    String testSentence = sentence.replaceAll("(?<= )(\\w+[a-z][A-Z]\\w+)(?= )", ""); //regex for finding non-separated capitalized words
+                    int testLength = testSentence.length();
+                    int sentLength = sentence.length();
+                    double proportion = (double)(sentLength - testLength) / (double)sentLength;
+
+                    if (proportion < 0.3) {
+                        sentences.set(i, sentence);
+                    } else {
+                        sentences.set(i, "Redacted.");
+                    }
                 }
             } else {
                 sentences.set(i, "Redacted.");
