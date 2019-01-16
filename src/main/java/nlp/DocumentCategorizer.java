@@ -19,7 +19,7 @@ public class DocumentCategorizer {
 
     final static Logger logger = LogManager.getLogger(DocumentCategorizer.class);
 
-    private static final double CATEGORY_THRESHOLD = 0.01;
+    private static final double CATEGORY_THRESHOLD = 0.1;
 
     private DoccatModel model;
     private DocumentCategorizerME categorizer;
