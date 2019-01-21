@@ -27,6 +27,7 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
+import org.apache.solr.common.SolrDocument;
 import org.springframework.core.io.ClassPathResource;
 
 import java.io.*;
@@ -373,6 +374,18 @@ public class NLPTools {
         }
         sentence = String.join(" ", tokensArr);
         return sentence;
+    }
+
+    public static void calculatePercentAnnotated(SolrDocument doc) {
+        if (doc.containsKey("annotated")) {
+            String annotated = doc.get("annotated").toString();
+            List<CoreMap> sentences = detectSentencesStanford(annotated);
+            int total = sentences.size();
+            long annotatedLines = sentences.stream().filter(p -> p.toString().contains("<END>")).count();
+            long percentAnnotated = (long)(((double)annotatedLines / (double)total) * 100);
+            doc.put("percentAnnotated", percentAnnotated);
+            doc.put("totalLines", total);
+        }
     }
 
     public static String fixFormattingAfterAnnotation(String text) {

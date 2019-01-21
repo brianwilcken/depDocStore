@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import common.TextExtractor;
 import common.Tools;
+import edu.stanford.nlp.util.CoreMap;
 import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
 import neo4japi.Neo4jClient;
@@ -379,6 +380,8 @@ public class DocumentsController {
             doc.addField("annotated", annotated);
         }
 
+        NLPTools.calculatePercentAnnotated(doc);
+
         List<SolrDocument> entityDocs = entities.stream()
                 .map(p -> p.mutate(id))
                 .collect(Collectors.toList());
@@ -444,6 +447,8 @@ public class DocumentsController {
                         doc.addField(p.getKey(), p.getValue());
                     }
                 });
+
+                NLPTools.calculatePercentAnnotated(doc);
 
                 doc.replace("created", Tools.getFormattedDateTimeString(created.toInstant()));
 
