@@ -112,6 +112,24 @@ public class DocumentsController {
         }
     }
 
+    @RequestMapping(value="/entities/dictionary/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getDocumentNamedEntitiesDictionary(@PathVariable(name="id") String id) {
+        logger.info("In getDocumentNamedEntitiesDictionary method");
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
+            if (!docs.isEmpty()) {
+                SolrDocument doc = docs.get(0);
+                List<NamedEntity> entities = recognizer.detectNamedEntitiesStanford(doc.get("parsed").toString());
+                return ResponseEntity.ok().body(Tools.formJsonResponse(entities));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
     @RequestMapping(value="/history/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> getDocumentHistory(@PathVariable(name="id") String id) {
         logger.info("In getDocumentHistory method");
@@ -134,7 +152,7 @@ public class DocumentsController {
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000000, 0, null, new String[] {"annotated"});
             JsonResponse response = Tools.formJsonResponse(docs);
-            logger.info("Returning historical annoptation");
+            logger.info("Returning historical annotation");
             return ResponseEntity.ok().body(response);
         } catch (Exception e) {
             logger.error(e);

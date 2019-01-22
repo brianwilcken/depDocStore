@@ -96,68 +96,48 @@ public class NamedEntityRecognizer {
     private SentenceModel sentModel;
     //private TokenizerModel tokenizerModel;
     private SolrClient client;
-    //private StanfordCoreNLP pipeline;
 
     public NamedEntityRecognizer(SolrClient client) {
-//        Properties props = new Properties();
-//        props.setProperty("annotators", "tokenize,ssplit,pos,lemma,ner");
-//        props.setProperty("threads", "4");
-//        pipeline = new StanfordCoreNLP(props);
-
         sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
         //tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
         this.client = client;
     }
 
-//    public List<NamedEntity> detectNamedEntitiesStanford(String document) {
-//        Annotation annotation = pipeline.process(document);
-//        List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
-//        List<NamedEntity> namedEntities = new ArrayList<>();
-//
-//        boolean inEntity = false;
-//        String currentEntity = "";
-//        String currentEntityType = "";
-//        for (int i = 0; i < sentences.size(); i++) {
-//            CoreMap sentence = sentences.get(i);
-//            for (CoreLabel token : sentence.get(CoreAnnotations.TokensAnnotation.class)) {
-//                String ne = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
-//
-//                if (!inEntity) {
-//                    if (!"O".equals(ne)) {
-//                        inEntity = true;
-//                        currentEntity = "";
-//                        currentEntityType = ne;
-//                    }
-//                }
-//                if (inEntity) {
-//                    if ("O".equals(ne)) {
-//                        inEntity = false;
-//                        switch (currentEntityType) {
-//                            case "PERSON":
-//                                System.out.println("Extracted Person - " + currentEntity.trim());
-//                                break;
-//                            case "ORGANIZATION":
-//                                namedEntities.add(new NamedEntity(currentEntity.trim(), null, i));
-//                                System.out.println("Extracted Organization - " + currentEntity.trim());
-//                                break;
-//                            case "LOCATION":
-//                                namedEntities.add(new NamedEntity(currentEntity.trim(), null, i));
-//                                System.out.println("Extracted Location - " + currentEntity.trim());
-//                                break;
-//                            case "DATE":
-//                                System.out.println("Extracted Date " + currentEntity.trim());
-//                                break;
-//                        }
-//                    } else {
-//                        currentEntity += " " + token.originalText();
-//                    }
-//
-//                }
-//            }
-//        }
-//
-//        return namedEntities;
-//    }
+    public List<NamedEntity> detectNamedEntitiesStanford(String document) {
+        List<CoreMap> sentences = NLPTools.detectNERStanford(document);
+        List<NamedEntity> namedEntities = new ArrayList<>();
+
+        boolean inEntity = false;
+        String currentEntity = "";
+        String currentEntityType = "";
+        for (int i = 0; i < sentences.size(); i++) {
+            CoreMap sentence = sentences.get(i);
+            for (CoreLabel token : sentence.get(CoreAnnotations.TokensAnnotation.class)) {
+                String ne = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
+
+                if (!inEntity) {
+                    if (!"O".equals(ne)) {
+                        inEntity = true;
+                        currentEntity = "";
+                        currentEntityType = ne;
+                    }
+                }
+                if (inEntity) {
+                    if ("O".equals(ne)) {
+                        inEntity = false;
+                        if (!currentEntityType.equals("DATE")) {
+                            namedEntities.add(new NamedEntity(currentEntity.trim(), null, i));
+                        }
+                    } else {
+                        currentEntity += " " + token.originalText();
+                    }
+
+                }
+            }
+        }
+
+        return namedEntities;
+    }
 
     public List<NamedEntity> detectNamedEntities(String document, List<String> categories, double threshold) throws IOException {
         List<CoreMap> sentences = NLPTools.detectSentencesStanford(document);
@@ -323,9 +303,78 @@ public class NamedEntityRecognizer {
     }
 
     public static void main(String[] args) {
+        String doc = "Jordan Valley Water Conservancy District Protect Treat Deliver 01 Board of Trustees 02 General Managers Message 03 Service Area 04 Wholesale Member Agencies 06 Sources 07 Deliveries 08 The Water We Drink Southwest Groundwater Treatment Plant Treatment Department 14 Water Treatment source to tap 16 Chlorine Dioxide Results 17 Financial Stewardship 18 Executive Staff 20 Outstanding Employees On the front While Jordan Valley Water Conservancy District's responsibilities are many and varied, our main responsibility is to treat and deliver water that meets the highest quality standards.\n" +
+                "Although EPA imposes strict standards for drinking water, we at Jordan Valley Water require even stricter standards for ourselves.\n" +
+                "During 2012 we accomplished this in many ways, including the completion of the Southwest Groundwater Treatment Plant SWGWTP , the final piece to our decades-long groundwater remediation project.\n" +
+                "We also focus attention on our Treatment Department, which completed many amazing projects during the past year.\n" +
+                "We are fortunate in Utah to have high-quality water sources for drinking purposes, but additional treatment processes are needed to further refine the finished product to the highest quality.\n" +
+                "Three of Jordan Valley Water's values directly emphasize our commitment to quality Safety We are committed to employee and public safety.\n" +
+                "Without high-quality drinking water, public safety would be compromised.\n" +
+                "We take very seriously our charge to provide this essential public service.\n" +
+                "Service We care about our customers needs and strive to fulfill them.\n" +
+                "Our dedicated service shines through, whether repairing a broken water pipeline at 2 a.m. in the middle of winter, helping our customers resolve technical issues, or installing new water infrastructure to accomodate population and economic growth.\n" +
+                "Leadership Our passion for quality drives us to employ innovative practices.\n" +
+                "In addition to the completion of the new high-tech reverse osmosis SWGWTP, the Treatment Department also brought a new chlorine dioxide feed system online at the Jordan Valley Water Treatment Plant.\n" +
+                "This process addition decreases disinfection by-products and provides a solid barrier against microbial contamination.\n" +
+                "We are dedicated to the pursuit of quality in every facet of our organization.\n" +
+                "From our General Managers Jordan Valley Water's service area encompasses much of the Salt Lake Valley, including the most rapidly-growing areas in the state.\n" +
+                "Sources of water include the Provo, Weber and Duchesne rivers, groundwater, and local mountain streams.\n" +
+                "More information about our sources can be found on page 6.\n" +
+                "It pumps mining-contaminated water to the reverse osmosis SWGWTP in West Jordan, where it will be remediated to provide high-quality drinking water.\n" +
+                "Jordan Valley Water's 17 member agencies provide our water, sometimes blended with their own sources, to more than 600,000 people every day.\n" +
+                "Right Backfilling over the by-product pipeline and finished water pipline at 8000 S. 1300 W., West Jordan, near TRAX.\n" +
+                "0707 The water we treat 08 The treatment process is just one step in providing clean drinking water to our customers.\n" +
+                "After traveling through a complex network of reservoirs, rivers, and aqueducts, untreated surface water reaches the water treatment plant.\n" +
+                "Jordan Valley Water has three water treatment plants, each using a unique set of processes to clean your water and ensure the highest-quality drinking water available.\n" +
+                "Jordan Valley Water Treatment Plant is the largest water treatment plant in the state of Utah and can treat up to gallons of water per day.\n" +
+                "This plant treats water from the Provo River system using what is known in the industry as conventional treatment illustrated on pg 15.\n" +
+                "Southeast Regional Water Treatment Plant can treat up to gallons of water per day.\n" +
+                "It uses a high-rate clarification process known as Actiflo , which enables it to treat water from several local mountain streams as well as the Provo River system.\n" +
+                "The third of Jordan Valley Water's treatment plants is a new plant that was completed this past year and will come on line in a few months.\n" +
+                "A reverse osmosis facility, the Southwest Groundwater Treatment Plant is part of a joint project with Rio Tinto Kennecott Utah Copper to clean up groundwater contaminated from a century of mining activities.\n" +
+                "The current phase of this plant can treat up to gallons of water per day.\n" +
+                "Strawberry Reservoir, feeding the ULS system to be utilized by Jordan Valley Water as one of its future sources, stores more than a million acre-feet of water.\n" +
+                "On average, gallons of water are treated every day in winter.\n" +
+                "In summer, that number increases to gallons every day.\n" +
+                "Southwest Groundwater Treatment Plant This project is one of the most noteworthy groundwater remediation projects ever completed in the United States, but we didnt make it happen on our own.\n" +
+                "Through the combined efforts of Jordan Valley Water and Rio Tinto Kennecott, this project will clean up water contaminated from more than a century of mining and put it to beneficial use as highly-purified drinking water.\n" +
+                "It will also prevent the contamination from spreading toother sources of water in the Salt Lake Valley.\n" +
+                "In 2012, more than 20 years of negotiation, litigation, design and construction involved in making this project happen finally reached fruition with the completion of this treatment plant.\n" +
+                "The Southwest Groundwater Treatment Plant is one of the largest inland reverse osmosis plants in the country.\n" +
+                "Opposite page The Southwest Groundwater Treatment Plant soon after completion.\n" +
+                "This page, top left Mike installs filters in the cartridge vessels upstream of the reverse osmosis units.\n" +
+                "This page, top right Tim and Alan working in the chemicals room.\n" +
+                "This page, bottom Treatment staff installs reverse osmosis membrane elements in a special preserving agent to await the startup of the SWGWTP.\n" +
+                "1 Drinking water should be clean, clear, and healthy.\n" +
+                "From the beginning of the treatment process to delivery at your tap, Jordan Valley Water's employees work hard to deliver quality water and services every day.\n" +
+                "This year, we highlight the efforts of our Treatment Department, whose work takes the millions of gallons of untreated water and purifies it to some of the best-tasting water in the country.\n" +
+                "As you can see from the pictures on these pages, what they do is varied and complex.\n" +
+                "We appreciate their hard work and dedication and recognize the vital role they play in providing a life-sustaining product to more than half a million residents in the Salt Lake Valley.\n" +
+                "Thirty-two employees make up the department and provide all the water treatment operations and maintenance, water quality monitoring and compliance, and laboratory services.\n" +
+                "Seven maintenance employees keep the equipment running and the facilities and grounds maintained.\n" +
+                "Five employees are responsible for water sample collection, water quality monitoring and reporting to ensure compliance with all federal, state, and county regulations.\n" +
+                "Four laboratory employees run analyses for both Jordan Valley Water and our member agencies in our state-certified laboratory.\n" +
+                "Far right Cleaning out the JVWTP sedimentation basins shows all the things that our treatment processes remove from drinking water.\n" +
+                "Opposite page, top Dave proudly displays the AWWA second-place award for best-tasting water, won by Southeast Regional Water Treatment Plant in 2012.\n" +
+                "Opposite page, bottom right Treatment staff suit up for annual chlorine safety training.\n" +
+                "Opposite page, bottom left Ed works on a flocculator motor at JVWTP.\n" +
+                "Photo by Linda Townes.12 Water treated at Southeast Regional Water Treatment Plant won second place for taste in a 2012 national taste-test.\n" +
+                "This doesnt mean it's a perfect process when chlorine combines with naturally-occurring organic compounds in the water, disinfection byproducts DBPs are the result.\n" +
+                "In the late 1990s, EPA passed the Stage 1 Disinfection By-Product Rule to regulate DBPs known as trihalomethanes THMs and haloacetic acids HAAs.\n" +
+                "Public water systems that added chlorine to their water treatment process were required to monitor and comply with established limits as a systemwide running annual average.\n" +
+                "In 2012 public water systems had to start complying with the second, more stringent phase of this rule.\n" +
+                "Jordan Valley Water was in compliance with Stage 1 and would most likely be able to comply with Stage 2.\n" +
+                "However, because DBPs tend to increase the longer water is in the pipe, we recognized that many of our member agencies would have difficulty meeting the Stage 2 requirements if our treatment process remained unchanged.\n" +
+                "After investigating several alternatives, Treatment Department staff began a process of pilot and full-scale testing of chlorine dioxide.\n" +
+                "Construction of the new feed system began at Jordan Valley Water Treatment Plant in December of 2010, and came on line in February 2012.\n" +
+                "The graph below shows an example of the project's success.\n" +
+                "Chlorine Dioxide Chlorine dioxide, a bold-yellow chemical, has made the treatment process at Jordan Valley Water Treatment Plant more succesful in removing disinfection by-products.\n" +
+                "The change to chlorine dioxide has allowed for better compliance with Stage 2 of the Disinfection By-Product Rule.\n" +
+                "This page, left A Distribution construction crew Jarod, Glen, Clint, and Calin vacuums water from an excavation in preparation for fixing a mainline break.\n" +
+                "This page, right Glen gives Jarod an assist.\n";
+
         NamedEntityRecognizer recognizer = new NamedEntityRecognizer(null);
-        byte[] featureGeneratorBytes = recognizer.getFeatureGeneratorBytes();
-        System.out.println(featureGeneratorBytes.length);
+        recognizer.detectNamedEntitiesStanford(doc);
     }
 
 //    public static void main(String[] args) {

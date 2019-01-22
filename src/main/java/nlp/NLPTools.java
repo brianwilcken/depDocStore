@@ -451,6 +451,22 @@ public class NLPTools {
         return sentences;
     }
 
+    private static StanfordCoreNLP nerPipeline;
+    private static StanfordCoreNLP getNERPipeline() {
+        if (nerPipeline == null) {
+            Properties props = new Properties();
+            props.setProperty("annotators", "tokenize,ssplit,pos,lemma,ner");
+            nerPipeline = new StanfordCoreNLP(props);
+        }
+        return nerPipeline;
+    }
+
+    public static List<CoreMap> detectNERStanford(String input) {
+        Annotation processed = getNERPipeline().process(input);
+        List<CoreMap> sentences = processed.get(CoreAnnotations.SentencesAnnotation.class);
+        return sentences;
+    }
+
     public static StanfordCoreNLP getStanfordOpenIEPipeline() {
         Properties props = new Properties();
         props.setProperty("annotators", "tokenize,ssplit,pos,lemma,depparse,natlog,openie");
