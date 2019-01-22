@@ -188,7 +188,7 @@ public class NamedEntityRecognizer {
                         String entity = String.join(" ", entityParts);
                         if (prob > threshold) {
                             NamedEntity namedEntity = new NamedEntity(entity, span, s);
-                            curateNamedEntityType(category, namedEntity);
+                            //curateNamedEntityType(category, namedEntity);
                             namedEntities.add(namedEntity);
                         }
                     }
@@ -213,25 +213,25 @@ public class NamedEntityRecognizer {
         }
     }
 
-    public void curateNamedEntityType(String category, NamedEntity namedEntity) {
-        if (dictionaries.containsKey(category)) {
-            List<String> dict = dictionaries.get(category);
-            //Case 1: the category-specific dictionary contains a token combination that matches at least part of the entity name
-            if (!dictionaryMatchesEntity(namedEntity, dict)) {
-                //Case 2: some other category dictionary may contain a term that matches part of the entity name
-                for (String key : dictionaries.keySet()) {
-                    if (!key.equals(category)) {
-                        List<String> otherDict = dictionaries.get(key);
-                        if (dictionaryMatchesEntity(namedEntity, otherDict)) {
-                            Span span = namedEntity.getSpan();
-                            Span newSpan = new Span(span.getStart(), span.getEnd(), key, span.getProb());
-                            namedEntity.setSpan(newSpan);
-                        }
-                    }
-                }
-            }
-        }
-    }
+//    public void curateNamedEntityType(String category, NamedEntity namedEntity) {
+//        if (dictionaries.containsKey(category)) {
+//            List<String> dict = dictionaries.get(category);
+//            //Case 1: the category-specific dictionary contains a token combination that matches at least part of the entity name
+//            if (!dictionaryMatchesEntity(namedEntity, dict)) {
+//                //Case 2: some other category dictionary may contain a term that matches part of the entity name
+//                for (String key : dictionaries.keySet()) {
+//                    if (!key.equals(category)) {
+//                        List<String> otherDict = dictionaries.get(key);
+//                        if (dictionaryMatchesEntity(namedEntity, otherDict)) {
+//                            Span span = namedEntity.getSpan();
+//                            Span newSpan = new Span(span.getStart(), span.getEnd(), key, span.getProb());
+//                            namedEntity.setSpan(newSpan);
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     private boolean dictionaryMatchesEntity(NamedEntity namedEntity, List<String> dict) {
         long matches = dict.stream().filter(p -> namedEntity.getEntity().toLowerCase().contains(p.toLowerCase())).count();
