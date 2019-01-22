@@ -310,6 +310,7 @@ public class DocumentsController {
             doc.addField("docText", docText);
 
             if (Strings.isNullOrEmpty(docText)) {
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Tools.formJsonResponse("Unable to extract text from file."));
             }
 
             docs = runNLPPipeline(docText, docId, doc);
@@ -323,8 +324,12 @@ public class DocumentsController {
             solrClient.indexDocuments(docs);
             cleanupService.process(filename, 1);
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+        catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Tools.formJsonResponse(e.getMessage()));
+        }
+        catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(e.getMessage()));
         }
     }
 
@@ -378,6 +383,9 @@ public class DocumentsController {
 
         String parsed = recognizer.deepCleanText(docText);
         parsed = NLPTools.redactTextForNLP(NLPTools.detectPOSStanford(parsed), 0.7, 1000);
+        if (Strings.isNullOrEmpty(parsed)) {
+            throw new IOException("Document contains no parsable data.");
+        }
         if (doc.containsKey("parsed")) {
             doc.replace("parsed", parsed);
         } else {
@@ -390,7 +398,7 @@ public class DocumentsController {
         } else {
             doc.addField("category", categories);
         }
-        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, 0.5);
+        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, 0.1);
         String annotated = NLPTools.autoAnnotate(parsed, entities);
         if (doc.containsKey("annotated")) {
             doc.replace("annotated", annotated);

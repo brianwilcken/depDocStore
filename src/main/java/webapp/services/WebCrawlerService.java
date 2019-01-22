@@ -87,7 +87,7 @@ public class WebCrawlerService {
                 File uploadedFile = Tools.WriteFileToDisk(filepath, in);
                 controller.processNewDocument(articleFilename, metadata, uploadedFile);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         }
     }

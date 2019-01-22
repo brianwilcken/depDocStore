@@ -56,7 +56,7 @@ public class NamedEntityRecognizer {
             SolrDocumentList docs = client.QuerySolrDocuments("categories:" + categories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse("") + " AND -annotated:*", 1000, 0, null, null);
             for (SolrDocument doc : docs) {
                 String document = (String)doc.get("parsed");
-                List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, categories, 0.5);
+                List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, categories, 0.1);
                 String annotated = NLPTools.autoAnnotate(document, entities);
                 if (doc.containsKey("annotated")) {
                     doc.replace("annotated", annotated);
