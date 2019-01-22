@@ -359,7 +359,7 @@ public class NLPTools {
                 }
             }
             document = String.join("\r\n", sentences);
-            document = fixFormattingAfterAnnotation(document);
+            document = fixFormattingAfterAutoAnnotation(document);
         } else {
             document = String.join("\r\n", sentences);
         }
@@ -388,10 +388,17 @@ public class NLPTools {
         }
     }
 
-    public static String fixFormattingAfterAnnotation(String text) {
+    public static String fixFormattingAfterAutoAnnotation(String text) {
+        //remove random spaces that are an artifact of the tokenization process
+        text = text.replaceAll("(\\b (?=,)|(?<=\\.) (?=,)|\\b (?=\\.)|(?<=,) (?=\\.)|\\b (?=')|(?<=<END>) (?= ')|(?<=<END>) (?= ,)|(?<=<END>) (?= \\.))", "");
+
+        return text;
+    }
+
+    public static String fixFormattingForModelTraining(String text) {
         text = text.replaceAll(" {2,}", " "); //ensure there are no multi-spaces that could disrupt model training
         //remove random spaces that are an artifact of the tokenization process
-        text = text.replaceAll("(\\b (?=,)|(?<=\\.) (?=,)|\\b (?=\\.)|(?<=,) (?=\\.)|\\b (?='))", "");
+        text = fixFormattingAfterAutoAnnotation(text);
 
         return text;
     }
