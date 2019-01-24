@@ -13,6 +13,8 @@ import edu.uci.ics.crawler4j.url.WebURL;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpHost;
+import org.apache.http.client.utils.URIUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -24,6 +26,8 @@ import webapp.services.WebCrawlerService;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -61,12 +65,16 @@ public class DocumentsWebCrawler extends WebCrawler {
      */
     @Override
     public boolean shouldVisit(Page referringPage, WebURL url) {
-        String href = url.getURL().toLowerCase();
-        String domain = hostURL.getSubDomain() + "." + hostURL.getDomain();
-        boolean willVisit = !FILTERS.matcher(href).matches()
-                && href.contains(domain);
+        try {
+            String href = url.getURL().toLowerCase();
+            HttpHost target = URIUtils.extractHost(new URI(urlSeed));
+            boolean willVisit = !FILTERS.matcher(href).matches()
+                    && href.startsWith(target.toString());
 
-        return willVisit;
+            return willVisit;
+        } catch (URISyntaxException e) {
+            return false;
+        }
     }
 
     /**

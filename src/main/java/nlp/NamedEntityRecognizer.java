@@ -262,7 +262,7 @@ public class NamedEntityRecognizer {
         String trainingFile = getTrainingFilePath(category);
         String modelFile = getModelFilePath(category);
 
-        client.writeTrainingDataToFile(trainingFile, category, client.getCategorySpecificDataQuery(category), client::formatForNERModelTraining);
+        client.writeTrainingDataToFile(trainingFile, category, client.getCategorySpecificDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
 
         TokenNameFinderModel model;

@@ -381,7 +381,7 @@ public class SolrClient {
 	}
 
 	public void writeTrainingDataToFile(String trainingFilePath, String category, Function<SolrQuery, SolrQuery> queryGetter,
-										Tools.CheckedTriConsumer<String, SolrDocument, FileOutputStream> consumer) {
+										Tools.CheckedTriConsumer<String, SolrDocument, FileOutputStream> consumer, TrainingDataThrottle throttle) {
 		SolrQuery query = queryGetter.apply(new SolrQuery());
 		query.setRows(1000000);
 		try {
@@ -390,11 +390,12 @@ public class SolrClient {
 			FileOutputStream fos = new FileOutputStream(file);
 			final BlockingQueue<SolrDocument> tmpQueue = new LinkedBlockingQueue<SolrDocument>();
 			client.queryAndStreamResponse(COLLECTION, query, new CallbackHandler(tmpQueue));
+			throttle.init(tmpQueue.size());
 
 			SolrDocument tmpDoc;
 			do {
 				tmpDoc = tmpQueue.take();
-				if (!(tmpDoc instanceof StopDoc)) {
+				if (!(tmpDoc instanceof StopDoc) && throttle.check(tmpDoc)) {
 					consumer.apply(category, tmpDoc, fos);
 				}
 			} while (!(tmpDoc instanceof StopDoc));
@@ -438,4 +439,73 @@ public class SolrClient {
 			}
 		}
 	}
+
+	private static abstract class TrainingDataThrottle {
+
+		protected String throttleFor;
+		protected double throttlePercent;
+
+		public TrainingDataThrottle(String throttleFor, double throttlePercent) {
+			this.throttleFor = throttleFor;
+			this.throttlePercent = throttlePercent;
+		}
+
+		public abstract void init(int numDocs);
+
+		public abstract boolean check(SolrDocument doc);
+	}
+
+	public static class DoccatThrottle extends TrainingDataThrottle {
+
+		private int numDocs;
+		private int throttleForCount;
+
+		public DoccatThrottle() {
+			super("Not_Applicable", 0.5);
+		}
+
+		@Override
+		public void init(int numDocs) {
+			this.numDocs = numDocs;
+		}
+
+		@Override
+		public boolean check(SolrDocument doc) {
+			if (doc.containsKey("category") && ((List)doc.get("category")).contains(throttleFor)) {
+				double currentPercent = (double)throttleForCount / (double)numDocs;
+				if (currentPercent > throttlePercent) {
+					return false;
+				} else {
+					//randomization such that not always given document is added
+					//50% likelihood the document is added
+					double random = Math.random();
+					if (random > 0.5) {
+						throttleForCount++;
+						return true;
+					}
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+
+	public static class NERThrottle extends TrainingDataThrottle {
+
+		public NERThrottle() {
+			super("", 0);
+		}
+
+		@Override
+		public void init(int numDocs) {
+
+		}
+
+		@Override
+		public boolean check(SolrDocument doc) {
+			return true;
+		}
+	}
+
+
 }
