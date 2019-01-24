@@ -290,14 +290,14 @@ public class SolrClient {
 
 	public SolrQuery getDoccatDataQuery(SolrQuery query) {
 		query.setQuery("parsed:*");
-
+		query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
 		return query;
 	}
 
 	public static Function<SolrQuery, SolrQuery> getCategorySpecificDataQuery(final String category) {
 		Function<SolrQuery, SolrQuery> func = query -> {
 			query.setQuery("annotated:* AND category:" + category);
-
+			query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
 			return query;
 		};
 		return func;

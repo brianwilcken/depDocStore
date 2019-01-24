@@ -51,6 +51,8 @@ public class WebCrawlerService {
         config = new CrawlConfig();
         config.setCrawlStorageFolder(crawlStorageFolder);
         config.setIncludeHttpsPages(true);
+        config.setMaxDepthOfCrawling(5);
+        config.setMaxPagesToFetch(100);
         config.setIncludeBinaryContentInCrawling(true);
         config.setMaxDownloadSize(104857600); //100MB
 
@@ -67,36 +69,17 @@ public class WebCrawlerService {
     public void process(String seedURL) throws Exception {
         CrawlController crawlController = new CrawlController(config, pageFetcher, robotstxtServer);
 
-        StringBuilder stringBuilder = new StringBuilder();
-        DocumentsWebCrawlerFactory factory = new DocumentsWebCrawlerFactory(seedURL, this, stringBuilder);
-
-        String articleFilename = Tools.removeSpecialCharacters(seedURL).replace(" ", "_") + ".txt";
-        String id = initId(articleFilename);
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("id", id);
-        String query = "id:" + id;
-
-        if (!solrClient.DocumentExists(query)) {
-            crawlController.addSeed(seedURL);
-            crawlController.start(factory, 1);
-
-            String docText = stringBuilder.toString();
-            String filepath = temporaryFileRepo + articleFilename;
-            try {
-                InputStream in = IOUtils.toInputStream(docText, "UTF-8");
-                File uploadedFile = Tools.WriteFileToDisk(filepath, in);
-                controller.processNewDocument(articleFilename, metadata, uploadedFile);
-            } catch (IOException e) {
-                logger.error(e.getMessage(), e);
-            }
-        }
+        DocumentsWebCrawlerFactory factory = new DocumentsWebCrawlerFactory(seedURL, this);
+        crawlController.addSeed(seedURL);
+        crawlController.start(factory, 1);
     }
 
     @Async("processExecutor")
-    public void processNewDocument(String filename, File uploadedFile) {
+    public void processNewDocument(String filename, File uploadedFile, String url) {
         String id = initId(filename);
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("id", id);
+        metadata.put("url", url);
         String query = "id:" + id;
         try {
             if (!solrClient.DocumentExists(query)) {
@@ -117,7 +100,7 @@ public class WebCrawlerService {
     public static void main(String[] args) {
         try {
             WebCrawlerService crawler = new WebCrawlerService();
-            crawler.process("http://fortworthtexas.gov/water/");
+            crawler.process("https://www.cctexas.com/departments/water-department");
         } catch (Exception e) {
             e.printStackTrace();
         }

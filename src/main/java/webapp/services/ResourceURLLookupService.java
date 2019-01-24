@@ -2,6 +2,7 @@ package webapp.services;
 
 import com.google.common.base.Strings;
 import common.DetectHtml;
+import common.TextExtractor;
 import common.Tools;
 import de.l3s.boilerpipe.BoilerpipeProcessingException;
 import org.apache.commons.io.FilenameUtils;
@@ -59,13 +60,14 @@ public class ResourceURLLookupService {
 
     public void process(URL url, Map<String, Object> metadata) {
         try {
-            String filename = FilenameUtils.getName(url.getPath());
-            if (!Strings.isNullOrEmpty(filename)) {
+            String filename = FilenameUtils.getName(url.getFile()).replaceAll("[\\\\/:*?\"<>|]", "");
+            if (!Strings.isNullOrEmpty(filename) && TextExtractor.canExtractText(new File(filename))) {
                 RequestCallback requestCallback = request -> request.getHeaders()
                         .setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
 
                 ResponseExtractor<Void> responseExtractor = response -> {
                     Path path = Paths.get(temporaryFileRepo + filename);
+                    Files.deleteIfExists(path);
                     Files.copy(response.getBody(), path);
                     File uploadedFile = path.toFile();
                     controller.processNewDocument(filename, metadata, uploadedFile);
@@ -82,6 +84,7 @@ public class ResourceURLLookupService {
                     String docText = getArticleBody(article);
                     String title = article.title();
                     String articleFilename = title.replace(" ", "_") + ".txt";
+                    articleFilename = articleFilename.replaceAll("[\\\\/:*?\"<>|]", "");
                     String filepath = temporaryFileRepo + articleFilename;
                     InputStream in = IOUtils.toInputStream(docText, "UTF-8");
                     File uploadedFile = Tools.WriteFileToDisk(filepath, in);

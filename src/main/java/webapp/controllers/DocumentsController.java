@@ -237,7 +237,7 @@ public class DocumentsController {
                 if (!docs.isEmpty()) {
                     return ResponseEntity.ok().body(Tools.formJsonResponse(docs.get(0)));
                 } else {
-                    return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse(null));
+                    return ResponseEntity.unprocessableEntity().body(Tools.formJsonResponse("Unable to process URL content."));
                 }
             }
         } catch (MalformedURLException e){
@@ -287,10 +287,8 @@ public class DocumentsController {
 
     public ResponseEntity<JsonResponse> processNewDocument(String filename, Map<String, Object> metadata, File uploadedFile) {
         try {
-            SolrDocumentList docs = new SolrDocumentList();
-
             SolrDocument doc = new SolrDocument();
-            String docId = null;
+            String docId;
             if (!metadata.containsKey("id")) {
                 docId = UUID.randomUUID().toString();
                 doc.addField("id", docId);
@@ -313,7 +311,7 @@ public class DocumentsController {
                 return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Tools.formJsonResponse("Unable to extract text from file."));
             }
 
-            docs = runNLPPipeline(docText, docId, doc);
+            SolrDocumentList docs = runNLPPipeline(docText, docId, doc);
 
             logger.info("storing file to MongoDB");
             ObjectId fileId = mongoClient.StoreFile(uploadedFile);
@@ -322,26 +320,26 @@ public class DocumentsController {
             logger.info("storing data to Solr");
             docs.add(doc);
             solrClient.indexDocuments(docs);
-            cleanupService.process(filename, 1);
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         }
         catch (IOException e) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Tools.formJsonResponse(e.getMessage()));
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(e.getMessage()));
+        } finally {
+            cleanupService.process(filename, 1);
         }
     }
 
     @RequestMapping(value="/file/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("file") MultipartFile document) {
+        String filename = null;
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             solrClient.deleteDocuments("docId:" + id + " AND -username:*");
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
 
-                String filename = null;
                 if (!document.isEmpty() && doc.containsKey("docStoreId")) { //uploaded file is being replaced
                     String oldFileId = doc.get("docStoreId").toString();
                     mongoClient.DeleteFile(oldFileId);
@@ -367,7 +365,6 @@ public class DocumentsController {
 
                 logger.info("storing data to Solr");
                 solrClient.indexDocument(doc);
-                cleanupService.process(filename, 1);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
@@ -375,6 +372,10 @@ public class DocumentsController {
             logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        } finally {
+            if (!Strings.isNullOrEmpty(filename)) {
+                cleanupService.process(filename, 1);
+            }
         }
     }
 
@@ -382,15 +383,19 @@ public class DocumentsController {
         SolrDocumentList docs = new SolrDocumentList();
 
         String parsed = recognizer.deepCleanText(docText);
-        parsed = NLPTools.redactTextForNLP(NLPTools.detectPOSStanford(parsed), 0.7, 1000);
-        if (Strings.isNullOrEmpty(parsed)) {
-            throw new IOException("Document contains no parsable data.");
-        }
         if (doc.containsKey("parsed")) {
             doc.replace("parsed", parsed);
         } else {
             doc.addField("parsed", parsed);
         }
+
+        parsed = NLPTools.redactTextForNLP(NLPTools.detectPOSStanford(parsed), 0.7, 1000);
+        if (Strings.isNullOrEmpty(parsed)) {
+            return docs;
+        } else {
+            doc.replace("parsed", parsed);
+        }
+
         List<String> categories = categorizer.detectBestCategories(parsed, 0);
         logger.info("categories detected: " + categories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse(""));
         if (doc.containsKey("category")) {
@@ -398,7 +403,7 @@ public class DocumentsController {
         } else {
             doc.addField("category", categories);
         }
-        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, 0.1);
+        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, 0.05);
         String annotated = NLPTools.autoAnnotate(parsed, entities);
         if (doc.containsKey("annotated")) {
             doc.replace("annotated", annotated);

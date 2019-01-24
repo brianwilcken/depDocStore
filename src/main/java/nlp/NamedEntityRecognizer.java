@@ -56,7 +56,7 @@ public class NamedEntityRecognizer {
             SolrDocumentList docs = client.QuerySolrDocuments("categories:" + categories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse("") + " AND -annotated:*", 1000, 0, null, null);
             for (SolrDocument doc : docs) {
                 String document = (String)doc.get("parsed");
-                List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, categories, 0.1);
+                List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, categories, 0.05);
                 String annotated = NLPTools.autoAnnotate(document, entities);
                 if (doc.containsKey("annotated")) {
                     doc.replace("annotated", annotated);
@@ -169,7 +169,21 @@ public class NamedEntityRecognizer {
                         if (prob > threshold) {
                             NamedEntity namedEntity = new NamedEntity(entity, span, s);
                             //curateNamedEntityType(category, namedEntity);
-                            namedEntities.add(namedEntity);
+                            final int currLine = s;
+                            //resolve duplicate entities that may overlap between different model categories
+                            List<NamedEntity> sameEntities = namedEntities.stream().filter(p -> p.getLine() == currLine &&
+                                    (p.getEntity().contains(entity) || entity.contains(p.getEntity())) &&
+                                    p.getSpan().intersects(span)).collect(Collectors.toList());
+                            if (sameEntities.size() > 0) {
+                                NamedEntity sameEntity = sameEntities.get(0);
+                                if (sameEntity.getSpan().getProb() < namedEntity.getSpan().getProb()) {
+                                    //favor the entity with the higher probability
+                                    namedEntities.remove(sameEntity);
+                                    namedEntities.add(namedEntity);
+                                }
+                            } else {
+                                namedEntities.add(namedEntity);
+                            }
                         }
                     }
                 }
