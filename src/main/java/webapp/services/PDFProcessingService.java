@@ -3,6 +3,7 @@ package webapp.services;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Strings;
 import com.sun.jna.ptr.PointerByReference;
+import common.ProcessedPage;
 import common.Tools;
 import edu.stanford.nlp.ling.TaggedWord;
 import net.sourceforge.lept4j.*;
@@ -60,7 +61,11 @@ public class PDFProcessingService {
     }
     
     @Async("pdfProcessExecutor")
-    public Future<String> process(File pdfFile, PDDocument pdDoc, int i) {
+    public Future<ProcessedPage> process(File pdfFile, PDDocument pdDoc, int i) {
+        ProcessedPage processedPage = new ProcessedPage();
+        processedPage.setPageNum(i);
+        processedPage.setPageState(ProcessedPage.PageState.Normal);
+        processedPage.setPageType(ProcessedPage.PageType.PlainText);
         Tesseract tesseract = new Tesseract();
         tesseract.setDatapath(tessdata);
         final double pdfGibberishThreshold = 0.75; //set this threshold very high to avoid using OCR whenever possible
@@ -71,7 +76,7 @@ public class PDFProcessingService {
             pdfStripper.setStartPage(i);
             pdfStripper.setEndPage(i);
             String parsedPage = pdfStripper.getText(pdDoc);
-
+            processedPage.setPageText(parsedPage);
             //The pdf document may contain some arbitrary text encoding, in which case text extraction
             // will be problematic.  In such a case the only option is to use OCR.
             double pdfPercentGibberish = detector.getPercentGibberish(parsedPage);
@@ -82,8 +87,10 @@ public class PDFProcessingService {
                 logger.info("PDF processing for file " + pdfFile.getName() + " page " + i + " failed.  Attempt to process page " + i + " using OCR");
                 //Use OCR to extract page text
                 //first convert page to TIFF format that is compatible with OCR
-                String filename = temporaryFileRepo + pdfFile.getName() + "_" + i;
+                String baseName = FilenameUtils.getBaseName(pdfFile.getName());
+                String filename = temporaryFileRepo + baseName + "_PAGE_" + i + ".pdf";
                 File pageFile = new File(filename);
+                processedPage.setPageFile(pageFile);
                 PdfBoxUtilities.splitPdf(pdfFile, pageFile, i, i);
 
                 logger.info("Converting page " + i + " to TIFF format for file " + pageFile.getName());
@@ -98,6 +105,8 @@ public class PDFProcessingService {
                     binFile = binarizeImage(tiffFile);
                     logger.info("Binarization of file " + binFile.getName() + " page " + i + " complete.  Begin OCR processing.");
                     String output = tesseract.doOCR(binFile);
+                    processedPage.setPageText(output);
+                    processedPage.setPageState(ProcessedPage.PageState.OCR);
 
                     //The OCR process may produce some gibberish output.  A threshold is used
                     //to deduce a point at which a different tactic is needed to extract information from the page.
@@ -109,7 +118,7 @@ public class PDFProcessingService {
                         logger.info("OCR processing for file " + binFile.getName() + " page " + i + " complete!");
                         //At this point it is very likely that the current page comprises scanned text.
                         //No further processing is needed.
-                        return new AsyncResult<>(output);
+                        return new AsyncResult<>(processedPage);
                     } else {
                         logger.info("OCR processing for file " + binFile.getName() + " page " + i + " finished, but output contains too much gibberish text.");
                         //The page likely contains a map or an engineering schematic.  It may be possible to extract
@@ -132,8 +141,9 @@ public class PDFProcessingService {
 
                         logger.info("Extract nouns from OCR output for file " + tiffFile.getName() + " for page " + i);
                         output = extractNouns(output);
-
-                        return new AsyncResult<>(output);
+                        processedPage.setPageText(output);
+                        processedPage.setPageType(ProcessedPage.PageType.Schematic);
+                        return new AsyncResult<>(processedPage);
                     }
                 } catch (TesseractException e) {
                     logger.error(e.getMessage(), e);
@@ -147,19 +157,20 @@ public class PDFProcessingService {
                     }
                     logger.info("After processing page " + i + ", now deleting file: " + tiffFile.getName());
                     tiffFile.delete();
-                    logger.info("After processing page " + i + ", now deleting file: " + pageFile.getName());
-                    pageFile.delete();
+//                    logger.info("After processing page " + i + ", now deleting file: " + pageFile.getName());
+//                    pageFile.delete();
                 }
             } else {
                 logger.info("PDF processing for file " + pdfFile.getName() + " for page " + i + " complete!");
-                return new AsyncResult<>(parsedPage);
+                return new AsyncResult<>(processedPage);
             }
         } catch (IOException e) {
             logger.info("An error has occurred affecting processing of file " + pdfFile.getName() + " for page " + i);
             logger.error(e.getMessage(), e);
         }
         logger.info("Processing for file " + pdfFile.getName() + " for page " + i + " FAILED!");
-        return new AsyncResult<>("ERROR OCCURRED WHEN PROCESSING PAGE: " + i);
+        processedPage.setPageState(ProcessedPage.PageState.Error);
+        return new AsyncResult<>(processedPage);
     }
 
     private String extractNouns(String input) {

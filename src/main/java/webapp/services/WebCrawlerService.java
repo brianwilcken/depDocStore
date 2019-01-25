@@ -41,9 +41,6 @@ public class WebCrawlerService {
     private DocumentsController controller;
 
     private CrawlConfig config;
-    private PageFetcher pageFetcher;
-    private RobotstxtConfig robotstxtConfig;
-    private RobotstxtServer robotstxtServer;
 
     final static Logger logger = LogManager.getLogger(WebCrawlerService.class);
 
@@ -55,10 +52,6 @@ public class WebCrawlerService {
         config.setMaxPagesToFetch(100);
         config.setIncludeBinaryContentInCrawling(true);
         config.setMaxDownloadSize(104857600); //100MB
-
-        pageFetcher = new PageFetcher(config);
-        robotstxtConfig = new RobotstxtConfig();
-        robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
     }
 
     @Async("processExecutor")
@@ -67,11 +60,15 @@ public class WebCrawlerService {
     }
 
     public void process(String seedURL) throws Exception {
+        PageFetcher pageFetcher = new PageFetcher(config);
+        RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
+        RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
         CrawlController crawlController = new CrawlController(config, pageFetcher, robotstxtServer);
 
         DocumentsWebCrawlerFactory factory = new DocumentsWebCrawlerFactory(seedURL, this);
         crawlController.addSeed(seedURL);
         crawlController.start(factory, 1);
+        crawlController.shutdown();
     }
 
     @Async("processExecutor")

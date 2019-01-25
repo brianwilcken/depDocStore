@@ -21,7 +21,7 @@ public class TextExtractor {
 
     final static Logger logger = LogManager.getLogger(TextExtractor.class);
 
-    public static final Map<String, Function<File, String>> extractors;
+    public static final Map<String, Function<File, ProcessedDocument>> extractors;
 
     static {
         extractors = new HashMap<>();
@@ -40,7 +40,7 @@ public class TextExtractor {
         }
     }
 
-    public static String extractText(File file) {
+    public static ProcessedDocument extractText(File file) {
         try {
             String contentType = Files.probeContentType(file.toPath());
             logger.info("uploaded file type: " + contentType);
@@ -54,39 +54,45 @@ public class TextExtractor {
         }
     }
 
-    private static String extractPDFText(File file) {
-        String docText = Tools.extractPDFText(file);
-        return docText;
+    private static ProcessedDocument extractPDFText(File file) {
+        ProcessedDocument pd = Tools.extractPDFText(file);
+        return pd;
     }
 
-    private static String extractPlainText(File file) {
+    private static ProcessedDocument extractPlainText(File file) {
         try {
             String docText = com.google.common.io.Files.toString(file, Charsets.UTF_8);
-            return docText;
+            ProcessedDocument pd = new ProcessedDocument();
+            pd.setExtractedText(docText);
+            return pd;
         } catch (IOException e) {
             return null;
         }
     }
 
-    private static String extractDocText(File file) {
+    private static ProcessedDocument extractDocText(File file) {
         try {
             FileInputStream fis = new FileInputStream(file);
             HWPFDocument doc = new HWPFDocument(fis);
             WordExtractor docExtractor = new WordExtractor(doc);
             String docText = docExtractor.getText();
-            return docText;
+            ProcessedDocument pd = new ProcessedDocument();
+            pd.setExtractedText(docText);
+            return pd;
         } catch (IOException e) {
             return null;
         }
     }
 
-    private static String extractDocxText(File file) {
+    private static ProcessedDocument extractDocxText(File file) {
         try {
             FileInputStream fis = new FileInputStream(file);
             XWPFDocument docx = new XWPFDocument(fis);
             XWPFWordExtractor docxExtractor = new XWPFWordExtractor(docx);
             String docText = docxExtractor.getText();
-            return docText;
+            ProcessedDocument pd = new ProcessedDocument();
+            pd.setExtractedText(docText);
+            return pd;
         } catch (IOException e) {
             return null;
         }

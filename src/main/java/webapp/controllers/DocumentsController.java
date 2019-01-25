@@ -2,6 +2,8 @@ package webapp.controllers;
 
 import com.google.common.base.Strings;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import common.ProcessedDocument;
+import common.ProcessedPage;
 import common.TextExtractor;
 import common.Tools;
 import edu.stanford.nlp.util.CoreMap;
@@ -286,6 +288,7 @@ public class DocumentsController {
     }
 
     public ResponseEntity<JsonResponse> processNewDocument(String filename, Map<String, Object> metadata, File uploadedFile) {
+        ProcessedDocument processedDocument = null;
         try {
             SolrDocument doc = new SolrDocument();
             String docId;
@@ -304,22 +307,30 @@ public class DocumentsController {
             doc.addField("lastUpdated", timestamp);
             logger.info("timestamp added");
 
-            String docText = TextExtractor.extractText(uploadedFile);
+            processedDocument = TextExtractor.extractText(uploadedFile);
+            String docText = processedDocument.getExtractedText();
             doc.addField("docText", docText);
 
-            if (Strings.isNullOrEmpty(docText)) {
+            if (Strings.isNullOrEmpty(docText) && processedDocument.getSchematics().size() == 0) {
                 return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Tools.formJsonResponse("Unable to extract text from file."));
             }
 
-            SolrDocumentList docs = runNLPPipeline(docText, docId, doc);
+            for (ProcessedPage page : processedDocument.getSchematics()) {
+                processSchematicPage(doc, page);
+            }
 
-            logger.info("storing file to MongoDB");
-            ObjectId fileId = mongoClient.StoreFile(uploadedFile);
-            doc.addField("docStoreId", fileId.toString());
+            if (!Strings.isNullOrEmpty(docText)) {
+                SolrDocumentList docs = runNLPPipeline(docText, docId, doc);
 
-            logger.info("storing data to Solr");
-            docs.add(doc);
-            solrClient.indexDocuments(docs);
+                logger.info("storing file to MongoDB");
+                ObjectId fileId = mongoClient.StoreFile(uploadedFile);
+                doc.addField("docStoreId", fileId.toString());
+
+                logger.info("storing data to Solr");
+                docs.add(doc);
+                solrClient.indexDocuments(docs);
+            }
+
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         }
         catch (IOException e) {
@@ -328,12 +339,41 @@ public class DocumentsController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(e.getMessage()));
         } finally {
             cleanupService.process(filename, 1);
+            if (processedDocument != null) {
+                processedDocument.cleanup();
+            }
+        }
+    }
+
+    private void processSchematicPage(SolrDocument doc, ProcessedPage processedPage) throws SolrServerException {
+        File pageFile = processedPage.getPageFile();
+        if (pageFile != null) {
+            logger.info("Processing schematic page " + processedPage.getPageNum() + " of document: " + doc.get("filename"));
+            SolrDocument page = new SolrDocument();
+            String pageId = UUID.randomUUID().toString();
+            page.addField("id", pageId);
+            page.addField("filename", pageFile.getName());
+            page.addField("created", doc.get("created"));
+            page.addField("lastUpdated", doc.get("lastUpdated"));
+            String docText = !Strings.isNullOrEmpty(processedPage.getPageText()) ? processedPage.getPageText() : "UNABLE TO EXTRACT DATA FROM SCHEMATIC";
+            page.addField("docText", docText);
+            if (doc.containsKey("url")) {
+                page.addField("url", doc.get("url"));
+            }
+
+            logger.info("storing schematic page " + processedPage.getPageNum() + " of document: " + doc.get("filename") + " to MongoDB");
+            ObjectId fileId = mongoClient.StoreFile(pageFile);
+            page.addField("docStoreId", fileId.toString());
+
+            logger.info("storing schematic page "  + processedPage.getPageNum() + " of document: " + doc.get("filename") + " to Solr");
+            solrClient.indexDocument(page);
         }
     }
 
     @RequestMapping(value="/file/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("file") MultipartFile document) {
         String filename = null;
+        ProcessedDocument processedDocument = null;
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             solrClient.deleteDocuments("docId:" + id + " AND -username:*");
@@ -349,7 +389,8 @@ public class DocumentsController {
                     doc.replace("docStoreId", fileId.toString());
                     doc.replace("filename", filename);
 
-                    String docText = TextExtractor.extractText(uploadedFile);
+                    processedDocument = TextExtractor.extractText(uploadedFile);
+                    String docText = processedDocument.getExtractedText();
                     if (doc.containsKey("docText")) {
                         doc.replace("docText", docText);
                     } else {
@@ -375,6 +416,9 @@ public class DocumentsController {
         } finally {
             if (!Strings.isNullOrEmpty(filename)) {
                 cleanupService.process(filename, 1);
+            }
+            if (processedDocument != null) {
+                processedDocument.cleanup();
             }
         }
     }
@@ -403,22 +447,25 @@ public class DocumentsController {
         } else {
             doc.addField("category", categories);
         }
-        List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, 0.05);
-        String annotated = NLPTools.autoAnnotate(parsed, entities);
-        if (doc.containsKey("annotated")) {
-            doc.replace("annotated", annotated);
-        } else {
-            doc.addField("annotated", annotated);
+
+        if (!categories.contains("Not_Applicable")) {
+            List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, 0.05);
+            String annotated = NLPTools.autoAnnotate(parsed, entities);
+            if (doc.containsKey("annotated")) {
+                doc.replace("annotated", annotated);
+            } else {
+                doc.addField("annotated", annotated);
+            }
+
+            NLPTools.calculatePercentAnnotated(doc);
+
+            List<SolrDocument> entityDocs = entities.stream()
+                    .map(p -> p.mutate(id))
+                    .collect(Collectors.toList());
+            docs.addAll(entityDocs);
+
+            resolveDocumentRelations(id, doc, docs, parsed, entities);
         }
-
-        NLPTools.calculatePercentAnnotated(doc);
-
-        List<SolrDocument> entityDocs = entities.stream()
-                .map(p -> p.mutate(id))
-                .collect(Collectors.toList());
-        docs.addAll(entityDocs);
-
-        resolveDocumentRelations(id, doc, docs, parsed, entities);
 
         return docs;
     }

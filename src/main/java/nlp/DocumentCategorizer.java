@@ -19,7 +19,7 @@ public class DocumentCategorizer {
 
     final static Logger logger = LogManager.getLogger(DocumentCategorizer.class);
 
-    private static final double CATEGORY_THRESHOLD = 0.1;
+    private static final double CATEGORY_THRESHOLD = 0.3;
 
     private DoccatModel model;
     private DocumentCategorizerME categorizer;
@@ -37,15 +37,6 @@ public class DocumentCategorizer {
         cat.optimizeModelTrainingParameters();
     }
 
-    /*Required Categories for initial implementation:
-    Electricity
-    Natural_Gas
-    Petroleum
-    Water
-    Wastewater_System
-    Recycled_Water_System
-     */
-
     public List<String> detectBestCategories(String document, int... numTries) throws IOException {
         try {
             DoccatModel model = NLPTools.getModel(DoccatModel.class, Tools.getProperty("nlp.doccatModel"));
@@ -56,10 +47,18 @@ public class DocumentCategorizer {
             //Categorize
             double[] outcomes = categorizer.categorize(docCatTokens);
             List<String> categories = new ArrayList<>();
-            for (int i = 0; i < outcomes.length; i++) {
-                if (outcomes[i] >= CATEGORY_THRESHOLD) {
-                    categories.add(Tools.removeUTF8BOM(categorizer.getCategory(i)));
+            String bestCategory = categorizer.getBestCategory(outcomes);
+            if (!bestCategory.equals("Not_Applicable")) {
+                for (int i = 0; i < outcomes.length; i++) {
+                    if (outcomes[i] >= CATEGORY_THRESHOLD) {
+                        categories.add(Tools.removeUTF8BOM(categorizer.getCategory(i)));
+                    }
                 }
+                if (categories.size() == 0) {
+                    categories.add(bestCategory);
+                }
+            } else {
+                categories.add(bestCategory); //Not_Applicable
             }
 
             return categories;

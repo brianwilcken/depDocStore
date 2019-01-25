@@ -251,12 +251,13 @@ public class Tools {
 		return t -> seen.add(keyExtractor.apply(t));
 	}
 
-	public static String extractPDFText(File pdfFile) {
+	public static ProcessedDocument extractPDFText(File pdfFile) {
 		PDFProcessingService pdfProcessingService = ApplicationContextProvider.getApplicationContext().getBean(PDFProcessingService.class);
 		//String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
 		StringBuilder parsed = new StringBuilder();
 		//final double pdfGibberishThreshold = 0.75; //set this threshold very high to avoid using OCR whenever possible
 		//final double ocrGibberishThreshold = 0.05; //set this threshold low to encourage additional image processing when using OCR
+		ProcessedDocument doc = new ProcessedDocument();
 		try {
 			logger.info("Begin PDF text extraction for file: " + pdfFile.getName());
 			RandomAccessFile randomAccessFile = new RandomAccessFile(pdfFile, "r");
@@ -267,11 +268,11 @@ public class Tools {
 			int pageCount = pdDoc.getNumberOfPages();
 			logger.info("PDF contains " + pageCount + " page(s).");
 
-			Map<Integer, Future<String>> pdfTasks = new HashMap<>();
+			Map<Integer, Future<ProcessedPage>> pdfTasks = new HashMap<>();
 
 			for (int i = 1; i <= pageCount; i++) {
 				logger.info("Queueing Page " + i + " for processing");
-				Future<String> pdfTask = pdfProcessingService.process(pdfFile, pdDoc, i);
+				Future<ProcessedPage> pdfTask = pdfProcessingService.process(pdfFile, pdDoc, i);
 				pdfTasks.put(i, pdfTask);
 			}
 
@@ -286,8 +287,18 @@ public class Tools {
 
 			for (int i = 1; i <= pageCount; i++) {
 				try {
-					String output = pdfTasks.get(i).get();
-					parsed.append(output);
+					ProcessedPage processedPage = pdfTasks.get(i).get();
+					if (processedPage.getPageState() != ProcessedPage.PageState.Error) {
+						if (processedPage.getPageType() == ProcessedPage.PageType.PlainText) {
+							parsed.append(processedPage.getPageText());
+						} else if (processedPage.getPageType() == ProcessedPage.PageType.Schematic) {
+							parsed.append("PAGE " + i + " IS A SCHEMATIC");
+							//pass the schematic page off to an alternate processing path for storage separate to the main document
+							doc.getSchematics().add(processedPage);
+						}
+					} else {
+						parsed.append("ERROR PROCESSING PAGE " + i);
+					}
 				} catch (Exception e) {
 					continue;
 				}
@@ -305,8 +316,9 @@ public class Tools {
 		//clean text to resolve broken hyphenated words
 		String parsedText = parsed.toString();
 		parsedText = parsedText.replaceAll("(?<=[a-z])-\\s(?=[a-z])", "");
+		doc.setExtractedText(parsedText);
 
-		return parsedText;
+		return doc;
 	}
 
 	public static <T> T loadXML(String xmlPath, Class<T> type) {
