@@ -1,5 +1,7 @@
 package webapp.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import common.ProcessedDocument;
@@ -12,6 +14,7 @@ import mongoapi.DocStoreMongoClient;
 import neo4japi.Neo4jClient;
 import neo4japi.domain.Document;
 import nlp.*;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -38,6 +41,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -56,6 +61,8 @@ public class DocumentsController {
     private final LocationResolver locationResolver;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
+
+    private static ObjectMapper mapper = new ObjectMapper();
 
     final static Logger logger = LogManager.getLogger(DocumentsController.class);
 
@@ -227,7 +234,10 @@ public class DocumentsController {
         try {
             URL url = new URL(urlString);
             logger.info("Loading resource from URL");
-            String docId = UUID.randomUUID().toString();
+            String docId = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(urlString)));
+            if (solrClient.DocumentExists("id:" + docId)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Tools.formJsonResponse("File already found in store."));
+            }
             metadata.put("id", docId);
             if (metadata.containsKey("async")) {
                 metadata.remove("async"); //remove the async flag otherwise this will be part of the saved document
@@ -291,13 +301,19 @@ public class DocumentsController {
         ProcessedDocument processedDocument = null;
         try {
             SolrDocument doc = new SolrDocument();
-            String docId;
+            String id;
             if (!metadata.containsKey("id")) {
-                docId = UUID.randomUUID().toString();
-                doc.addField("id", docId);
+                id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(filename)));
+                doc.addField("id", id);
             } else {
-                docId = metadata.get("id").toString();
+                id = metadata.get("id").toString();
             }
+
+            String query = "id:" + id;
+            if (solrClient.DocumentExists(query)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Tools.formJsonResponse("File already found in store."));
+            }
+
             doc.addField("filename", filename);
             metadata.entrySet().stream().forEach(p -> doc.addField(p.getKey(), p.getValue()));
 
@@ -320,7 +336,7 @@ public class DocumentsController {
             }
 
             if (!Strings.isNullOrEmpty(docText)) {
-                SolrDocumentList docs = runNLPPipeline(docText, docId, doc);
+                SolrDocumentList docs = runNLPPipeline(docText, id, doc);
 
                 logger.info("storing file to MongoDB");
                 ObjectId fileId = mongoClient.StoreFile(uploadedFile);
@@ -345,12 +361,18 @@ public class DocumentsController {
         }
     }
 
-    private void processSchematicPage(SolrDocument doc, ProcessedPage processedPage) throws SolrServerException {
+    private void processSchematicPage(SolrDocument doc, ProcessedPage processedPage) throws SolrServerException, JsonProcessingException, NoSuchAlgorithmException {
         File pageFile = processedPage.getPageFile();
         if (pageFile != null) {
             logger.info("Processing schematic page " + processedPage.getPageNum() + " of document: " + doc.get("filename"));
             SolrDocument page = new SolrDocument();
-            String pageId = UUID.randomUUID().toString();
+            String pageId = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(pageFile.getName())));
+            String query = "id:" + pageId;
+            if (solrClient.DocumentExists(query)) {
+                logger.info("Found duplicate schematic page " + processedPage.getPageNum() + " of document: " + doc.get("filename"));
+                return;
+            }
+
             page.addField("id", pageId);
             page.addField("filename", pageFile.getName());
             page.addField("created", doc.get("created"));

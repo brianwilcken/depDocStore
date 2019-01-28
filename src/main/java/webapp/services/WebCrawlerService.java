@@ -73,25 +73,9 @@ public class WebCrawlerService {
 
     @Async("processExecutor")
     public void processNewDocument(String filename, File uploadedFile, String url) {
-        String id = initId(filename);
         Map<String, Object> metadata = new HashMap<>();
-        metadata.put("id", id);
         metadata.put("url", url);
-        String query = "id:" + id;
-        try {
-            if (!solrClient.DocumentExists(query)) {
-                controller.processNewDocument(filename, metadata, uploadedFile);
-            }
-        } catch (SolrServerException e) { }
-    }
-
-    public static String initId(String articleFilename) {
-        try {
-            String id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(articleFilename)));
-            return id;
-        } catch (JsonProcessingException | NoSuchAlgorithmException e) {
-            return null;
-        }
+        controller.processNewDocument(filename, metadata, uploadedFile);
     }
 
     public static void main(String[] args) {
