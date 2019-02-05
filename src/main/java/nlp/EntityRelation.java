@@ -2,21 +2,40 @@ package nlp;
 
 import neo4japi.domain.Dependency;
 import org.apache.solr.common.SolrDocument;
+import solrapi.model.IndexedObject;
 import webapp.models.GeoNameWithFrequencyScore;
 
 import java.util.List;
 
-public class EntityRelation {
+public class EntityRelation extends IndexedObject {
     private NamedEntity subjectEntity;
     private NamedEntity objectEntity;
     private String relation;
+    private String relationState;
+    private String dependentFacilityUUID;
+    private String providingFacilityUUID;
+    private String assetUUID;
     private int lineNum;
+    private String id;
 
     public EntityRelation(NamedEntity subjectEntity, NamedEntity objectEntity, String relation, int lineNum) {
         this.subjectEntity = subjectEntity;
         this.objectEntity = objectEntity;
         this.relation = relation;
         this.lineNum = lineNum;
+    }
+
+    public EntityRelation(SolrDocument relDoc, List<NamedEntity> docEntities) {
+        consumeSolr(relDoc);
+        String subjectEntityId = relDoc.get("subjectEntityId").toString();
+        String objectEntityId = relDoc.get("objectEntityId").toString();
+        for (NamedEntity namedEntitiy : docEntities) {
+            if (namedEntitiy.getId().equals(subjectEntityId)) {
+                subjectEntity = namedEntitiy;
+            } else if (namedEntitiy.getId().equals(objectEntityId)) {
+                objectEntity = namedEntitiy;
+            }
+        }
     }
 
     public SolrDocument mutateForSolr(String docId) {
@@ -67,5 +86,45 @@ public class EntityRelation {
 
     public void setLineNum(int lineNum) {
         this.lineNum = lineNum;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getRelationState() {
+        return relationState;
+    }
+
+    public void setRelationState(String relationState) {
+        this.relationState = relationState;
+    }
+
+    public String getDependentFacilityUUID() {
+        return dependentFacilityUUID;
+    }
+
+    public void setDependentFacilityUUID(String dependentFacilityUUID) {
+        this.dependentFacilityUUID = dependentFacilityUUID;
+    }
+
+    public String getProvidingFacilityUUID() {
+        return providingFacilityUUID;
+    }
+
+    public void setProvidingFacilityUUID(String providingFacilityUUID) {
+        this.providingFacilityUUID = providingFacilityUUID;
+    }
+
+    public String getAssetUUID() {
+        return assetUUID;
+    }
+
+    public void setAssetUUID(String assetUUID) {
+        this.assetUUID = assetUUID;
     }
 }

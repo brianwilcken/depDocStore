@@ -3,28 +3,17 @@ package solrapi.model;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import nlp.NLPTools;
-import opennlp.tools.stemmer.Stemmer;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.lang.StringUtils;
 import org.apache.solr.client.solrj.beans.Field;
 import org.apache.solr.common.SolrDocument;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import common.Tools;
-import opennlp.tools.stemmer.PorterStemmer;
 import opennlp.tools.tokenize.TokenizerModel;
 
 public class IndexedDocument extends IndexedObject {
@@ -48,7 +37,7 @@ public class IndexedDocument extends IndexedObject {
     public IndexedDocument() { }
 
     public IndexedDocument(SolrDocument doc) {
-        ConsumeSolr(doc);
+        consumeSolr(doc);
     }
 
     public void initId() {

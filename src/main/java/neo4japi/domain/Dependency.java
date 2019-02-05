@@ -1,6 +1,7 @@
 package neo4japi.domain;
 
 import nlp.EntityRelation;
+import nlp.NamedEntity;
 import org.neo4j.ogm.annotation.*;
 import webapp.models.GeoNameWithFrequencyScore;
 
@@ -18,7 +19,19 @@ public class Dependency {
     @EndNode
     private Facility providingFacility;
 
+    private String dependencyTypeId;
+
+    private String relationId;
+
     private String relation;
+
+    private Boolean isCommitted;
+
+    private Boolean isIgnored;
+
+    private String committedDependentUUID;
+
+    private String committedProvidingUUID;
 
     public Dependency(Facility dependentFacility, Facility providingFacility) {
         this.dependentFacility = dependentFacility;
@@ -28,9 +41,14 @@ public class Dependency {
     public Dependency() {}
 
     public void consume(EntityRelation relation, GeoNameWithFrequencyScore loc, List<GeoNameWithFrequencyScore> geoNames) {
-        dependentFacility = new Facility(relation.getSubjectEntity().getEntity(), loc, geoNames);
-        providingFacility = new Facility(relation.getObjectEntity().getEntity(), loc, geoNames);
+        dependentFacility = new Facility(relation.getSubjectEntity(), loc, geoNames);
+        providingFacility = new Facility(relation.getObjectEntity(), loc, geoNames);
         this.relation = relation.getRelation();
+        this.isCommitted = relation.getRelationState() != null && relation.getRelationState().equals("COMMITTED");
+        this.isIgnored = relation.getRelationState() != null && relation.getRelationState().equals("IGNORED");
+        this.dependencyTypeId = relation.getAssetUUID();
+        this.committedDependentUUID = relation.getDependentFacilityUUID();
+        this.committedProvidingUUID = relation.getProvidingFacilityUUID();
     }
 
     public Long getId() {
@@ -57,11 +75,59 @@ public class Dependency {
         this.providingFacility = providingFacility;
     }
 
+    public String getDependencyTypeId() {
+        return dependencyTypeId;
+    }
+
+    public void setDependencyTypeId(String dependencyTypeId) {
+        this.dependencyTypeId = dependencyTypeId;
+    }
+
+    public String getRelationId() {
+        return relationId;
+    }
+
+    public void setRelationId(String relationId) {
+        this.relationId = relationId;
+    }
+
     public String getRelation() {
         return relation;
     }
 
     public void setRelation(String relation) {
         this.relation = relation;
+    }
+
+    public Boolean getCommitted() {
+        return isCommitted;
+    }
+
+    public void setCommitted(Boolean committed) {
+        isCommitted = committed;
+    }
+
+    public Boolean getIgnored() {
+        return isIgnored;
+    }
+
+    public void setIgnored(Boolean ignored) {
+        isIgnored = ignored;
+    }
+
+    public String getCommittedDependentUUID() {
+        return committedDependentUUID;
+    }
+
+    public void setCommittedDependentUUID(String committedDependentUUID) {
+        this.committedDependentUUID = committedDependentUUID;
+    }
+
+    public String getCommittedProvidingUUID() {
+        return committedProvidingUUID;
+    }
+
+    public void setCommittedProvidingUUID(String committedProvidingUUID) {
+        this.committedProvidingUUID = committedProvidingUUID;
     }
 }

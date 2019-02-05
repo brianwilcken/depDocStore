@@ -2,8 +2,9 @@ package neo4japi.domain;
 
 import org.neo4j.ogm.annotation.GeneratedValue;
 import org.neo4j.ogm.annotation.Id;
+import solrapi.model.IndexedObject;
 
-public abstract class Entity {
+public abstract class Entity extends IndexedObject {
 
     @Id
     @GeneratedValue

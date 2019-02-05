@@ -12,7 +12,10 @@ import edu.stanford.nlp.util.CoreMap;
 import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
 import neo4japi.Neo4jClient;
+import neo4japi.domain.DataModelLink;
+import neo4japi.domain.Dependency;
 import neo4japi.domain.Document;
+import neo4japi.domain.Facility;
 import nlp.*;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
@@ -186,6 +189,120 @@ public class DocumentsController {
                 return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/dependencies/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getBestFacilityMatchesForDocumentDependencies(@PathVariable(name="id") String id) {
+        logger.info("In getNominalDependencies method");
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
+            if (!docs.isEmpty()) {
+                SolrDocument doc = docs.get(0);
+
+                SolrDocumentList entDocs = solrClient.QuerySolrDocuments("docId:" + id + " AND entity:*", 100000, 0, null, null);
+                final List<NamedEntity> entities = entDocs.stream().map(p -> new NamedEntity(p)).collect(Collectors.toList());
+
+                SolrDocumentList relDocs = solrClient.QuerySolrDocuments("docId:" + id + " AND relation:* AND -relationState:IGNORED", 100000, 0, null, null);
+                final List<EntityRelation> rels = relDocs.stream().map(p -> new EntityRelation(p, entities)).collect(Collectors.toList());
+
+                String parsed = doc.get("parsed").toString();
+                List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
+
+                Map<EntityRelation, Dependency> deps;
+                if (geoNames.size() > 0) {
+                    deps = neo4jClient.getNominalDependencies(geoNames, rels);
+                    for (Map.Entry<EntityRelation, Dependency> entry : deps.entrySet()) {
+                        EntityRelation relation = entry.getKey();
+                        Dependency dependency = entry.getValue();
+                        dependency.setRelationId(relation.getId());
+                        Facility dependentCandidate = dependency.getDependentFacility();
+                        Facility providingCandidate = dependency.getProvidingFacility();
+                        dependentCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(dependentCandidate, geoNames));
+                        providingCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(providingCandidate, geoNames));
+                    }
+                } else {
+                    deps = new HashMap<>();
+                }
+
+                return ResponseEntity.ok().body(Tools.formJsonResponse(deps.values()));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/dependencies", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> updateDependency(@RequestPart("dependency") Map<String, Object> dependency) {
+        try {
+            String relationId = dependency.get("relationId").toString();
+            String docId = dependency.get("docId").toString();
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + docId, 1000, 0, null, null);
+            SolrDocumentList relDocs = solrClient.QuerySolrDocuments("id:" + relationId, 1000, 0, null, null);
+            if (!relDocs.isEmpty() && !docs.isEmpty()) {
+                SolrDocument doc = docs.get(0);
+                SolrDocument relDoc = relDocs.get(0);
+                String relationState = dependency.get("relationState").toString();
+                relDoc.addField("relationState", relationState);
+
+                if (relationState.equals("COMMITTED")) {
+                    String parsed = doc.get("parsed").toString();
+                    List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
+
+                    Facility providingFacility = new Facility((Map<String, Object>)dependency.get("providingFacility"));
+                    Facility dependentFacility = new Facility((Map<String, Object>)dependency.get("dependentFacility"));
+                    String providingDataModelNodeName = providingFacility.getDataModelNode();
+                    String dependentDataModelNodeName = dependentFacility.getDataModelNode();
+                    String dataModelLinkUUID = dependency.get("assetUUID").toString();
+
+                    if (dependency.containsKey("addNewProvider")) {
+                        providingFacility = neo4jClient.addFacility(providingFacility);
+                    } else {
+                        providingFacility = neo4jClient.addFacility(providingFacility, geoNames);
+                    }
+                    neo4jClient.addDataModelNodeFacilityRelation(providingFacility, providingDataModelNodeName);
+
+                    if (dependency.containsKey("addNewDependent")) {
+                        dependentFacility = neo4jClient.addFacility(dependentFacility);
+                    } else {
+                        dependentFacility = neo4jClient.addFacility(dependentFacility, geoNames);
+                    }
+                    neo4jClient.addDataModelNodeFacilityRelation(dependentFacility, dependentDataModelNodeName);
+
+                    neo4jClient.addDependency(dependentFacility, providingFacility, dataModelLinkUUID);
+                    Document document = neo4jClient.addDocument(doc);
+                    neo4jClient.addDataModelNodeDocumentRelation(doc, document);
+                    neo4jClient.addDocumentFacilitiesRelation(document, providingFacility, dependentFacility);
+
+                    relDoc.addField("dependentFacilityUUID", dependentFacility.getUUID());
+                    relDoc.addField("providingFacilityUUID", providingFacility.getUUID());
+                    relDoc.addField("assetUUID", dataModelLinkUUID);
+                }
+
+                solrClient.indexDocument(relDoc);
+                return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/dependencies/relations", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getDependencyRelations() {
+        logger.info("In getDependencyRelations method");
+        try {
+            List<DataModelLink> assets = neo4jClient.getTradableAssets();
+            return ResponseEntity.ok().body(Tools.formJsonResponse(assets));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
@@ -494,7 +611,7 @@ public class DocumentsController {
 
     private void resolveDocumentRelations(String id, SolrDocument doc, SolrDocumentList docs, String parsed, List<NamedEntity> entities) {
         logger.info("resolving locations");
-        List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed, id);
+        List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
         List<SolrDocument> locDocs = geoNames.stream()
                 .map(p -> p.mutate(id))
                 .collect(Collectors.toList());
@@ -511,11 +628,9 @@ public class DocumentsController {
                     .collect(Collectors.toList());
             docs.addAll(relDocs);
 
-            if (geoNames.size() > 0) {
-                Document n4jdoc = neo4jClient.addDocument(doc);
-                neo4jClient.addDataModelDocumentRelation(doc, n4jdoc);
-                neo4jClient.addDependencies(n4jdoc, geoNames, entityRelations);
-            }
+//            Document n4jdoc = neo4jClient.addDocument(doc);
+//            neo4jClient.addDataModelNodeDocumentRelation(doc, n4jdoc);
+//            neo4jClient.addDependencies(n4jdoc, geoNames, entityRelations);
         }
     }
 

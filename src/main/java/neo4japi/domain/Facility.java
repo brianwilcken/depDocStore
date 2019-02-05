@@ -2,15 +2,14 @@ package neo4japi.domain;
 
 import com.bericotech.clavin.gazetteer.GeoName;
 import geoparsing.LocationResolver;
+import nlp.NamedEntity;
 import org.apache.commons.math3.ml.clustering.Clusterable;
+import org.apache.solr.common.SolrDocument;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 import webapp.models.GeoNameWithFrequencyScore;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @NodeEntity
 public class Facility extends Entity implements Clusterable {
@@ -21,8 +20,11 @@ public class Facility extends Entity implements Clusterable {
     private String county;
     private String state;
 
-    private double latitude;
-    private double longitude;
+    private Double latitude;
+    private Double longitude;
+
+    private Map<Double, Facility> possibleMatches;
+    private String dataModelNode;
 
     @Relationship(type = "Dependent_On", direction = Relationship.INCOMING)
     private Set<Facility> downstreamDependencies; //facilities that depend on this facility
@@ -33,9 +35,21 @@ public class Facility extends Entity implements Clusterable {
     @Relationship(type = "Refers_To", direction = Relationship.INCOMING)
     private Set<Document> referringDocuments;
 
-    public Facility(String name, GeoNameWithFrequencyScore optimalGeoName, List<GeoNameWithFrequencyScore> geoNames) {
+    public Facility(Map<String, Object> fac) {
+        UUID = fac.get("UUID").toString();
+        name = fac.get("name").toString();
+        city = fac.get("city") != null ? fac.get("city").toString() : null;
+        county = fac.get("county") != null ? fac.get("county").toString() : null;
+        state = fac.get("state") != null ? fac.get("state").toString() : null;
+        latitude = fac.get("latitude") != null ? Double.parseDouble(fac.get("latitude").toString()) : null;
+        longitude = fac.get("longitude") != null ? Double.parseDouble(fac.get("longitude").toString()) : null;
+        dataModelNode = fac.get("dataModelNode") != null ? fac.get("dataModelNode").toString().replace("_", " ") : null;
+    }
+
+    public Facility(NamedEntity entity, GeoNameWithFrequencyScore optimalGeoName, List<GeoNameWithFrequencyScore> geoNames) {
         this.UUID = java.util.UUID.randomUUID().toString();
-        this.name = name;
+        this.name = entity.getEntity();
+        this.dataModelNode = entity.getSpan().getType();
 
         GeoNameWithFrequencyScore geoName = optimalGeoName;
 
@@ -49,7 +63,7 @@ public class Facility extends Entity implements Clusterable {
             clusterable.addAll(geoNames);
             clusterable.add(exactGeoNameWithFreq);
 
-            List<Clusterable> clustered = LocationResolver.getValidGeoCoordinatesByClustering(clusterable, 20, 2, 1, 4, 0);
+            List<Clusterable> clustered = LocationResolver.getValidGeoCoordinatesByClustering(clusterable, 3, 2, 1, 4, 0);
             if (clustered.contains(exactGeoNameWithFreq)) {
                 geoName = exactGeoNameWithFreq;
             } else {
@@ -87,6 +101,8 @@ public class Facility extends Entity implements Clusterable {
         downstreamDependencies = new HashSet<>();
         upstreamDependencies = new HashSet<>();
         referringDocuments = new HashSet<>();
+
+        possibleMatches = new HashMap<>();
     }
 
     public Facility() {
@@ -173,6 +189,22 @@ public class Facility extends Entity implements Clusterable {
 
     public void setReferringDocuments(Set<Document> referringDocuments) {
         this.referringDocuments = referringDocuments;
+    }
+
+    public Map<Double, Facility> getPossibleMatches() {
+        return possibleMatches;
+    }
+
+    public void setPossibleMatches(Map<Double, Facility> possibleMatches) {
+        this.possibleMatches = possibleMatches;
+    }
+
+    public String getDataModelNode() {
+        return dataModelNode;
+    }
+
+    public void setDataModelNode(String dataModelNode) {
+        this.dataModelNode = dataModelNode;
     }
 
     @Override

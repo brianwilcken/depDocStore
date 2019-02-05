@@ -25,7 +25,7 @@ public class GeoNameWithFrequencyScore extends IndexedObject implements Clustera
     }
 
     public GeoNameWithFrequencyScore(SolrDocument doc) {
-        ConsumeSolr(doc);
+        consumeSolr(doc);
     }
 
     public SolrDocument mutate(String docId) {

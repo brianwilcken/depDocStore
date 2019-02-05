@@ -39,7 +39,7 @@ public class LocationResolver {
         }
     }
 
-    public List<GeoNameWithFrequencyScore> getLocationsFromDocument(String docText, String docId) {
+    public List<GeoNameWithFrequencyScore> getLocationsFromDocument(String docText) {
         List<GeoNameWithFrequencyScore> geoNames = new ArrayList<>();
         try {
             //Geoparse the document to extract a list of geolocations

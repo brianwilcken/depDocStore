@@ -80,7 +80,7 @@ public class InformationExtractor {
     }
 
     public List<EntityRelation> getEntityRelations(String text, String docId, List<NamedEntity> entities, List<Coreference> coreferences) {
-        final double similarityThreshold = 0.5;
+        final double similarityThreshold = 0.9;
         final double lineNumRange = 5;
 
         List<Annotation> annotationParts = getDocumentAnnotations(text);
