@@ -1,7 +1,6 @@
 package neo4japi.domain;
 
 import nlp.EntityRelation;
-import nlp.NamedEntity;
 import org.neo4j.ogm.annotation.*;
 import webapp.models.GeoNameWithFrequencyScore;
 
@@ -33,6 +32,8 @@ public class Dependency {
 
     private String committedProvidingUUID;
 
+    private Integer lineNumber;
+
     public Dependency(Facility dependentFacility, Facility providingFacility) {
         this.dependentFacility = dependentFacility;
         this.providingFacility = providingFacility;
@@ -44,11 +45,12 @@ public class Dependency {
         dependentFacility = new Facility(relation.getSubjectEntity(), loc, geoNames);
         providingFacility = new Facility(relation.getObjectEntity(), loc, geoNames);
         this.relation = relation.getRelation();
-        this.isCommitted = relation.getRelationState() != null && relation.getRelationState().equals("COMMITTED");
+        this.isCommitted = relation.getRelationState() != null && !relation.getRelationState().equals("IGNORED");
         this.isIgnored = relation.getRelationState() != null && relation.getRelationState().equals("IGNORED");
         this.dependencyTypeId = relation.getAssetUUID();
         this.committedDependentUUID = relation.getDependentFacilityUUID();
         this.committedProvidingUUID = relation.getProvidingFacilityUUID();
+        this.lineNumber = relation.getLine();
     }
 
     public Long getId() {
@@ -129,5 +131,13 @@ public class Dependency {
 
     public void setCommittedProvidingUUID(String committedProvidingUUID) {
         this.committedProvidingUUID = committedProvidingUUID;
+    }
+
+    public Integer getLineNumber() {
+        return lineNumber;
+    }
+
+    public void setLineNumber(Integer lineNumber) {
+        this.lineNumber = lineNumber;
     }
 }

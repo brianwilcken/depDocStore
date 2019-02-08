@@ -187,12 +187,20 @@ public class Neo4jClient {
         }
     }
 
-    public List<DataModelLink> getTradableAssets() {
+    public Map<String, List<DataModelLink>> getTradableAssets(String linkName) {
         Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
         //List<DataModelLink> assets = Lists.newArrayList(session.query(DataModelLink.class, "MATCH (n:DataModelLink) WHERE NOT (n:DataModelLink)-[:ParentOf]->() RETURN n ORDER BY n.name", Collections.EMPTY_MAP));
-        List<DataModelLink> assets = Lists.newArrayList(session.query(DataModelLink.class, "MATCH (n:DataModelLink)<-[:ChildOf]-(m:DataModelLink) RETURN m ORDER BY m.name", Collections.EMPTY_MAP));
+        //List<DataModelLink> assets = Lists.newArrayList(session.query(DataModelLink.class, "MATCH (n:DataModelLink)<-[:ChildOf]-(m:DataModelLink) RETURN m ORDER BY m.name", Collections.EMPTY_MAP));
 
-        return assets;
+        List<DataModelLink> assets = Lists.newArrayList(session.query(DataModelLink.class, "MATCH (n:DataModelLink {name:\"" + linkName + "\"} )-[r:ParentOf]->(m:DataModelLink) RETURN m ORDER BY m.name", Collections.EMPTY_MAP));
+        Map<String, List<DataModelLink>> assetMap = new HashMap<>();
+        assetMap.put(linkName, assets);
+
+        for (DataModelLink asset : assets) {
+            assetMap.putAll(getTradableAssets(asset.getName()));
+        }
+
+        return assetMap;
     }
 
     public DataModelLink getTradedAsset(String providingFacilityUUID, String dependentFacilityUUID) {

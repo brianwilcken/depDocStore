@@ -15,14 +15,14 @@ public class EntityRelation extends IndexedObject {
     private String dependentFacilityUUID;
     private String providingFacilityUUID;
     private String assetUUID;
-    private int lineNum;
+    private int line;
     private String id;
 
-    public EntityRelation(NamedEntity subjectEntity, NamedEntity objectEntity, String relation, int lineNum) {
+    public EntityRelation(NamedEntity subjectEntity, NamedEntity objectEntity, String relation, int line) {
         this.subjectEntity = subjectEntity;
         this.objectEntity = objectEntity;
         this.relation = relation;
-        this.lineNum = lineNum;
+        this.line = line;
     }
 
     public EntityRelation(SolrDocument relDoc, List<NamedEntity> docEntities) {
@@ -44,7 +44,7 @@ public class EntityRelation extends IndexedObject {
         doc.addField("subjectEntityId", subjectEntity.getId());
         doc.addField("objectEntityId", objectEntity.getId());
         doc.addField("relation", relation);
-        doc.addField("line", lineNum);
+        doc.addField("line", line);
 
         return doc;
     }
@@ -80,12 +80,12 @@ public class EntityRelation extends IndexedObject {
         this.relation = relation;
     }
 
-    public int getLineNum() {
-        return lineNum;
+    public int getLine() {
+        return line;
     }
 
-    public void setLineNum(int lineNum) {
-        this.lineNum = lineNum;
+    public void setLine(int line) {
+        this.line = line;
     }
 
     public String getId() {

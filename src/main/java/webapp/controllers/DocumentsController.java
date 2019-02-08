@@ -252,7 +252,7 @@ public class DocumentsController {
                 String relationState = dependency.get("relationState").toString();
                 relDoc.addField("relationState", relationState);
 
-                if (relationState.equals("COMMITTED")) {
+                if (!relationState.equals("IGNORED")) {
                     String parsed = doc.get("parsed").toString();
                     List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
 
@@ -284,6 +284,13 @@ public class DocumentsController {
                     relDoc.addField("dependentFacilityUUID", dependentFacility.getUUID());
                     relDoc.addField("providingFacilityUUID", providingFacility.getUUID());
                     relDoc.addField("assetUUID", dataModelLinkUUID);
+
+                    if (relationState.equals("REVERSED")) {
+                        String subjectEntityId = relDoc.get("subjectEntityId").toString();
+                        String objectEntityId = relDoc.get("objectEntityId").toString();
+                        relDoc.replace("subjectEntityId", objectEntityId);
+                        relDoc.replace("objectEntityId", subjectEntityId);
+                    }
                 }
 
                 solrClient.indexDocument(relDoc);
@@ -297,11 +304,11 @@ public class DocumentsController {
         }
     }
 
-    @RequestMapping(value="/dependencies/relations", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> getDependencyRelations() {
+    @RequestMapping(value="/dependencies/relations/{linkName}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getDependencyRelations(@PathVariable(name="linkName") String linkName) {
         logger.info("In getDependencyRelations method");
         try {
-            List<DataModelLink> assets = neo4jClient.getTradableAssets();
+            Map<String, List<DataModelLink>> assets = neo4jClient.getTradableAssets(linkName);
             return ResponseEntity.ok().body(Tools.formJsonResponse(assets));
         } catch (Exception e) {
             logger.error(e);
@@ -603,13 +610,13 @@ public class DocumentsController {
                     .collect(Collectors.toList());
             docs.addAll(entityDocs);
 
-            resolveDocumentRelations(id, doc, docs, parsed, entities);
+            resolveDocumentRelations(id, doc, docs, parsed, entities, 0.7, 5);
         }
 
         return docs;
     }
 
-    private void resolveDocumentRelations(String id, SolrDocument doc, SolrDocumentList docs, String parsed, List<NamedEntity> entities) {
+    private void resolveDocumentRelations(String id, SolrDocument doc, SolrDocumentList docs, String parsed, List<NamedEntity> entities, double similarity, double searchLines) {
         logger.info("resolving locations");
         List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
         List<SolrDocument> locDocs = geoNames.stream()
@@ -621,7 +628,7 @@ public class DocumentsController {
             List<Coreference> coreferences = processCoreferences(docs, parsed, id, entities);
 
             logger.info("resolving entity relations");
-            InformationExtractor informationExtractor = new InformationExtractor();
+            InformationExtractor informationExtractor = new InformationExtractor(similarity, searchLines);
             List<EntityRelation> entityRelations = informationExtractor.getEntityRelations(parsed, id, entities, coreferences);
             List<SolrDocument> relDocs = entityRelations.stream()
                     .map(p -> p.mutateForSolr(id))
@@ -690,7 +697,7 @@ public class DocumentsController {
                             .collect(Collectors.toList());
                     SolrDocumentList solrDocs = new SolrDocumentList();
                     solrDocs.addAll(entityDocs);
-                    resolveDocumentRelations(id, doc, solrDocs, doc.get("parsed").toString(), entities);
+                    resolveDocumentRelations(id, doc, solrDocs, doc.get("parsed").toString(), entities, 0.7, 5);
                     solrClient.indexDocuments(solrDocs);
                 }
 
@@ -743,8 +750,8 @@ public class DocumentsController {
         }
     }
 
-    @RequestMapping(value="/relations/{id}", method=RequestMethod.PUT, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> reprocessDocumentRelations(@PathVariable(name="id") String id) {
+    @RequestMapping(value="/relations/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> reprocessDocumentRelations(@PathVariable(name="id") String id, @RequestPart("similarity") double similarity, @RequestPart("searchLines") int searchLines) {
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
@@ -754,12 +761,12 @@ public class DocumentsController {
                     solrClient.deleteDocuments("docId:" + id + " AND -entity:* AND -username:*");
 
                     //Pull in the Solr documents for named entities and for locations
-                    List<NamedEntity> entities = solrClient.QueryIndexedDocuments(NamedEntity.class, "docId: " + id + " AND entity:*", 100000, 0, null, null);
+                    List<NamedEntity> entities = solrClient.QueryIndexedDocuments(NamedEntity.class, "docId:" + id + " AND entity:*", 100000, 0, null, null);
 
                     String parsed = doc.get("parsed").toString();
 
                     SolrDocumentList relDocs = new SolrDocumentList();
-                    resolveDocumentRelations(id, doc, relDocs, parsed, entities);
+                    resolveDocumentRelations(id, doc, relDocs, parsed, entities, similarity, searchLines);
 
                     logger.info("storing data to Solr");
                     solrClient.indexDocuments(relDocs);

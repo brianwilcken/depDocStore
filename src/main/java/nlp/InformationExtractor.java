@@ -10,16 +10,22 @@ import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Core;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class InformationExtractor {
     private final static Logger logger = LogManager.getLogger(InformationExtractor.class);
     private StanfordCoreNLPWithThreadControl pipeline;
     private StanfordCoreNLP sentPipeline;
+    private final double similarityThreshold;
+    private final double lineNumRange;
 
-    public InformationExtractor() {
+    public InformationExtractor(double similarityThreshold, double lineNumRange) {
+        this.similarityThreshold = similarityThreshold;
+        this.lineNumRange = lineNumRange;
         Properties props = new Properties();
         props.setProperty("annotators", "tokenize,ssplit,pos,lemma,depparse,natlog,openie");
         pipeline = new StanfordCoreNLPWithThreadControl(props);
@@ -80,9 +86,6 @@ public class InformationExtractor {
     }
 
     public List<EntityRelation> getEntityRelations(String text, String docId, List<NamedEntity> entities, List<Coreference> coreferences) {
-        final double similarityThreshold = 0.9;
-        final double lineNumRange = 5;
-
         List<Annotation> annotationParts = getDocumentAnnotations(text);
 
         List<EntityRelation> relatedEntities = new ArrayList<>();
@@ -414,7 +417,7 @@ public class InformationExtractor {
                 "Do not have activities or programs that target this type customer.\n" +
                 "Less Than Effective Somewhat Effective Highly Effective Residential Customers Industrial Customers Institutional Customers Commercial Customers Agricultural Customers";
 
-        InformationExtractor extractor = new InformationExtractor();
+        InformationExtractor extractor = new InformationExtractor(0.7, 5);
         extractor.getEntityRelations(text2, null, null, null);
     }
 }
