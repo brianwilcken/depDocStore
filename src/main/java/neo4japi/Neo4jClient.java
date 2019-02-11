@@ -187,6 +187,20 @@ public class Neo4jClient {
         }
     }
 
+    public Map<String, List<DataModelNode>> getFacilityTypes(String typeName) {
+        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
+
+        List<DataModelNode> types = Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode {name:\"" + typeName + "\"} )-[r:ParentOf]->(m:DataModelNode) RETURN m ORDER BY m.name", Collections.EMPTY_MAP));
+        Map<String, List<DataModelNode>> typeMap = new HashMap<>();
+        typeMap.put(typeName, types);
+
+        for (DataModelNode type : types) {
+            typeMap.putAll(getFacilityTypes(type.getName()));
+        }
+
+        return typeMap;
+    }
+
     public Map<String, List<DataModelLink>> getTradableAssets(String linkName) {
         Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
         //List<DataModelLink> assets = Lists.newArrayList(session.query(DataModelLink.class, "MATCH (n:DataModelLink) WHERE NOT (n:DataModelLink)-[:ParentOf]->() RETURN n ORDER BY n.name", Collections.EMPTY_MAP));

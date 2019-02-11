@@ -12,10 +12,7 @@ import edu.stanford.nlp.util.CoreMap;
 import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
 import neo4japi.Neo4jClient;
-import neo4japi.domain.DataModelLink;
-import neo4japi.domain.Dependency;
-import neo4japi.domain.Document;
-import neo4japi.domain.Facility;
+import neo4japi.domain.*;
 import nlp.*;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
@@ -297,6 +294,19 @@ public class DocumentsController {
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/annotationTypes/{typeName}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getAnnotationTypes(@PathVariable(name="typeName") String typeName) {
+        logger.info("In getAnnotationTypes method");
+        try {
+            Map<String, List<DataModelNode>> assets = neo4jClient.getFacilityTypes(typeName);
+            return ResponseEntity.ok().body(Tools.formJsonResponse(assets));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
