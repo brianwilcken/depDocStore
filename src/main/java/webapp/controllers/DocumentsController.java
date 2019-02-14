@@ -36,6 +36,7 @@ import webapp.models.GeoNameWithFrequencyScore;
 import webapp.models.JsonResponse;
 import webapp.services.*;
 
+import javax.websocket.server.PathParam;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -194,8 +195,8 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/dependencies/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> getBestFacilityMatchesForDocumentDependencies(@PathVariable(name="id") String id) {
-        logger.info("In getNominalDependencies method");
+    public ResponseEntity<JsonResponse> getDocumentDependencies(@PathVariable(name="id") String id, @RequestParam("relationId") String relationId) {
+        logger.info("In getDocumentDependencies method");
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
@@ -205,7 +206,10 @@ public class DocumentsController {
                 final List<NamedEntity> entities = entDocs.stream().map(p -> new NamedEntity(p)).collect(Collectors.toList());
 
                 SolrDocumentList relDocs = solrClient.QuerySolrDocuments("docId:" + id + " AND relation:* AND -relationState:IGNORED", 100000, 0, null, null);
-                final List<EntityRelation> rels = relDocs.stream().map(p -> new EntityRelation(p, entities)).collect(Collectors.toList());
+                final List<EntityRelation> rels = relDocs.stream()
+                        .map(p -> new EntityRelation(p, entities))
+                        .filter(p -> Strings.isNullOrEmpty(relationId) || p.getId().equals(relationId))
+                        .collect(Collectors.toList());
 
                 String parsed = doc.get("parsed").toString();
                 List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
@@ -217,10 +221,12 @@ public class DocumentsController {
                         EntityRelation relation = entry.getKey();
                         Dependency dependency = entry.getValue();
                         dependency.setRelationId(relation.getId());
-                        Facility dependentCandidate = dependency.getDependentFacility();
-                        Facility providingCandidate = dependency.getProvidingFacility();
-                        dependentCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(dependentCandidate, geoNames));
-                        providingCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(providingCandidate, geoNames));
+                        if (!Strings.isNullOrEmpty(relationId)) { //providing possible match data is very expensive, so only provide this if a specific relation Id is provided
+                            Facility dependentCandidate = dependency.getDependentFacility();
+                            Facility providingCandidate = dependency.getProvidingFacility();
+                            dependentCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(dependentCandidate, geoNames));
+                            providingCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(providingCandidate, geoNames));
+                        }
                     }
                 } else {
                     deps = new HashMap<>();
@@ -273,10 +279,11 @@ public class DocumentsController {
                     }
                     neo4jClient.addDataModelNodeFacilityRelation(dependentFacility, dependentDataModelNodeName);
 
-                    neo4jClient.addDependency(dependentFacility, providingFacility, dataModelLinkUUID);
                     Document document = neo4jClient.addDocument(doc);
                     neo4jClient.addDataModelNodeDocumentRelation(doc, document);
                     neo4jClient.addDocumentFacilitiesRelation(document, providingFacility, dependentFacility);
+
+                    neo4jClient.addDependency(dependentFacility, providingFacility, dataModelLinkUUID, document.getUUID());
 
                     relDoc.addField("dependentFacilityUUID", dependentFacility.getUUID());
                     relDoc.addField("providingFacilityUUID", providingFacility.getUUID());

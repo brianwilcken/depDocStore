@@ -128,7 +128,7 @@ public class Neo4jClient {
             dependentFacility = addFacility(dependentFacility, geoNames);
             providingFacility = addFacility(providingFacility, geoNames);
 
-            addDependency(dependentFacility, providingFacility, dependency.getValue().getRelation());
+            addDependency(dependentFacility, providingFacility, dependency.getValue().getRelation(), doc.getUUID());
 
             addDataModelNodeFacilityRelation(dependentFacility, dependentDataModelNodeName);
             addDataModelNodeFacilityRelation(providingFacility, providingDataModelNodeName);
@@ -141,16 +141,17 @@ public class Neo4jClient {
         }
     }
 
-    public Dependency addDependency(Facility dependentFacility, Facility providingFacility, String linkUUID) {
+    public Dependency addDependency(Facility dependentFacility, Facility providingFacility, String linkUUID, String docUUID) {
         Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
 
-        List<Dependency> dependencies = Lists.newArrayList(session.query(Dependency.class, "MATCH p=(f:Facility)-[r:Dependent_On]->(g:Facility) WHERE f.UUID = \"" + dependentFacility.getUUID() + "\" AND g.UUID = \"" + providingFacility.getUUID() + "\" AND r.dependencyTypeId = \"" + linkUUID + "\" RETURN r", Collections.EMPTY_MAP));
+        List<Dependency> dependencies = Lists.newArrayList(session.query(Dependency.class, "MATCH p=(f:Facility)-[r:Dependent_On]->(g:Facility) WHERE f.UUID = \"" + dependentFacility.getUUID() + "\" AND g.UUID = \"" + providingFacility.getUUID() + "\" AND r.dependencyTypeId = \"" + linkUUID + "\" AND r.documentUUID = \"" + docUUID + "\" RETURN r", Collections.EMPTY_MAP));
 
         if (dependencies.size() == 0) {
             Dependency dependency = new Dependency();
             dependency.setDependentFacility(dependentFacility);
             dependency.setProvidingFacility(providingFacility);
             dependency.setDependencyTypeId(linkUUID);
+            dependency.setDocumentUUID(docUUID);
 
             session.save(dependency);
             return dependency;

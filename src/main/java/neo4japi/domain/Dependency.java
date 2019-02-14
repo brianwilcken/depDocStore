@@ -20,6 +20,8 @@ public class Dependency {
 
     private String dependencyTypeId;
 
+    private String documentUUID;
+
     private String relationId;
 
     private String relation;
@@ -83,6 +85,14 @@ public class Dependency {
 
     public void setDependencyTypeId(String dependencyTypeId) {
         this.dependencyTypeId = dependencyTypeId;
+    }
+
+    public String getDocumentUUID() {
+        return documentUUID;
+    }
+
+    public void setDocumentUUID(String documentUUID) {
+        this.documentUUID = documentUUID;
     }
 
     public String getRelationId() {
