@@ -14,6 +14,7 @@ import mongoapi.DocStoreMongoClient;
 import neo4japi.Neo4jClient;
 import neo4japi.domain.*;
 import nlp.*;
+import opennlp.tools.util.eval.FMeasure;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -345,6 +346,24 @@ public class DocumentsController {
             }
 
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/testNER", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> testNERModel(String[] category) {
+        logger.info("In testNERModel method");
+        try {
+            Map<String, String> reports = new HashMap<>();
+            for (String cat : category) {
+                String report = recognizer.evaluateNERModel(cat);
+                reports.put(cat, report);
+            }
+
+            return ResponseEntity.ok().body(Tools.formJsonResponse(reports));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);

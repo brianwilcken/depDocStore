@@ -294,10 +294,17 @@ public class SolrClient {
 		return query;
 	}
 
-	public static Function<SolrQuery, SolrQuery> getCategorySpecificDataQuery(final String category) {
+	public static Function<SolrQuery, SolrQuery> getCategorySpecificNERModelTrainingDataQuery(final String category) {
 		Function<SolrQuery, SolrQuery> func = query -> {
-			query.setQuery("annotated:* AND category:" + category);
-			query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
+			query.setQuery("category:" + category + " AND includeInNERTraining:true");
+			return query;
+		};
+		return func;
+	}
+
+	public static Function<SolrQuery, SolrQuery> getCategorySpecificNERModelTestingDataQuery(final String category) {
+		Function<SolrQuery, SolrQuery> func = query -> {
+			query.setQuery("category:" + category + " AND includeInNERTesting:true");
 			return query;
 		};
 		return func;
@@ -331,7 +338,8 @@ public class SolrClient {
 						//the current sentence contains a valid entity annotation based on the model training category
 						String sentence = sentences[s];
 						//first remove all annotations to ensure that only category-specific annotations are included in the training data
-						sentence = sentence.replaceAll(" ?<START:.+?> ", "").replaceAll(" <END> ", "");
+						//sentence = sentence.replaceAll(" ?<START:.+?> ", "").replaceAll(" <END> ", "");
+						sentence = sentence.replaceAll("(?<=\\S\\s)<START:.+?> ", "").replaceAll("\\s?<START:.+?> ", "").replaceAll(" <END> ", "");
 						List<NamedEntity> validLineEntities = lineEntities.get(s).stream()
 								.filter(p -> facilityTypes.contains(p.getSpan().getType()))
 								.collect(Collectors.toList());

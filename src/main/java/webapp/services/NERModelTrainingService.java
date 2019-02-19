@@ -19,12 +19,12 @@ public class NERModelTrainingService {
     public void processAsync(DocumentsController documentsController, List<String> categories) {
         try {
             process(documentsController, categories);
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
     }
 
-    public void process(DocumentsController documentsController, List<String> categories) throws IOException {
+    public void process(DocumentsController documentsController, List<String> categories) throws Exception {
         try {
             if (!trainingInProgress) {
                 trainingInProgress = true;
@@ -33,7 +33,7 @@ public class NERModelTrainingService {
                 logger.info("Model training complete.");
                 trainingInProgress = false;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             trainingInProgress = false;
             throw e;
         }
