@@ -8,13 +8,11 @@ import common.ProcessedDocument;
 import common.ProcessedPage;
 import common.TextExtractor;
 import common.Tools;
-import edu.stanford.nlp.util.CoreMap;
 import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
 import neo4japi.Neo4jClient;
 import neo4japi.domain.*;
 import nlp.*;
-import opennlp.tools.util.eval.FMeasure;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -37,7 +35,6 @@ import webapp.models.GeoNameWithFrequencyScore;
 import webapp.models.JsonResponse;
 import webapp.services.*;
 
-import javax.websocket.server.PathParam;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -213,24 +210,24 @@ public class DocumentsController {
                         .collect(Collectors.toList());
 
                 String parsed = doc.get("parsed").toString();
-                List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
 
-                Map<EntityRelation, Dependency> deps;
-                if (geoNames.size() > 0) {
-                    deps = neo4jClient.getNominalDependencies(geoNames, rels);
-                    for (Map.Entry<EntityRelation, Dependency> entry : deps.entrySet()) {
-                        EntityRelation relation = entry.getKey();
-                        Dependency dependency = entry.getValue();
-                        dependency.setRelationId(relation.getId());
-                        if (!Strings.isNullOrEmpty(relationId)) { //providing possible match data is very expensive, so only provide this if a specific relation Id is provided
-                            Facility dependentCandidate = dependency.getDependentFacility();
-                            Facility providingCandidate = dependency.getProvidingFacility();
-                            dependentCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(dependentCandidate, geoNames));
-                            providingCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(providingCandidate, geoNames));
+                Map<EntityRelation, Dependency> deps = new HashMap<>();
+                if (rels.size() > 0) {
+                    List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
+                    if (geoNames.size() > 0) {
+                        deps = neo4jClient.getNominalDependencies(geoNames, rels);
+                        for (Map.Entry<EntityRelation, Dependency> entry : deps.entrySet()) {
+                            EntityRelation relation = entry.getKey();
+                            Dependency dependency = entry.getValue();
+                            dependency.setRelationId(relation.getId());
+                            if (!Strings.isNullOrEmpty(relationId)) { //providing possible match data is very expensive, so only provide this if a specific relation Id is provided
+                                Facility dependentCandidate = dependency.getDependentFacility();
+                                Facility providingCandidate = dependency.getProvidingFacility();
+                                dependentCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(dependentCandidate, geoNames));
+                                providingCandidate.getPossibleMatches().putAll(neo4jClient.getMatchingFacilities(providingCandidate, geoNames));
+                            }
                         }
                     }
-                } else {
-                    deps = new HashMap<>();
                 }
 
                 return ResponseEntity.ok().body(Tools.formJsonResponse(deps.values()));
@@ -496,7 +493,7 @@ public class DocumentsController {
             }
 
             if (!Strings.isNullOrEmpty(docText)) {
-                SolrDocumentList docs = runNLPPipeline(docText, id, doc);
+                SolrDocumentList docs = runEntityResolutionPipeline(docText, id, doc);
 
                 logger.info("storing file to MongoDB");
                 ObjectId fileId = mongoClient.StoreFile(uploadedFile);
@@ -537,7 +534,7 @@ public class DocumentsController {
             page.addField("filename", pageFile.getName());
             page.addField("created", doc.get("created"));
             page.addField("lastUpdated", doc.get("lastUpdated"));
-            String docText = !Strings.isNullOrEmpty(processedPage.getPageText()) ? processedPage.getPageText() : "UNABLE TO EXTRACT DATA FROM SCHEMATIC";
+            String docText = !Strings.isNullOrEmpty(processedPage.getPageText()) ? processedPage.getPageText() : "UNABLE TO EXTRACT DATA FROM PAGE";
             page.addField("docText", docText);
             if (doc.containsKey("url")) {
                 page.addField("url", doc.get("url"));
@@ -552,60 +549,7 @@ public class DocumentsController {
         }
     }
 
-    @RequestMapping(value="/file/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("file") MultipartFile document) {
-        String filename = null;
-        ProcessedDocument processedDocument = null;
-        try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
-            solrClient.deleteDocuments("docId:" + id + " AND -username:*");
-            if (!docs.isEmpty()) {
-                SolrDocument doc = docs.get(0);
-
-                if (!document.isEmpty() && doc.containsKey("docStoreId")) { //uploaded file is being replaced
-                    String oldFileId = doc.get("docStoreId").toString();
-                    mongoClient.DeleteFile(oldFileId);
-                    filename = document.getOriginalFilename();
-                    File uploadedFile = Tools.WriteFileToDisk(temporaryFileRepo + filename, document.getInputStream());
-                    ObjectId fileId = mongoClient.StoreFile(uploadedFile);
-                    doc.replace("docStoreId", fileId.toString());
-                    doc.replace("filename", filename);
-
-                    processedDocument = TextExtractor.extractText(uploadedFile);
-                    String docText = processedDocument.getExtractedText();
-                    if (doc.containsKey("docText")) {
-                        doc.replace("docText", docText);
-                    } else {
-                        doc.addField("docText", docText);
-                    }
-
-                    SolrDocumentList solrDocs = runNLPPipeline(docText, id, doc);
-                    solrClient.indexDocuments(solrDocs);
-                }
-
-                String timestamp = Tools.getFormattedDateTimeString(Instant.now());
-                doc.replace("lastUpdated", timestamp);
-
-                logger.info("storing data to Solr");
-                solrClient.indexDocument(doc);
-                return ResponseEntity.ok().body(Tools.formJsonResponse(null));
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
-        } catch (Exception e) {
-            logger.error(e);
-            Tools.getExceptions().add(e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
-        } finally {
-            if (!Strings.isNullOrEmpty(filename)) {
-                cleanupService.process(filename, 1);
-            }
-            if (processedDocument != null) {
-                processedDocument.cleanup();
-            }
-        }
-    }
-
-    private SolrDocumentList runNLPPipeline(String docText, String id, SolrDocument doc) throws SolrServerException, IOException {
+    private SolrDocumentList runEntityResolutionPipeline(String docText, String id, SolrDocument doc) throws SolrServerException, IOException {
         SolrDocumentList docs = new SolrDocumentList();
 
         String parsed = recognizer.deepCleanText(docText);
@@ -646,7 +590,7 @@ public class DocumentsController {
                     .collect(Collectors.toList());
             docs.addAll(entityDocs);
 
-            resolveDocumentRelations(id, doc, docs, parsed, entities, 0.7, 5);
+            //resolveDocumentRelations(id, doc, docs, parsed, entities, 0.7, 5);
         }
 
         return docs;
@@ -690,7 +634,7 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/metadata/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("metadata") Map<String, Object> metadata, @RequestPart("doNLP") boolean doNLP) {
+    public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("metadata") Map<String, Object> metadata) {
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
@@ -722,7 +666,7 @@ public class DocumentsController {
                 }
 
                 //any user-entered changes to the annotated document must initiate an overhaul of the underlying dependency data
-                if (doNLP && metadata.keySet().contains("annotated")) {
+                if (metadata.keySet().contains("annotated")) {
                     String annotated = metadata.get("annotated").toString();
                     List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
 
@@ -733,7 +677,7 @@ public class DocumentsController {
                             .collect(Collectors.toList());
                     SolrDocumentList solrDocs = new SolrDocumentList();
                     solrDocs.addAll(entityDocs);
-                    resolveDocumentRelations(id, doc, solrDocs, doc.get("parsed").toString(), entities, 0.7, 5);
+                    //resolveDocumentRelations(id, doc, solrDocs, doc.get("parsed").toString(), entities, 0.7, 5);
                     solrClient.indexDocuments(solrDocs);
                 }
 
@@ -761,33 +705,8 @@ public class DocumentsController {
         return null;
     }
 
-    @RequestMapping(value="/reprocess/{id}", method=RequestMethod.PUT, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> reprocessDocument(@PathVariable(name="id") String id) {
-        try {
-            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
-            if (!docs.isEmpty()) {
-                SolrDocument doc = docs.get(0);
-                if (doc.containsKey("docText")) {
-                    solrClient.deleteDocuments("docId:" + id + " AND -username:*");
-                    String docText = doc.get("docText").toString();
-                    SolrDocumentList solrDocs = runNLPPipeline(docText, id, doc);
-                    logger.info("storing data to Solr");
-                    solrClient.indexDocuments(solrDocs);
-                    solrClient.indexDocument(doc);
-                }
-
-                return ResponseEntity.ok().body(Tools.formJsonResponse(null));
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
-        } catch (Exception e) {
-            logger.error(e);
-            Tools.getExceptions().add(e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
-        }
-    }
-
     @RequestMapping(value="/relations/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> reprocessDocumentRelations(@PathVariable(name="id") String id, @RequestPart("similarity") double similarity, @RequestPart("searchLines") int searchLines) {
+    public ResponseEntity<JsonResponse> processDocumentRelations(@PathVariable(name="id") String id, @RequestPart("similarity") double similarity, @RequestPart("searchLines") int searchLines) {
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
@@ -875,6 +794,84 @@ public class DocumentsController {
             return new ResponseEntity<>(isr, respHeaders, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(null, null, HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @RequestMapping(value="/reprocess/{id}", method=RequestMethod.PUT, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> reprocessDocument(@PathVariable(name="id") String id) {
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
+            if (!docs.isEmpty()) {
+                SolrDocument doc = docs.get(0);
+                if (doc.containsKey("docText")) {
+                    solrClient.deleteDocuments("docId:" + id + " AND -username:*");
+                    String docText = doc.get("docText").toString();
+                    SolrDocumentList solrDocs = runEntityResolutionPipeline(docText, id, doc);
+                    logger.info("storing data to Solr");
+                    solrClient.indexDocuments(solrDocs);
+                    solrClient.indexDocument(doc);
+                }
+
+                return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/file/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("file") MultipartFile document) {
+        String filename = null;
+        ProcessedDocument processedDocument = null;
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
+            solrClient.deleteDocuments("docId:" + id + " AND -username:*");
+            if (!docs.isEmpty()) {
+                SolrDocument doc = docs.get(0);
+
+                if (!document.isEmpty() && doc.containsKey("docStoreId")) { //uploaded file is being replaced
+                    String oldFileId = doc.get("docStoreId").toString();
+                    mongoClient.DeleteFile(oldFileId);
+                    filename = document.getOriginalFilename();
+                    File uploadedFile = Tools.WriteFileToDisk(temporaryFileRepo + filename, document.getInputStream());
+                    ObjectId fileId = mongoClient.StoreFile(uploadedFile);
+                    doc.replace("docStoreId", fileId.toString());
+                    doc.replace("filename", filename);
+
+                    processedDocument = TextExtractor.extractText(uploadedFile);
+                    String docText = processedDocument.getExtractedText();
+                    if (doc.containsKey("docText")) {
+                        doc.replace("docText", docText);
+                    } else {
+                        doc.addField("docText", docText);
+                    }
+
+                    SolrDocumentList solrDocs = runEntityResolutionPipeline(docText, id, doc);
+                    solrClient.indexDocuments(solrDocs);
+                }
+
+                String timestamp = Tools.getFormattedDateTimeString(Instant.now());
+                doc.replace("lastUpdated", timestamp);
+
+                logger.info("storing data to Solr");
+                solrClient.indexDocument(doc);
+                return ResponseEntity.ok().body(Tools.formJsonResponse(null));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        } finally {
+            if (!Strings.isNullOrEmpty(filename)) {
+                cleanupService.process(filename, 1);
+            }
+            if (processedDocument != null) {
+                processedDocument.cleanup();
+            }
         }
     }
 }
