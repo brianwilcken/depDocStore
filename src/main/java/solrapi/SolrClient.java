@@ -54,12 +54,12 @@ public class SolrClient {
 	
 	public static void main(String[] args) {
 		SolrClient client = new SolrClient("http://localhost:8983/solr");
-		//client.writeTrainingDataToFile(Tools.getProperty("nlp.waterNerTrainingFile"), client::getWaterDataQuery, client::formatForNERModelTraining);
+		//client.writeCorpusDataToFile(Tools.getProperty("nlp.waterNerTrainingFile"), client::getWaterDataQuery, client::formatForNERModelTraining);
 
 		//retrieveAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
-		//client.writeTrainingDataToFile("data/clustering.csv", client::getDoccatDataQuery, client::formatForClustering);
+		//client.writeCorpusDataToFile("data/clustering.csv", client::getDoccatDataQuery, client::formatForClustering);
 
 		try {
 			logger.info("Begin dependency data export");
@@ -388,8 +388,9 @@ public class SolrClient {
 		}
 	}
 
-	public void writeTrainingDataToFile(String trainingFilePath, String category, Function<SolrQuery, SolrQuery> queryGetter,
-										Tools.CheckedTriConsumer<String, SolrDocument, FileOutputStream> consumer, TrainingDataThrottle throttle) {
+	public Map<String, String> writeCorpusDataToFile(String trainingFilePath, String category, Function<SolrQuery, SolrQuery> queryGetter,
+											  Tools.CheckedTriConsumer<String, SolrDocument, FileOutputStream> consumer, TrainingDataThrottle throttle) {
+		Map<String, String> corpusDocs = new HashMap<>();
 		SolrQuery query = queryGetter.apply(new SolrQuery());
 		query.setRows(1000000);
 		try {
@@ -404,6 +405,11 @@ public class SolrClient {
 			do {
 				tmpDoc = tmpQueue.take();
 				if (!(tmpDoc instanceof StopDoc) && throttle.check(tmpDoc)) {
+					if (tmpDoc.containsKey("id")) {
+						String id = tmpDoc.get("id").toString();
+						String filename = tmpDoc.get("filename").toString();
+						corpusDocs.put(filename, id);
+					}
 					consumer.apply(category, tmpDoc, fos);
 				}
 			} while (!(tmpDoc instanceof StopDoc));
@@ -412,6 +418,7 @@ public class SolrClient {
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 		}
+		return corpusDocs;
 	}
 
 	private class StopDoc extends SolrDocument {

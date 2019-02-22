@@ -5,12 +5,19 @@ import common.Tools;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.util.CoreMap;
+import opennlp.tools.cmdline.namefind.NameEvaluationErrorListener;
+import opennlp.tools.cmdline.namefind.TokenNameFinderDetailedFMeasureListener;
 import opennlp.tools.dictionary.Dictionary;
+import opennlp.tools.ml.BeamSearch;
+import opennlp.tools.ml.maxent.quasinewton.QNTrainer;
+import opennlp.tools.ml.naivebayes.NaiveBayesTrainer;
 import opennlp.tools.namefind.*;
 import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.Span;
 import opennlp.tools.util.TrainingParameters;
+import opennlp.tools.util.eval.FMeasure;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,6 +28,7 @@ import org.springframework.core.io.ClassPathResource;
 import solrapi.SolrClient;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -137,7 +145,15 @@ public class NamedEntityRecognizer {
         List<NamedEntity> namedEntities = new ArrayList<>();
         try {
             for (String category : categories) {
-                String modelFile = getModelFilePath(category);
+                String modelFile;
+                if (category.contains(":")) {
+                    String[] categoryAndVersion = category.split(":");
+                    category = categoryAndVersion[0];
+                    String version = categoryAndVersion[1];
+                    modelFile = getModelFilePath(getModelDir(category, version));
+                } else {
+                    modelFile = getModelFilePath(getModelDir(category, false));
+                }
                 TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
                 NameFinderME nameFinder = new NameFinderME(model);
 
@@ -247,10 +263,14 @@ public class NamedEntityRecognizer {
     }
 
     public void trainNERModel(String category) throws IOException {
+        if (category.contains(":")) {
+            category = category.split(":")[0];
+        }
         String trainingFile = getTrainingFilePath(category);
-        String modelFile = getModelFilePath(category);
+        String modelDir = getModelDir(category, true);
+        String modelFile = getModelFilePath(modelDir);
 
-        client.writeTrainingDataToFile(trainingFile, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFile, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
 
         if (lineStream.read() == null) {
@@ -267,7 +287,12 @@ public class NamedEntityRecognizer {
         Map<String, Object> resources = new HashMap<>();
         resources.put("ner-dict", getTrainingDictionary(category));
 
+        int lineNum = 0;
         try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
+            while(sampleStream.read() != null) {
+                ++lineNum;
+            }
+            sampleStream.reset();
             model = NameFinderME.train("en", null, sampleStream, params,
                     TokenNameFinderFactory.create(null, getFeatureGeneratorBytes(), resources, new BioCodec()));
         }
@@ -275,13 +300,18 @@ public class NamedEntityRecognizer {
         try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(modelFile))) {
             model.serialize(modelOut);
         }
+
+        String modelEvaluationReport = evaluateNERModel(category);
+        modelEvaluationReport += System.lineSeparator() + "Number of model sentences: " + lineNum;
+        String reportFile = getReportFilePath(modelDir);
+        FileUtils.writeStringToFile(new File(reportFile), modelEvaluationReport, Charset.defaultCharset());
     }
 
     public String evaluateNERModel(String category) {
         try {
             String testFile = getTestFilePath(category);
 
-            client.writeTrainingDataToFile(testFile, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
+            client.writeCorpusDataToFile(testFile, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
             ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(testFile);
 
             if (lineStream.read() == null) {
@@ -289,7 +319,7 @@ public class NamedEntityRecognizer {
             }
             lineStream.reset();
 
-            String modelFile = getModelFilePath(category);
+            String modelFile = getModelFilePath(getModelDir(category, false));
             TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
             NameFinderME nameFinder = new NameFinderME(model);
 
@@ -310,9 +340,62 @@ public class NamedEntityRecognizer {
         }
     }
 
-    private String getModelFilePath(String category) {
-        String modelFile = "data/" + category + ".bin";
+    public List<NERModelData> getModelListing(String category) {
+        String modelPath = getModelDir(category, false);
+        File modelDir = new File(modelPath);
+        File categoryDir = modelDir.getParentFile();
+        File[] dirs = categoryDir.listFiles();
+        List<NERModelData> modelListing = new ArrayList<>();
+        for (File dir : dirs) {
+            if (dir.isDirectory()) {
+                try {
+                    NERModelData data = new NERModelData(dir);
+                    modelListing.add(data);
+                } catch (IOException e) {
+                    continue;
+                }
+            }
+        }
+        return modelListing;
+    }
+
+    private String getModelFilePath(String modelDir) {
+        String modelFile = modelDir + "/model.bin";
         return modelFile;
+    }
+
+    private String getReportFilePath(String modelDir) {
+        String modelFile = modelDir + "/report.txt";
+        return modelFile;
+    }
+
+    private String getModelDir(String category, boolean increment) {
+        Integer maxDirNum = getCurrentMaximumModelDir(category);
+
+        if (increment) {
+            maxDirNum++;
+        }
+
+        File modelDir = new File("data/ner/" + category + "/" + maxDirNum);
+        modelDir.mkdirs();
+        return modelDir.getPath();
+    }
+
+    private String getModelDir(String category, String version) {
+        File modelDir = new File("data/ner/" + category + "/" + version);
+        modelDir.mkdirs();
+        return modelDir.getPath();
+    }
+
+    private Integer getCurrentMaximumModelDir(String category) {
+        File dirs = new File("data/ner/" + category);
+        dirs.mkdirs();
+        Integer maxDirNum = Arrays.stream(dirs.listFiles())
+                .filter(p -> p.isDirectory())
+                .map(p -> Integer.parseInt(p.getName()))
+                .max(Integer::compareTo).orElse(0);
+
+        return maxDirNum;
     }
 
     private String getTrainingFilePath(String category) {

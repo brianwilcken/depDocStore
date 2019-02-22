@@ -64,7 +64,7 @@ public abstract class FineGrainedReportListener {
     // api methods
     // general stats
 
-    protected FineGrainedReportListener.Stats getStats() {
+    public FineGrainedReportListener.Stats getStats() {
         return this.stats;
     }
 
@@ -92,6 +92,14 @@ public abstract class FineGrainedReportListener {
 
     private double getAccuracy() {
         return stats.getAccuracy();
+    }
+
+    private double getNamedEntityAccuracy() {
+        return stats.getNamedEntityAccuracy();
+    }
+
+    private double getNamedEntityFMeasure() {
+        return stats.getNamedEntityFMeasure();
     }
 
     private double getTokenAccuracy(String token) {
@@ -157,6 +165,9 @@ public abstract class FineGrainedReportListener {
     private String matrixToString(SortedSet<String> tagset, double[][] data,
                                   boolean filter) {
         // we dont want to print trivial cases (acc=1)
+        if (data.length == 0) {
+            return "empty";
+        }
         int initialIndex = 0;
         String[] tags = tagset.toArray(new String[tagset.size()]);
         StringBuilder sb = new StringBuilder();
@@ -224,6 +235,14 @@ public abstract class FineGrainedReportListener {
         printStream.append(
                 String.format("%21s: %6s", "Accuracy",
                         MessageFormat.format("{0,number,#.##%}", getAccuracy()))).append(
+                "\n");
+        printStream.append(
+                String.format("%21s: %6s", "Entity Accuracy",
+                        MessageFormat.format("{0,number,#.##%}", getNamedEntityAccuracy()))).append(
+                "\n");
+        printStream.append(
+                String.format("%21s: %6s", "Entity F-Measure",
+                        MessageFormat.format("{0,number,#.###}", getNamedEntityFMeasure()))).append(
                 "\n");
         printFooter("Evaluation Corpus Statistics");
     }
@@ -350,7 +369,6 @@ public abstract class FineGrainedReportListener {
                     MessageFormat.format("{0,number,#.###}", p > 0 ? p : 0),
                     MessageFormat.format("{0,number,#.###}", r > 0 ? r : 0),
                     MessageFormat.format("{0,number,#.###}", f > 0 ? f : 0))
-
             );
         }
         printLine(tableSize);
@@ -748,6 +766,7 @@ public abstract class FineGrainedReportListener {
 
         // general statistics
         private final Mean accuracy = new Mean();
+        private final Mean namedEntityAccuracy = new Mean();
         private final Mean averageSentenceLength = new Mean();
         // token statistics
         private final Map<String, Mean> tokAccuracies = new HashMap<>();
@@ -843,11 +862,15 @@ public abstract class FineGrainedReportListener {
             if (ref.equals(pred)) {
                 tokAccuracies.get(tok).add(1);
                 accuracy.add(1);
+                if (!ref.equals("other")) {
+                    namedEntityAccuracy.add(1);
+                }
             } else {
                 tokAccuracies.get(tok).add(0);
                 tokErrors.get(tok).increment();
                 tagErrors.get(ref).increment();
                 accuracy.add(0);
+                namedEntityAccuracy.add(0);
             }
 
             // populate confusion matrixes
@@ -892,94 +915,121 @@ public abstract class FineGrainedReportListener {
             }
         }
 
-        private double getAccuracy() {
+        public double getAccuracy() {
             return accuracy.mean();
         }
 
-        private int getNumberOfTags() {
+        public double getNamedEntityAccuracy() {
+            return namedEntityAccuracy.mean();
+        }
+
+        public int getNumberOfTags() {
             return this.tagOcurrencies.keySet().size();
         }
 
-        private long getNumberOfSentences() {
+        public long getNumberOfSentences() {
             return this.averageSentenceLength.count();
         }
 
-        private double getAverageSentenceSize() {
+        public double getAverageSentenceSize() {
             return this.averageSentenceLength.mean();
         }
 
-        private int getMinSentenceSize() {
+        public int getMinSentenceSize() {
             return this.minimalSentenceLength;
         }
 
-        private int getMaxSentenceSize() {
+        public int getMaxSentenceSize() {
             return this.maximumSentenceLength;
         }
 
-        private double getTokenAccuracy(String token) {
+        public double getTokenAccuracy(String token) {
             return tokAccuracies.get(token).mean();
         }
 
-        private int getTokenErrors(String token) {
+        public int getTokenErrors(String token) {
             return tokErrors.get(token).value();
         }
 
-        private int getTokenFrequency(String token) {
+        public int getTokenFrequency(String token) {
             return tokOcurrencies.get(token).value();
         }
 
-        private SortedSet<String> getTokensOrderedByFrequency() {
+        public SortedSet<String> getTokensOrderedByFrequency() {
             SortedSet<String> toks = new TreeSet<>(new FineGrainedReportListener.SimpleLabelComparator(tokOcurrencies));
             toks.addAll(tokOcurrencies.keySet());
             return Collections.unmodifiableSortedSet(toks);
         }
 
-        private SortedSet<String> getTokensOrderedByNumberOfErrors() {
+        public SortedSet<String> getTokensOrderedByNumberOfErrors() {
             SortedSet<String> toks = new TreeSet<>(new FineGrainedReportListener.SimpleLabelComparator(tokErrors));
             toks.addAll(tokErrors.keySet());
             return toks;
         }
 
-        private int getTagFrequency(String tag) {
+        public int getTagFrequency(String tag) {
             return tagOcurrencies.get(tag).value();
         }
 
-        private int getTagErrors(String tag) {
+        public int getTagErrors(String tag) {
             return tagErrors.get(tag).value();
         }
 
-        private double getTagFMeasure(String tag) {
+        public double getTagFMeasure(String tag) {
             return tagFMeasure.get(tag).getFMeasure();
         }
 
-        private double getTagRecall(String tag) {
+        public double getNamedEntityFMeasure() {
+            int numTags = getNumberOfTags() - 1; //exclude "other" tag
+            SortedSet<String> tags = getConfusionMatrixTagset();
+            double precision = 0.0d;
+            double recall = 0.0d;
+            for (String tag : tags) {
+                if (!tag.equals("other")) {
+                    FMeasure fMeasure = tagFMeasure.get(tag);
+                    precision += fMeasure.getPrecisionScore();
+                    recall += fMeasure.getRecallScore();
+                }
+            }
+            precision = precision / numTags;
+            recall = recall / numTags;
+            if (precision + recall > 0) {
+                return 2 * (precision * recall)
+                        / (precision + recall);
+            } else {
+                // cannot divide by zero, return error code
+                return -1;
+            }
+        }
+
+        public double getTagRecall(String tag) {
             return tagFMeasure.get(tag).getRecallScore();
         }
 
-        private double getTagPrecision(String tag) {
+        public double getTagPrecision(String tag) {
             return tagFMeasure.get(tag).getPrecisionScore();
         }
 
-        private SortedSet<String> getTagsOrderedByErrors() {
+        public SortedSet<String> getTagsOrderedByErrors() {
             SortedSet<String> tags = new TreeSet<>(getLabelComparator(tagErrors));
             tags.addAll(tagErrors.keySet());
             return Collections.unmodifiableSortedSet(tags);
         }
 
-        private SortedSet<String> getConfusionMatrixTagset() {
+        public SortedSet<String> getConfusionMatrixTagset() {
             return getConfusionMatrixTagset(generalConfusionMatrix);
         }
 
-        private double[][] getConfusionMatrix() {
+        public double[][] getConfusionMatrix() {
             return createConfusionMatrix(getConfusionMatrixTagset(),
                     generalConfusionMatrix);
         }
 
-        private SortedSet<String> getConfusionMatrixTagset(String token) {
+        public SortedSet<String> getConfusionMatrixTagset(String token) {
             return getConfusionMatrixTagset(tokenConfusionMatrix.get(token));
         }
 
-        private double[][] getConfusionMatrix(String token) {
+        public double[][] getConfusionMatrix(String token) {
             return createConfusionMatrix(getConfusionMatrixTagset(token),
                     tokenConfusionMatrix.get(token));
         }

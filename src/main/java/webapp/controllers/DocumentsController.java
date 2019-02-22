@@ -170,16 +170,24 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/annotate/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> getAutoAnnotatedDocument(@PathVariable(name="id") String id, int threshold) {
+    public ResponseEntity<JsonResponse> getAutoAnnotatedDocument(@PathVariable(name="id") String id, double threshold, String category, String version) {
         logger.info("In autoAnnotate method");
         try {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
 
-                double dblThreshold = (double)threshold / (double)100;
                 List<String> categories = (List<String>)doc.get("category");
-                List<NamedEntity> entities = recognizer.detectNamedEntities(doc.get("parsed").toString(), categories, dblThreshold);
+                if (category != null) {
+                    for (int i = 0; i < categories.size(); i++) {
+                        String cat = categories.get(i);
+                        if (cat.equals(category)) {
+                            cat += ":" + version;
+                            categories.set(i, cat);
+                        }
+                    }
+                }
+                List<NamedEntity> entities = recognizer.detectNamedEntities(doc.get("parsed").toString(), categories, threshold);
                 String annotated = NLPTools.autoAnnotate(doc.get("parsed").toString(), entities);
 
                 return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
@@ -361,6 +369,23 @@ public class DocumentsController {
             }
 
             return ResponseEntity.ok().body(Tools.formJsonResponse(reports));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/NERModelListing", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getNERModelListing(String[] category) {
+        logger.info("In getNERModelListing method");
+        try {
+            Map<String, List<NERModelData>> listing = new HashMap<>();
+            for (String cat : category) {
+                listing.put(cat, recognizer.getModelListing(cat));
+            }
+
+            return ResponseEntity.ok().body(Tools.formJsonResponse(listing));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
