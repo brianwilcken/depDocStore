@@ -14,6 +14,7 @@ import neo4japi.Neo4jClient;
 import neo4japi.domain.*;
 import nlp.*;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -27,6 +28,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import solrapi.SolrClient;
@@ -40,12 +42,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @CrossOrigin
@@ -79,6 +83,9 @@ public class DocumentsController {
 
     @Autowired
     private WebCrawlerService webCrawlerService;
+
+    @Autowired
+    private BulkUploadService bulkUploadService;
 
     public DocumentsController() {
         solrClient = new SolrClient(Tools.getProperty("solr.url"));
@@ -477,6 +484,90 @@ public class DocumentsController {
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
+    }
+
+    @RequestMapping(value="/bulkUpload", method=RequestMethod.POST, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> bulkUpload(@RequestPart("documents") List<Map<String, Object>> documents) {
+        try {
+            logger.info("Begin Bulk Document Upload");
+
+            List<Future<ResponseEntity<JsonResponse>>> results = new ArrayList<>();
+            for (Map<String, Object> document : documents) {
+                Future<ResponseEntity<JsonResponse>> result = bulkUploadService.process(document);
+                results.add(result);
+            }
+
+            while(results.stream().anyMatch(p -> !p.isDone())) {
+                Thread.sleep(100);
+            }
+
+            List<JsonResponse> responses = new ArrayList<>();
+            for (Future<ResponseEntity<JsonResponse>> result : results) {
+                responses.add(result.get().getBody());
+            }
+
+            return ResponseEntity.ok().body(Tools.formJsonResponse(responses));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    public ResponseEntity<JsonResponse> uploadJSON(Map<String, Object> document) {
+        String filename;
+        try {
+            SolrDocument doc = new SolrDocument();
+            document.entrySet().stream().forEach(p -> doc.addField(p.getKey(), p.getValue()));
+
+            String timestamp = Tools.getFormattedDateTimeString(Instant.now());
+            doc.addField("created", timestamp);
+            doc.addField("lastUpdated", timestamp);
+
+            String id;
+            if (document.containsKey("title")) {
+                filename = document.get("title").toString();
+                filename = filename.replace(" ", "_") + ".txt";
+                filename = Tools.removeFilenameSpecialCharacters(filename);
+                doc.addField("filename", filename);
+                id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(filename)));
+                doc.addField("id", id);
+
+                String query = "id:" + id;
+                if (solrClient.DocumentExists(query)) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(Tools.formJsonResponse("File already exists in document store: " + filename));
+                }
+            } else {
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Tools.formJsonResponse("Missing title field"));
+            }
+
+            String docText;
+            if (document.containsKey("text")) {
+                docText = document.get("text").toString();
+                doc.addField("docText", docText);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Tools.formJsonResponse("Missing text field: " + filename));
+            }
+
+            File uploadedFile = new File(temporaryFileRepo + filename);
+            FileUtils.writeStringToFile(uploadedFile, docText, Charset.defaultCharset());
+
+            SolrDocumentList docs = runEntityResolutionPipeline(docText, id, doc);
+
+            logger.info("storing file to MongoDB");
+            ObjectId fileId = mongoClient.StoreFile(uploadedFile);
+            doc.addField("docStoreId", fileId.toString());
+
+            logger.info("storing data to Solr");
+            docs.add(doc);
+            solrClient.indexDocuments(docs);
+            cleanupService.process(filename, 1);
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+        return ResponseEntity.ok().body(Tools.formJsonResponse("Successfully uploaded: " + filename));
     }
 
     public ResponseEntity<JsonResponse> processNewDocument(String filename, Map<String, Object> metadata, File uploadedFile) {

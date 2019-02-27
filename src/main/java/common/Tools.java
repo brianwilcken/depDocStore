@@ -227,6 +227,11 @@ public class Tools {
 		return document;
 	}
 
+	public static String removeFilenameSpecialCharacters(String filename) {
+		filename = filename.replaceAll("[\\\\/:*?\"<>|]", "");
+		return filename;
+	}
+
 	public static boolean numericRangeCompare(double num1, double num2, double rng) {
 		return ((num1 - rng) < num2) && (num2 < (num1 + rng));
 	}

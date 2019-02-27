@@ -60,7 +60,7 @@ public class ResourceURLLookupService {
 
     public void process(URL url, Map<String, Object> metadata) {
         try {
-            String filename = FilenameUtils.getName(url.getFile()).replaceAll("[\\\\/:*?\"<>|]", "");
+            String filename = Tools.removeFilenameSpecialCharacters(FilenameUtils.getName(url.getFile()));
             if (!Strings.isNullOrEmpty(filename) && TextExtractor.canExtractText(new File(filename))) {
                 RequestCallback requestCallback = request -> request.getHeaders()
                         .setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
@@ -84,7 +84,7 @@ public class ResourceURLLookupService {
                     String docText = getArticleBody(article);
                     String title = article.title();
                     String articleFilename = title.replace(" ", "_") + ".txt";
-                    articleFilename = articleFilename.replaceAll("[\\\\/:*?\"<>|]", "");
+                    articleFilename = Tools.removeFilenameSpecialCharacters(articleFilename);
                     String filepath = temporaryFileRepo + articleFilename;
                     InputStream in = IOUtils.toInputStream(docText, "UTF-8");
                     File uploadedFile = Tools.WriteFileToDisk(filepath, in);
