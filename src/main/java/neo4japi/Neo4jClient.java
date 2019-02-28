@@ -1,5 +1,6 @@
 package neo4japi;
 
+import com.bericotech.clavin.gazetteer.GeoName;
 import com.google.common.collect.Lists;
 import geoparsing.LocationResolver;
 import neo4japi.domain.*;
@@ -36,11 +37,16 @@ public class Neo4jClient {
         Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
         //Collection<DataModelNode> dataModelNodes = session.loadAll(DataModelNode.class);
 
-        List<DataModelNode> dataModelNodes = Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode) WHERE n.name = \"Coal\" RETURN n", Collections.EMPTY_MAP));
+        //List<DataModelNode> dataModelNodes = Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode) WHERE n.name = \"Coal\" RETURN n", Collections.EMPTY_MAP));
 
-        for (DataModelNode node : dataModelNodes) {
-            System.out.println(node.getName());
-        }
+//        List<Facility> facilities = Lists.newArrayList(session.query(Facility.class, "MATCH (f:Facility {city:\"Corpus Christi\"})-[m:IsDataModelNode]->(n:DataModelNode {name:\"Finished Water System\"}) RETURN f", Collections.EMPTY_MAP));
+//        for (Facility facility : facilities) {
+//            System.out.println(facility.getName());
+//        }
+
+        Map<String, List<DataModelNode>> facilityTypes = client.getFacilityTypes("Finished Water System");
+
+        facilityTypes.size();
 
 //        SolrDocument solrDoc = new SolrDocument();
 //        solrDoc.setField("filename", "facility_document.pdf");
@@ -61,6 +67,44 @@ public class Neo4jClient {
 //
 //        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
 //        session.save(doc);
+    }
+
+    public Map<String, List<Facility>> getFacilitiesInArea(List<GeoNameWithFrequencyScore> geoNames, String category) {
+        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
+        Map<String, List<DataModelNode>> facilityTypes = getFacilityTypes(category);
+        GeoNameWithFrequencyScore optimalGeoLocation = LocationResolver.getOptimalGeoLocation(geoNames);
+//        GeoName cityGeoName = optimalGeoLocation.getCity(optimalGeoLocation.getGeoName());
+//        GeoName countyGeoName = optimalGeoLocation.getCounty(optimalGeoLocation.getGeoName());
+//        GeoName stateGeoName = optimalGeoLocation.getState(optimalGeoLocation.getGeoName());
+
+        double maxLat = optimalGeoLocation.getGeoName().getLatitude() + 0.5;
+        double minLat = optimalGeoLocation.getGeoName().getLatitude() - 0.5;
+        double maxLon = optimalGeoLocation.getGeoName().getLongitude() + 0.5;
+        double minLon = optimalGeoLocation.getGeoName().getLongitude() - 0.5;
+
+        String locQuery = "WHERE f.latitude > " + minLat + " AND f.latitude < " + maxLat + " AND f.longitude > " + minLon + " AND f.longitude < " + maxLon;
+
+//        String locQuery = null;
+//        if (cityGeoName != null) {
+//            locQuery = "city:\"" + cityGeoName.getName() + "\"";
+//        } else if (countyGeoName != null) {
+//            locQuery = "county:\"" + countyGeoName.getName() + "\"";
+//        } else if (stateGeoName != null) {
+//            locQuery = "state:\"" + stateGeoName.getName() + "\"";
+//        }
+
+        Map<String, List<Facility>> areaFacilities = new HashMap<>();
+        //if (locQuery != null) {
+        for (String facilityType : facilityTypes.keySet()) {
+            if (!areaFacilities.containsKey(facilityType)) {
+                areaFacilities.put(facilityType, new ArrayList<>());
+            }
+            //areaFacilities.get(facilityType).addAll(Lists.newArrayList(session.query(Facility.class, "MATCH (f:Facility {" + locQuery + "})-[m:IsDataModelNode]->(n:DataModelNode {name:\"" + facilityType + "\"}) RETURN f", Collections.EMPTY_MAP)));
+            areaFacilities.get(facilityType).addAll(Lists.newArrayList(session.query(Facility.class, "MATCH (f:Facility)-[m:IsDataModelNode]->(n:DataModelNode {name:\"" + facilityType + "\"}) " + locQuery + " RETURN f", Collections.EMPTY_MAP)));
+        }
+        //}
+
+        return areaFacilities;
     }
 
     public Document addDocument(SolrDocument doc) {

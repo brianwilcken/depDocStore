@@ -1,10 +1,13 @@
 package nlp;
 
+import com.google.common.base.Strings;
 import com.google.common.io.Files;
 import common.Tools;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.util.CoreMap;
+import neo4japi.Neo4jClient;
+import neo4japi.domain.Facility;
 import opennlp.tools.cmdline.namefind.NameEvaluationErrorListener;
 import opennlp.tools.cmdline.namefind.TokenNameFinderDetailedFMeasureListener;
 import opennlp.tools.dictionary.Dictionary;
@@ -17,8 +20,10 @@ import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.Span;
 import opennlp.tools.util.TrainingParameters;
 import opennlp.tools.util.eval.FMeasure;
+import org.apache.commons.collections.ArrayStack;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.WordUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -26,10 +31,13 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.springframework.core.io.ClassPathResource;
 import solrapi.SolrClient;
+import webapp.models.GeoNameWithFrequencyScore;
 
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class NamedEntityRecognizer {
@@ -47,26 +55,26 @@ public class NamedEntityRecognizer {
 ////        }
 //    }
 
-    private static void autoAnnotateAllForCategory(SolrClient client, NamedEntityRecognizer namedEntityRecognizer, List<String> categories) {
-        try {
-            SolrDocumentList docs = client.QuerySolrDocuments("categories:" + categories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse("") + " AND -annotated:*", 1000, 0, null, null);
-            for (SolrDocument doc : docs) {
-                String document = (String)doc.get("parsed");
-                List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, categories, 0.05);
-                String annotated = NLPTools.autoAnnotate(document, entities);
-                if (doc.containsKey("annotated")) {
-                    doc.replace("annotated", annotated);
-                } else {
-                    doc.addField("annotated", annotated);
-                }
-                //FileUtils.writeStringToFile(new File("data/annotated.txt"), annotated, Charset.forName("Cp1252").displayName());
-
-                client.indexDocument(doc);
-            }
-        } catch (SolrServerException | IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    private static void autoAnnotateAllForCategory(SolrClient client, NamedEntityRecognizer namedEntityRecognizer, List<String> categories) {
+//        try {
+//            SolrDocumentList docs = client.QuerySolrDocuments("categories:" + categories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse("") + " AND -annotated:*", 1000, 0, null, null);
+//            for (SolrDocument doc : docs) {
+//                String document = (String)doc.get("parsed");
+//                List<NamedEntity> entities = namedEntityRecognizer.detectNamedEntities(document, categories, 0.05);
+//                String annotated = NLPTools.autoAnnotate(document, entities);
+//                if (doc.containsKey("annotated")) {
+//                    doc.replace("annotated", annotated);
+//                } else {
+//                    doc.addField("annotated", annotated);
+//                }
+//                //FileUtils.writeStringToFile(new File("data/annotated.txt"), annotated, Charset.forName("Cp1252").displayName());
+//
+//                client.indexDocument(doc);
+//            }
+//        } catch (SolrServerException | IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     private static final Map<String, List<String>> dictionaries;
     static
@@ -92,11 +100,13 @@ public class NamedEntityRecognizer {
     private SentenceModel sentModel;
     //private TokenizerModel tokenizerModel;
     private SolrClient client;
+    private Neo4jClient neo4jClient;
 
     public NamedEntityRecognizer(SolrClient client) {
         sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
         //tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
         this.client = client;
+        neo4jClient = new Neo4jClient();
     }
 
     public List<NamedEntity> detectNamedEntitiesStanford(String document) {
@@ -135,9 +145,73 @@ public class NamedEntityRecognizer {
         return namedEntities;
     }
 
-    public List<NamedEntity> detectNamedEntities(String document, List<String> categories, double threshold) throws IOException {
+    public List<NamedEntity> detectNamedEntities(String document, List<String> categories, List<GeoNameWithFrequencyScore> geoNames, double threshold) throws IOException {
         List<CoreMap> sentences = NLPTools.detectSentencesStanford(document);
         List<NamedEntity> entities = detectNamedEntities(sentences, categories, threshold);
+
+        Map<String, List<Facility>> facilities = new HashMap<>();
+        for (String category : categories) {
+            if (category.contains(":")) {
+                String[] categoryAndVersion = category.split(":");
+                category = categoryAndVersion[0];
+            }
+            facilities.putAll(neo4jClient.getFacilitiesInArea(geoNames, category));
+        }
+
+        for (String facilityType : facilities.keySet()) {
+            List<Facility> typeFacilities = facilities.get(facilityType);
+            List<String> facNames = typeFacilities.stream().map(p -> p.getName()).collect(Collectors.toList());//.reduce((c, n) -> c + "|" + n).orElse("");
+            List<String> facCaptureGrps = new ArrayList<>();
+            for (String facName : facNames) {
+                String[] facSplit = facName.split(" ");
+                List<String> captureGroups = new ArrayList<>();
+                for (String part : facSplit) {
+                    String titleCaps = WordUtils.capitalizeFully(part);
+                    String lowercase = part.toLowerCase();
+                    String captureGrp = "(" + titleCaps + "\\b|" + lowercase + "\\b)";
+                    captureGroups.add(captureGrp);
+                }
+                if (captureGroups.size() > 0) {
+                    String facCaptureGrp = "(" + captureGroups.stream().reduce((c, n) -> c + " " + n).get() + ")";
+                    facCaptureGrps.add(facCaptureGrp);
+                }
+            }
+            String regex = facCaptureGrps.stream().reduce((c, n) -> c + "|" + n).orElse("");
+
+            if (!Strings.isNullOrEmpty(regex)) {
+                Pattern pattern = Pattern.compile(regex);
+                for (int s = 0; s < sentences.size(); s++) {
+                    String sentence = sentences.get(s).toString();
+                    List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+                    Matcher facilityMatcher = pattern.matcher(sentence);
+                    while(facilityMatcher.find()) {
+                        int facStart = facilityMatcher.start();
+                        int facEnd = facilityMatcher.end();
+                        List<CoreLabel> spanTokens = tokens.stream()
+                                .filter(p -> (facStart == 0 || p.beginPosition() >= facStart) && p.endPosition() <= facEnd)
+                                .collect(Collectors.toList());
+                        String[] entityTokensArr = spanTokens.stream().map(p -> p.toString()).toArray(String[]::new);
+                        String entity = String.join(" ", entityTokensArr);
+                        if (pattern.matcher(entity).matches()) {
+                            int spanStart = spanTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - 1;
+                            int spanEnd = spanTokens.get(spanTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class).intValue();
+                            Span span = new Span(spanStart, spanEnd, facilityType);
+                            NamedEntity namedEntity = new NamedEntity(entity, span, s);
+                            boolean storeEntity = true;
+                            for (NamedEntity storedEntity : entities) {
+                                if (storedEntity.getLine() == s && storedEntity.getSpan().intersects(span)) {
+                                    storeEntity = false;
+                                }
+                            }
+                            if (storeEntity) {
+                                entities.add(namedEntity);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return entities;
     }
 

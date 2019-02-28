@@ -194,7 +194,9 @@ public class DocumentsController {
                         }
                     }
                 }
-                List<NamedEntity> entities = recognizer.detectNamedEntities(doc.get("parsed").toString(), categories, threshold);
+                String parsed = doc.get("parsed").toString();
+                List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
+                List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, geoNames, threshold);
                 String annotated = NLPTools.autoAnnotate(doc.get("parsed").toString(), entities);
 
                 return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
@@ -691,7 +693,14 @@ public class DocumentsController {
         }
 
         if (!categories.contains("Not_Applicable")) {
-            List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, 0.05);
+            logger.info("resolving locations");
+            List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
+            List<SolrDocument> locDocs = geoNames.stream()
+                    .map(p -> p.mutate(id))
+                    .collect(Collectors.toList());
+            docs.addAll(locDocs);
+
+            List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, geoNames,0.05);
             String annotated = NLPTools.autoAnnotate(parsed, entities);
             if (doc.containsKey("annotated")) {
                 doc.replace("annotated", annotated);
@@ -712,14 +721,15 @@ public class DocumentsController {
         return docs;
     }
 
-    private void resolveDocumentRelations(String id, SolrDocument doc, SolrDocumentList docs, String parsed, List<NamedEntity> entities, double similarity, double searchLines) {
-        logger.info("resolving locations");
-        List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
-        List<SolrDocument> locDocs = geoNames.stream()
-                .map(p -> p.mutate(id))
-                .collect(Collectors.toList());
-        docs.addAll(locDocs);
-
+    private void resolveDocumentRelations(String id, SolrDocument doc, SolrDocumentList docs, String parsed, List<NamedEntity> entities, List<GeoNameWithFrequencyScore> geoNames,
+                                          double similarity, double searchLines) {
+        if (geoNames.size() == 0) {
+            geoNames = locationResolver.getLocationsFromDocument(parsed);
+            List<SolrDocument> locDocs = geoNames.stream()
+                    .map(p -> p.mutate(id))
+                    .collect(Collectors.toList());
+            docs.addAll(locDocs);
+        }
         if (entities.size() > 0 && geoNames.size() > 0) {
             List<Coreference> coreferences = processCoreferences(docs, parsed, id, entities);
 
@@ -833,11 +843,11 @@ public class DocumentsController {
 
                     //Pull in the Solr documents for named entities and for locations
                     List<NamedEntity> entities = solrClient.QueryIndexedDocuments(NamedEntity.class, "docId:" + id + " AND entity:*", 100000, 0, null, null);
-
+                    List<GeoNameWithFrequencyScore> geoNames = solrClient.QueryIndexedDocuments(GeoNameWithFrequencyScore.class, "docId:" + id + " AND name:*", 100000, 0, null, null);
                     String parsed = doc.get("parsed").toString();
 
                     SolrDocumentList relDocs = new SolrDocumentList();
-                    resolveDocumentRelations(id, doc, relDocs, parsed, entities, similarity, searchLines);
+                    resolveDocumentRelations(id, doc, relDocs, parsed, entities, geoNames, similarity, searchLines);
 
                     logger.info("storing data to Solr");
                     solrClient.indexDocuments(relDocs);
