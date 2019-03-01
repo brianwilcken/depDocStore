@@ -11,11 +11,13 @@ public class NamedEntity extends IndexedObject {
     private int line;
     private Span span;
     private String id;
+    private String source;
 
-    public NamedEntity(String entity, Span span, int line) {
+    public NamedEntity(String entity, Span span, int line, String source) {
         this.entity = entity;
         this.span = span;
         this.line = line;
+        this.source = source;
         id = UUID.randomUUID().toString();
     }
 
@@ -83,5 +85,13 @@ public class NamedEntity extends IndexedObject {
 
     public void setSpan(Span span) {
         this.span = span;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
     }
 }

@@ -336,7 +336,7 @@ public class NLPTools {
                 int spanStart = entityTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - tokenIndexDecrement - 1; //subtract two token indices for every entity to accomodate for start/end tags
                 int spanEnd = entityTokens.get(entityTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - tokenIndexDecrement;
                 Span span = new Span(spanStart, spanEnd, type);
-                NamedEntity namedEntity = new NamedEntity(entity, span, i);
+                NamedEntity namedEntity = new NamedEntity(entity, span, i, "Annotation");
                 entities.add(namedEntity);
                 tagTokenNum++;
             }

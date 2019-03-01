@@ -198,8 +198,10 @@ public class DocumentsController {
                 List<GeoNameWithFrequencyScore> geoNames = locationResolver.getLocationsFromDocument(parsed);
                 List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, geoNames, threshold);
                 String annotated = NLPTools.autoAnnotate(doc.get("parsed").toString(), entities);
+                Map<String, List<NamedEntity>> annotatedWithEntities = new HashMap<>();
+                annotatedWithEntities.put(annotated, entities);
 
-                return ResponseEntity.ok().body(Tools.formJsonResponse(annotated));
+                return ResponseEntity.ok().body(Tools.formJsonResponse(annotatedWithEntities));
             }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Tools.formJsonResponse(null));
         } catch (Exception e) {

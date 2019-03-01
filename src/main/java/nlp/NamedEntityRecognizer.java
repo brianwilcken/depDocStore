@@ -132,7 +132,7 @@ public class NamedEntityRecognizer {
                     if ("O".equals(ne)) {
                         inEntity = false;
                         if (!currentEntityType.equals("DATE")) {
-                            namedEntities.add(new NamedEntity(currentEntity.trim(), null, i));
+                            namedEntities.add(new NamedEntity(currentEntity.trim(), null, i, "StanfordNLP"));
                         }
                     } else {
                         currentEntity += " " + token.originalText();
@@ -160,11 +160,12 @@ public class NamedEntityRecognizer {
 
         for (String facilityType : facilities.keySet()) {
             List<Facility> typeFacilities = facilities.get(facilityType);
-            List<String> facilityRegexs = typeFacilities.stream().map(p -> Tools.escapeRegex(p.getName())).collect(Collectors.toList());
+            //Map<Facility, String> facilityRegexs = typeFacilities.stream().collect(Collectors.toMap(p -> p, p -> Tools.escapeRegex(p.getName())));
             //String regex = typeFacilities.stream().map(p -> p.getName()).reduce((c, n) -> c + "|" + n).orElse("");
             //regex = Tools.escapeRegex(regex);
 
-            for (String regex : facilityRegexs) {
+            for (Facility facility : typeFacilities) {
+                String regex = Tools.escapeRegex(facility.getName());
                 if (!Strings.isNullOrEmpty(regex)) {
                     Pattern pattern;
                     try {
@@ -186,10 +187,10 @@ public class NamedEntityRecognizer {
                             String[] entityTokensArr = spanTokens.stream().map(p -> p.toString()).toArray(String[]::new);
                             String entity = String.join(" ", entityTokensArr);
                             if (pattern.matcher(entity).matches()) {
-                                int spanStart = spanTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - 1;
-                                int spanEnd = spanTokens.get(spanTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class).intValue();
+                                int spanStart = spanTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class) - 1;
+                                int spanEnd = spanTokens.get(spanTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class);
                                 Span span = new Span(spanStart, spanEnd, facilityType);
-                                NamedEntity namedEntity = new NamedEntity(entity, span, s);
+                                NamedEntity namedEntity = new NamedEntity(entity, span, s, "AHA");
                                 boolean storeEntity = true;
                                 for (NamedEntity storedEntity : entities) {
                                     if (storedEntity.getLine() == s && storedEntity.getSpan().intersects(span)) {
@@ -216,9 +217,9 @@ public class NamedEntityRecognizer {
                 String modelFile;
                 if (category.contains(":")) {
                     String[] categoryAndVersion = category.split(":");
-                    category = categoryAndVersion[0];
+                    String categoryOnly = categoryAndVersion[0];
                     String version = categoryAndVersion[1];
-                    modelFile = getModelFilePath(getModelDir(category, version));
+                    modelFile = getModelFilePath(getModelDir(categoryOnly, version));
                 } else {
                     modelFile = getModelFilePath(getModelDir(category, false));
                 }
@@ -239,7 +240,7 @@ public class NamedEntityRecognizer {
                         String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
                         String entity = String.join(" ", entityParts);
                         if (prob > threshold) {
-                            NamedEntity namedEntity = new NamedEntity(entity, span, s);
+                            NamedEntity namedEntity = new NamedEntity(entity, span, s, category);
                             //curateNamedEntityType(category, namedEntity);
                             final int currLine = s;
                             //resolve duplicate entities that may overlap between different model categories
