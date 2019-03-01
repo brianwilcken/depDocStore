@@ -236,6 +236,29 @@ public class Tools {
 		return ((num1 - rng) < num2) && (num2 < (num1 + rng));
 	}
 
+	public static String escapeRegex(String regex) {
+		regex = regex.replace("(", "\\(");
+		regex = regex.replace("/", "\\/");
+		regex = regex.replace("{", "\\{");
+		regex = regex.replace("[", "\\[");
+		regex = regex.replace("^", "\\^");
+		regex = regex.replace("-", "\\-");
+		regex = regex.replace("&", "\\&");
+		regex = regex.replace("$", "\\$");
+		regex = regex.replace("?", "\\?");
+		regex = regex.replace("*", "\\*");
+		regex = regex.replace("+", "\\+");
+		regex = regex.replace(",", "\\,");
+		regex = regex.replace(":", "\\:");
+		regex = regex.replace("=", "\\=");
+		regex = regex.replace("!", "\\!");
+		regex = regex.replace("<", "\\<");
+		regex = regex.replace(">", "\\>");
+		regex = regex.replace("|", "\\|");
+		regex = regex.replace("\\", "\\\\");
+		return regex;
+	}
+
 	@FunctionalInterface
 	public interface CheckedConsumer<T> {
 		void apply(T t) throws Exception;

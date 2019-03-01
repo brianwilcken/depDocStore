@@ -160,51 +160,45 @@ public class NamedEntityRecognizer {
 
         for (String facilityType : facilities.keySet()) {
             List<Facility> typeFacilities = facilities.get(facilityType);
-            List<String> facNames = typeFacilities.stream().map(p -> p.getName()).collect(Collectors.toList());//.reduce((c, n) -> c + "|" + n).orElse("");
-            List<String> facCaptureGrps = new ArrayList<>();
-            for (String facName : facNames) {
-                String[] facSplit = facName.split(" ");
-                List<String> captureGroups = new ArrayList<>();
-                for (String part : facSplit) {
-                    String titleCaps = WordUtils.capitalizeFully(part);
-                    String lowercase = part.toLowerCase();
-                    String captureGrp = "(" + titleCaps + "\\b|" + lowercase + "\\b)";
-                    captureGroups.add(captureGrp);
-                }
-                if (captureGroups.size() > 0) {
-                    String facCaptureGrp = "(" + captureGroups.stream().reduce((c, n) -> c + " " + n).get() + ")";
-                    facCaptureGrps.add(facCaptureGrp);
-                }
-            }
-            String regex = facCaptureGrps.stream().reduce((c, n) -> c + "|" + n).orElse("");
+            List<String> facilityRegexs = typeFacilities.stream().map(p -> Tools.escapeRegex(p.getName())).collect(Collectors.toList());
+            //String regex = typeFacilities.stream().map(p -> p.getName()).reduce((c, n) -> c + "|" + n).orElse("");
+            //regex = Tools.escapeRegex(regex);
 
-            if (!Strings.isNullOrEmpty(regex)) {
-                Pattern pattern = Pattern.compile(regex);
-                for (int s = 0; s < sentences.size(); s++) {
-                    String sentence = sentences.get(s).toString();
-                    List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
-                    Matcher facilityMatcher = pattern.matcher(sentence);
-                    while(facilityMatcher.find()) {
-                        int facStart = facilityMatcher.start();
-                        int facEnd = facilityMatcher.end();
-                        List<CoreLabel> spanTokens = tokens.stream()
-                                .filter(p -> (facStart == 0 || p.beginPosition() >= facStart) && p.endPosition() <= facEnd)
-                                .collect(Collectors.toList());
-                        String[] entityTokensArr = spanTokens.stream().map(p -> p.toString()).toArray(String[]::new);
-                        String entity = String.join(" ", entityTokensArr);
-                        if (pattern.matcher(entity).matches()) {
-                            int spanStart = spanTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - 1;
-                            int spanEnd = spanTokens.get(spanTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class).intValue();
-                            Span span = new Span(spanStart, spanEnd, facilityType);
-                            NamedEntity namedEntity = new NamedEntity(entity, span, s);
-                            boolean storeEntity = true;
-                            for (NamedEntity storedEntity : entities) {
-                                if (storedEntity.getLine() == s && storedEntity.getSpan().intersects(span)) {
-                                    storeEntity = false;
+            for (String regex : facilityRegexs) {
+                if (!Strings.isNullOrEmpty(regex)) {
+                    Pattern pattern;
+                    try {
+                        pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+                    } catch (Exception e) {
+                        logger.error(e.getMessage(), e);
+                        continue;
+                    }
+                    for (int s = 0; s < sentences.size(); s++) {
+                        String sentence = sentences.get(s).toString();
+                        List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+                        Matcher facilityMatcher = pattern.matcher(sentence);
+                        while(facilityMatcher.find()) {
+                            int facStart = facilityMatcher.start();
+                            int facEnd = facilityMatcher.end();
+                            List<CoreLabel> spanTokens = tokens.stream()
+                                    .filter(p -> (facStart == 0 || p.beginPosition() >= facStart) && p.endPosition() <= facEnd)
+                                    .collect(Collectors.toList());
+                            String[] entityTokensArr = spanTokens.stream().map(p -> p.toString()).toArray(String[]::new);
+                            String entity = String.join(" ", entityTokensArr);
+                            if (pattern.matcher(entity).matches()) {
+                                int spanStart = spanTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class).intValue() - 1;
+                                int spanEnd = spanTokens.get(spanTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class).intValue();
+                                Span span = new Span(spanStart, spanEnd, facilityType);
+                                NamedEntity namedEntity = new NamedEntity(entity, span, s);
+                                boolean storeEntity = true;
+                                for (NamedEntity storedEntity : entities) {
+                                    if (storedEntity.getLine() == s && storedEntity.getSpan().intersects(span)) {
+                                        storeEntity = false;
+                                    }
                                 }
-                            }
-                            if (storeEntity) {
-                                entities.add(namedEntity);
+                                if (storeEntity) {
+                                    entities.add(namedEntity);
+                                }
                             }
                         }
                     }
