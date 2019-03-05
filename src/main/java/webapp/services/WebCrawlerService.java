@@ -48,8 +48,7 @@ public class WebCrawlerService {
         config = new CrawlConfig();
         config.setCrawlStorageFolder(crawlStorageFolder);
         config.setIncludeHttpsPages(true);
-        config.setMaxDepthOfCrawling(5);
-        config.setMaxPagesToFetch(100);
+        config.setMaxDepthOfCrawling(1);
         config.setIncludeBinaryContentInCrawling(true);
         config.setMaxDownloadSize(104857600); //100MB
     }
