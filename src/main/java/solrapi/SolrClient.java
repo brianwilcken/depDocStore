@@ -310,6 +310,13 @@ public class SolrClient {
 		return func;
 	}
 
+	public void formatForWord2VecModelTraining(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
+		String parsed = doc.get("parsed").toString();
+		parsed = parsed.replace("\r", " ").replace("\n", " ");
+		fos.write(parsed.getBytes(Charset.forName("Cp1252")));
+		fos.write(System.lineSeparator().getBytes());
+	}
+
 	public void formatForDoccatModelTraining(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
 		String parsed = doc.get("parsed").toString();
 		String normalized = NLPTools.normalizeText(parsed);

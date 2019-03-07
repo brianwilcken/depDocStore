@@ -20,6 +20,7 @@ import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.Span;
 import opennlp.tools.util.TrainingParameters;
 import opennlp.tools.util.eval.FMeasure;
+import opennlp.tools.util.featuregen.WordClusterDictionary;
 import org.apache.commons.collections.ArrayStack;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -101,12 +102,14 @@ public class NamedEntityRecognizer {
     //private TokenizerModel tokenizerModel;
     private SolrClient client;
     private Neo4jClient neo4jClient;
+    private WordVectorizer vectorizer;
 
     public NamedEntityRecognizer(SolrClient client) {
         sentModel = NLPTools.getModel(SentenceModel.class, new ClassPathResource(Tools.getProperty("nlp.sentenceDetectorModel")));
         //tokenizerModel = NLPTools.getModel(TokenizerModel.class, new ClassPathResource(Tools.getProperty("nlp.tokenizerModel")));
         this.client = client;
         neo4jClient = new Neo4jClient();
+        vectorizer = new WordVectorizer(client);
     }
 
     public List<NamedEntity> detectNamedEntitiesStanford(String document) {
@@ -355,6 +358,7 @@ public class NamedEntityRecognizer {
 
         Map<String, Object> resources = new HashMap<>();
         resources.put("ner-dict", getTrainingDictionary(category));
+        resources.put("word2vec.cluster", getWordClusterDictionary(category, 1));
 
         int lineNum = 0;
         try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
@@ -485,6 +489,26 @@ public class NamedEntityRecognizer {
             return dict;
         } catch (IOException e) {
             return new Dictionary();
+        }
+    }
+
+    private WordClusterDictionary getWordClusterDictionary(String category, int numAttempts) throws IOException {
+        try {
+            String clusterFilePath = vectorizer.getClusterFilePath(category);
+            FileInputStream fin = new FileInputStream(new File(clusterFilePath));
+            WordClusterDictionary dict = new WordClusterDictionary(fin);
+            return dict;
+        } catch (IOException e) {
+            try {
+                if (numAttempts < 2) {
+                    vectorizer.generateWordClusterDictionary(category, 1);
+                    return getWordClusterDictionary(category, ++numAttempts);
+                } else {
+                    throw e;
+                }
+            } catch (IOException e1) {
+                throw e1;
+            }
         }
     }
 

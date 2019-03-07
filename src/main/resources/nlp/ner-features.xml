@@ -22,4 +22,8 @@
         <str name="dict">ner-dict</str>
         <str name="prefix">dict</str>
     </generator>
+    <generator class="opennlp.tools.util.featuregen.WordClusterFeatureGeneratorFactory">
+        <str name="dict">word2vec.cluster</str>
+        <bool name="lowerCase">true</bool>
+    </generator>
 </featureGenerators>

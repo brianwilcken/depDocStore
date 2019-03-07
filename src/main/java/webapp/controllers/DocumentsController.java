@@ -61,6 +61,7 @@ public class DocumentsController {
     private Neo4jClient neo4jClient;
     private DocumentCategorizer categorizer;
     private NamedEntityRecognizer recognizer;
+    private WordVectorizer vectorizer;
     private final LocationResolver locationResolver;
 
     private static String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
@@ -74,6 +75,9 @@ public class DocumentsController {
 
     @Autowired
     private NERModelTrainingService nerModelTrainingService;
+
+    @Autowired
+    private W2VModelTrainingService w2vModelTrainingService;
 
     @Autowired
     private DoccatModelTrainingService doccatModelTrainingService;
@@ -93,6 +97,7 @@ public class DocumentsController {
         neo4jClient = new Neo4jClient();
         categorizer = new DocumentCategorizer(solrClient);
         recognizer = new NamedEntityRecognizer(solrClient);
+        vectorizer = new WordVectorizer(solrClient);
         locationResolver = new LocationResolver();
     }
 
@@ -344,6 +349,24 @@ public class DocumentsController {
         try {
             Map<String, List<DataModelLink>> assets = neo4jClient.getTradableAssets(linkName);
             return ResponseEntity.ok().body(Tools.formJsonResponse(assets));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/trainWordToVec", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> trainWordToVecModel(String[] category, boolean doAsync) {
+        logger.info("In trainWordToVecModel method");
+        try {
+            if (!doAsync) {
+                w2vModelTrainingService.process(this, Arrays.asList(category));
+            } else {
+                w2vModelTrainingService.processAsync(this, Arrays.asList(category));
+            }
+
+            return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
@@ -868,6 +891,13 @@ public class DocumentsController {
     public void initiateNERModelTraining(List<String> categories) throws IOException {
         for (String category : categories) {
             recognizer.trainNERModel(category);
+        }
+    }
+
+    public void initiateW2VModelTraining(List<String> categories) throws IOException {
+        for (String category : categories) {
+            vectorizer.trainModel(category);
+            vectorizer.generateWordClusterDictionary(category, 1);
         }
     }
 
