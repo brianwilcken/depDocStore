@@ -1,7 +1,7 @@
 package nlp;
 
+import common.Tools;
 import org.apache.commons.io.FileUtils;
-import org.deeplearning4j.clustering.cluster.Cluster;
 import org.deeplearning4j.clustering.cluster.ClusterSet;
 import org.deeplearning4j.clustering.cluster.Point;
 import org.deeplearning4j.clustering.cluster.PointClassification;
@@ -9,20 +9,28 @@ import org.deeplearning4j.clustering.kmeans.KMeansClustering;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
+import org.deeplearning4j.models.word2vec.VocabWord;
 import org.deeplearning4j.models.word2vec.Word2Vec;
+import org.deeplearning4j.models.word2vec.wordstore.VocabCache;
+import org.deeplearning4j.plot.BarnesHutTsne;
 import org.deeplearning4j.text.sentenceiterator.LineSentenceIterator;
 import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
 import org.deeplearning4j.text.sentenceiterator.SentencePreProcessor;
 import org.deeplearning4j.text.tokenization.tokenizer.preprocessor.CommonPreprocessor;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
+import org.nd4j.linalg.api.buffer.DataBuffer;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.exception.ND4JIllegalStateException;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.primitives.Pair;
 import solrapi.SolrClient;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -30,15 +38,17 @@ public class WordVectorizer {
 
     final static Logger logger = LogManager.getLogger(WordVectorizer.class);
 
+    private static String wordVectorsPath = Tools.getProperty("wordVectors.location");
+
     private SolrClient client;
 
     public static void main(String[] args) {
         WordVectorizer vectorizer = new WordVectorizer(new SolrClient("http://localhost:8983/solr"));
-        //vectorizer.trainModel("data/wordVectors.txt", "Water");
-        //vectorizer.evaluateModel("data/wordVectors.txt");
+        //vectorizer.trainModel("Water");
+        //vectorizer.evaluateModel("Water");
 
         try {
-            vectorizer.generateWordClusterDictionary("Water", 1);
+            vectorizer.generateWordClusterDictionary("Water");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -90,7 +100,7 @@ public class WordVectorizer {
         String modelFilePath = getModelFilePath(category);
         String trainingFilePath = getTrainingFilePath(category);
 
-        client.writeCorpusDataToFile(trainingFilePath, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFilePath, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
 
         SentenceIterator iter = new LineSentenceIterator(new File(trainingFilePath));
 
@@ -107,10 +117,10 @@ public class WordVectorizer {
 
         logger.info("Building model....");
         Word2Vec vec = new Word2Vec.Builder()
-                .minWordFrequency(5)
+                .minWordFrequency(200)
                 .layerSize(100)
                 .seed(42)
-                .windowSize(5)
+                .windowSize(20)
                 .iterate(iter)
                 .tokenizerFactory(t)
                 .build();
@@ -126,12 +136,60 @@ public class WordVectorizer {
         }
     }
 
-    private ClusterSet generateKMeansCluster(Word2Vec vec) {
-        //iterate over rows in the wordvector and create a List of word vectors
-        List<INDArray> vectors = new ArrayList<>();
-        for (String word : vec.vocab().words()) {
-            vectors.add(vec.getWordVectorMatrix(word));
+    public void evaluateModel(String category) {
+        try {
+            //STEP 1: Initialization
+            int iterations = 100;
+            String modelFilePath = getModelFilePath(category);
+            String tsneFilePath = getTSNEFilePath(category);
+            //create an n-dimensional array of doubles
+            Nd4j.setDataType(DataBuffer.Type.DOUBLE);
+            List<String> cacheList = new ArrayList<>(); //cacheList is a dynamic array of strings used to hold all words
+
+            //STEP 2: Turn text input into a list of words
+            logger.info("Load & Vectorize data....");
+            //Get the data of all unique word vectors
+            Pair<InMemoryLookupTable,VocabCache> vectors = WordVectorSerializer.loadTxt(new File(modelFilePath));
+            VocabCache cache = vectors.getSecond();
+            INDArray weights = vectors.getFirst().getSyn0();    //seperate weights of unique words into their own list
+
+            for(int i = 0; i < cache.numWords(); i++)   //seperate strings of words into their own list
+                cacheList.add(cache.wordAtIndex(i));
+
+            //STEP 3: build a dual-tree tsne to use later
+            logger.info("Build model....");
+            BarnesHutTsne tsne = new BarnesHutTsne.Builder()
+                    .setMaxIter(iterations).theta(0.5)
+                    .normalize(false)
+                    .learningRate(500)
+                    .useAdaGrad(false)
+    //                .usePca(false)
+                    .build();
+
+            //STEP 4: establish the tsne values and save them to a file
+            logger.info("Store TSNE Coordinates for Plotting....");
+            (new File(tsneFilePath)).getParentFile().mkdirs();
+
+            tsne.fit(weights);
+            tsne.saveAsFile(cacheList, tsneFilePath);
+            //This tsne will use the weights of the vectors as its matrix, have two dimensions, use the words strings as
+            //labels, and be written to the outputFile created on the previous line
+            // Plot Data with gnuplot
+            //    set datafile separator ","
+            //    plot 'tsne-standard-coords.csv' using 1:2:3 with labels font "Times,8"
+            //!!! Possible error: plot was recently deprecated. Might need to re-do the last line
+            //
+            // If you use nDims=3 in the call to tsne.plot above, you can use the following gnuplot commands to
+            // generate a 3d visualization of the word vectors:
+            //    set datafile separator ","
+            //    splot 'tsne-standard-coords.csv' using 1:2:3:4 with labels font "Times,8"
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
         }
+    }
+
+    private ClusterSet generateKMeansCluster(List<INDArray> vectors) {
+        //iterate over rows in the wordvector and create a List of word vectors
         logger.info(vectors.size() + " vectors extracted to create Point list");
         List<Point> pointsLst = Point.toPoints(vectors);
         logger.info(pointsLst.size() + " Points created out of " + vectors.size() + " vectors");
@@ -139,40 +197,44 @@ public class WordVectorizer {
         //create a kmeanscluster instance
         int maxIterationCount = 5;
         String distanceFunction = "cosinesimilarity";
-        int maxClusterCount = 20;
-        int clusterCount = 1;
-        Map<Integer, Double> sumSquaredErrors = new HashMap<>();
-        Map<Integer, Double> backDiffs = new HashMap<>();
-        Map<Integer, ClusterSet> clusterSets = new HashMap<>();
-        for (; clusterCount <= maxClusterCount; clusterCount++) {
-            logger.info("optimizing cluster count: " + clusterCount);
-            sumSquaredErrors.put(clusterCount, 0d);
-            KMeansClustering kmc = KMeansClustering.setup(clusterCount, maxIterationCount, distanceFunction);
-            ClusterSet cs = kmc.applyTo(pointsLst);
-            clusterSets.put(clusterCount, cs);
-            for (Cluster cluster : cs.getClusters()) {
-                Point center = cluster.getCenter();
-                for (Point point : cluster.getPoints()) {
-                    double squaredError = Math.pow(point.getArray().squaredDistance(center.getArray()), 2);
-                    double sse = sumSquaredErrors.get(clusterCount) + squaredError;
-                    sumSquaredErrors.replace(clusterCount, sse);
-                }
-            }
-            if (clusterCount > 1) {
-                double backDiff = calculateBackwardDifference(clusterCount, sumSquaredErrors);
-                backDiffs.put(clusterCount, backDiff);
-            }
-            if (clusterCount > 2) {
-                int optimalCluster = findOptimalClusterNum(backDiffs);
-                if (optimalCluster != clusterCount) {
-                    return clusterSets.get(optimalCluster);
-                }
-            }
-        }
-
-        int optimalCluster = findOptimalClusterNum(backDiffs);
-
-        return clusterSets.get(optimalCluster);
+        int K = (int)Math.round(pointsLst.size() * 0.001); //number of clusters is 0.1% of the total number of word vectors
+        KMeansClustering kmc = KMeansClustering.setup(K, maxIterationCount, distanceFunction);
+        ClusterSet cs = kmc.applyTo(pointsLst);
+        return cs;
+//        int maxClusterCount = 100;
+//        int clusterCount = 1;
+//        Map<Integer, Double> sumSquaredErrors = new HashMap<>();
+//        Map<Integer, Double> backDiffs = new HashMap<>();
+//        Map<Integer, ClusterSet> clusterSets = new HashMap<>();
+//        for (; clusterCount <= maxClusterCount; clusterCount++) {
+//            logger.info("optimizing cluster count: " + clusterCount);
+//            sumSquaredErrors.put(clusterCount, 0d);
+//            KMeansClustering kmc = KMeansClustering.setup(clusterCount, maxIterationCount, distanceFunction);
+//            ClusterSet cs = kmc.applyTo(pointsLst);
+//            clusterSets.put(clusterCount, cs);
+//            for (Cluster cluster : cs.getClusters()) {
+//                Point center = cluster.getCenter();
+//                for (Point point : cluster.getPoints()) {
+//                    double squaredError = Math.pow(point.getArray().squaredDistance(center.getArray()), 2);
+//                    double sse = sumSquaredErrors.get(clusterCount) + squaredError;
+//                    sumSquaredErrors.replace(clusterCount, sse);
+//                }
+//            }
+//            if (clusterCount > 1) {
+//                double backDiff = calculateBackwardDifference(clusterCount, sumSquaredErrors);
+//                backDiffs.put(clusterCount, backDiff);
+//            }
+//            if (clusterCount > 2) {
+//                int optimalCluster = findOptimalClusterNum(backDiffs);
+//                if (optimalCluster != clusterCount) {
+//                    return clusterSets.get(optimalCluster);
+//                }
+//            }
+//        }
+//
+//        int optimalCluster = findOptimalClusterNum(backDiffs);
+//
+//        return clusterSets.get(optimalCluster);
     }
 
     //using "elbow method" for finding best number of clusters
@@ -216,39 +278,53 @@ public class WordVectorizer {
         return backwardDiff;
     }
 
-    public void generateWordClusterDictionary(String category, int numAttempts) throws IOException {
+    public void generateWordClusterDictionary(String category) throws IOException {
         String clusterFilePath = getClusterFilePath(category);
-        String modelFilePath = getModelFilePath(category);
+        String trainingFilePath = getTrainingFilePath(category);
+        client.writeCorpusDataToFile(trainingFilePath, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
 
         Word2Vec vec;
         try {
-            vec = WordVectorSerializer.readWord2VecModel(modelFilePath);
+            //load the Google word vectors model
+            vec = WordVectorSerializer.readWord2VecModel(wordVectorsPath);
         } catch (ND4JIllegalStateException e) {
-            if (numAttempts < 2) {
-                trainModel(category);
-                generateWordClusterDictionary(category, ++numAttempts);
-                return;
-            } else {
-                throw new IOException("Unable to read word vector model!");
+            throw new IOException("Unable to read Google word vector model!");
+        }
+
+        String corpus = FileUtils.readFileToString(new File(trainingFilePath), Charset.forName("utf-8"));
+
+        String numberless = Tools.removeAllNumbers(corpus);
+        String cleaned = Tools.removeSpecialCharacters(numberless);
+
+        String[] allWords = NLPTools.detectTokens(cleaned);
+
+        TreeSet<String> uniqueWords = new TreeSet<>();
+        for (String word : allWords) {
+            uniqueWords.add(word);
+        }
+
+        List<INDArray> vectors = new ArrayList<>();
+        VocabCache<VocabWord> vocab = vec.getVocab();
+        for (String word : uniqueWords) {
+            if (vocab.containsWord(word)) {
+                vectors.add(vec.getWordVectorMatrix(word));
             }
         }
-        ClusterSet cs = generateKMeansCluster(vec);
+
+        ClusterSet cs = generateKMeansCluster(vectors);
 
         StringBuilder dict = new StringBuilder();
-        for (String word : vec.vocab().words()) {
-            Point testPoint = new Point("testId", word, vec.getWordVector(word));
-            PointClassification pc = cs.classifyPoint(testPoint);
-            String clusterId = pc.getCluster().getId();
-            dict.append(word + " " + clusterId);
-            dict.append(System.lineSeparator());
+        for (String word : uniqueWords) {
+            if (vocab.containsWord(word)) {
+                Point testPoint = new Point("testId", word, vec.getWordVector(word));
+                PointClassification pc = cs.classifyPoint(testPoint);
+                String clusterId = pc.getCluster().getId();
+                dict.append(word + " " + clusterId);
+                dict.append(System.lineSeparator());
+            }
         }
 
         FileUtils.writeStringToFile(new File(clusterFilePath), dict.toString(), StandardCharsets.UTF_8);
-    }
-
-    public void evaluateModel(String modelPath) {
-        Word2Vec vec = WordVectorSerializer.readWord2VecModel(modelPath);
-        vec.wordsNearest("water", 5);
     }
 
     public String getClusterFilePath(String category) {
@@ -258,6 +334,11 @@ public class WordVectorizer {
 
     private String getModelFilePath(String category) {
         String modelFile = "data/ner/" + category + "/w2v.txt";
+        return modelFile;
+    }
+
+    private String getTSNEFilePath(String category) {
+        String modelFile = "data/ner/" + category + "/tsne-standard-coords.csv";
         return modelFile;
     }
 

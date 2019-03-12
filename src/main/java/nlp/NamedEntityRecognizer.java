@@ -501,7 +501,7 @@ public class NamedEntityRecognizer {
         } catch (IOException e) {
             try {
                 if (numAttempts < 2) {
-                    vectorizer.generateWordClusterDictionary(category, 1);
+                    vectorizer.generateWordClusterDictionary(category);
                     return getWordClusterDictionary(category, ++numAttempts);
                 } else {
                     throw e;

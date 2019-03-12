@@ -896,8 +896,7 @@ public class DocumentsController {
 
     public void initiateW2VModelTraining(List<String> categories) throws IOException {
         for (String category : categories) {
-            vectorizer.trainModel(category);
-            vectorizer.generateWordClusterDictionary(category, 1);
+            vectorizer.generateWordClusterDictionary(category);
         }
     }
 
