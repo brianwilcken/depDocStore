@@ -8,28 +8,18 @@ import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.util.CoreMap;
 import neo4japi.Neo4jClient;
 import neo4japi.domain.Facility;
-import opennlp.tools.cmdline.namefind.NameEvaluationErrorListener;
-import opennlp.tools.cmdline.namefind.TokenNameFinderDetailedFMeasureListener;
 import opennlp.tools.dictionary.Dictionary;
-import opennlp.tools.ml.BeamSearch;
-import opennlp.tools.ml.maxent.quasinewton.QNTrainer;
-import opennlp.tools.ml.naivebayes.NaiveBayesTrainer;
 import opennlp.tools.namefind.*;
 import opennlp.tools.sentdetect.SentenceModel;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.Span;
 import opennlp.tools.util.TrainingParameters;
-import opennlp.tools.util.eval.FMeasure;
+import opennlp.tools.util.featuregen.BrownCluster;
 import opennlp.tools.util.featuregen.WordClusterDictionary;
-import org.apache.commons.collections.ArrayStack;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.WordUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.common.SolrDocument;
-import org.apache.solr.common.SolrDocumentList;
 import org.springframework.core.io.ClassPathResource;
 import solrapi.SolrClient;
 import webapp.models.GeoNameWithFrequencyScore;
@@ -359,6 +349,7 @@ public class NamedEntityRecognizer {
         Map<String, Object> resources = new HashMap<>();
         resources.put("ner-dict", getTrainingDictionary(category));
         resources.put("word2vec.cluster", getWordClusterDictionary(category, 1));
+        resources.put("brownCluster", getBrownClusterDictionary(category, 1));
 
         int lineNum = 0;
         try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
@@ -494,7 +485,7 @@ public class NamedEntityRecognizer {
 
     private WordClusterDictionary getWordClusterDictionary(String category, int numAttempts) throws IOException {
         try {
-            String clusterFilePath = vectorizer.getClusterFilePath(category);
+            String clusterFilePath = vectorizer.getXMeansClusterFilePath(category);
             FileInputStream fin = new FileInputStream(new File(clusterFilePath));
             WordClusterDictionary dict = new WordClusterDictionary(fin);
             return dict;
@@ -503,6 +494,26 @@ public class NamedEntityRecognizer {
                 if (numAttempts < 2) {
                     vectorizer.generateWordClusterDictionary(category);
                     return getWordClusterDictionary(category, ++numAttempts);
+                } else {
+                    throw e;
+                }
+            } catch (IOException e1) {
+                throw e1;
+            }
+        }
+    }
+
+    private BrownCluster getBrownClusterDictionary(String category, int numAttempts) throws IOException {
+        try {
+            String clusterFilePath = vectorizer.getBrownClusterFilePath(category);
+            FileInputStream fin = new FileInputStream(new File(clusterFilePath));
+            BrownCluster dict = new BrownCluster(fin);
+            return dict;
+        } catch (IOException e) {
+            try {
+                if (numAttempts < 2) {
+                    vectorizer.generateWordClusterDictionary(category);
+                    return getBrownClusterDictionary(category, ++numAttempts);
                 } else {
                     throw e;
                 }

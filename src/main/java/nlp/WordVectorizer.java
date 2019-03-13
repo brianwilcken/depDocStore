@@ -4,7 +4,6 @@ import common.Tools;
 import org.apache.commons.io.FileUtils;
 import org.deeplearning4j.clustering.cluster.ClusterSet;
 import org.deeplearning4j.clustering.cluster.Point;
-import org.deeplearning4j.clustering.cluster.PointClassification;
 import org.deeplearning4j.clustering.kmeans.KMeansClustering;
 
 import org.apache.logging.log4j.LogManager;
@@ -18,6 +17,7 @@ import org.deeplearning4j.plot.BarnesHutTsne;
 import org.deeplearning4j.text.sentenceiterator.LineSentenceIterator;
 import org.deeplearning4j.text.sentenceiterator.SentenceIterator;
 import org.deeplearning4j.text.sentenceiterator.SentencePreProcessor;
+import org.deeplearning4j.text.stopwords.StopWords;
 import org.deeplearning4j.text.tokenization.tokenizer.preprocessor.CommonPreprocessor;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
@@ -26,6 +26,10 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.exception.ND4JIllegalStateException;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.primitives.Pair;
+import smile.clustering.HierarchicalClustering;
+import smile.clustering.XMeans;
+import smile.clustering.linkage.CompleteLinkage;
+import smile.math.Math;
 import solrapi.SolrClient;
 
 import java.io.File;
@@ -188,11 +192,11 @@ public class WordVectorizer {
         }
     }
 
-    private ClusterSet generateKMeansCluster(List<INDArray> vectors) {
+    private ClusterSet generateKMeansCluster(INDArray matrix) {
         //iterate over rows in the wordvector and create a List of word vectors
-        logger.info(vectors.size() + " vectors extracted to create Point list");
-        List<Point> pointsLst = Point.toPoints(vectors);
-        logger.info(pointsLst.size() + " Points created out of " + vectors.size() + " vectors");
+        logger.info(matrix.size(0) + " vectors extracted to create Point list");
+        List<Point> pointsLst = Point.toPoints(matrix);
+        logger.info(pointsLst.size() + " Points created out of " + matrix.size(0) + " vectors");
 
         //create a kmeanscluster instance
         int maxIterationCount = 5;
@@ -279,7 +283,8 @@ public class WordVectorizer {
     }
 
     public void generateWordClusterDictionary(String category) throws IOException {
-        String clusterFilePath = getClusterFilePath(category);
+        String xmeansClusterFilePath = getXMeansClusterFilePath(category);
+        String brownClusterFilePath = getBrownClusterFilePath(category);
         String trainingFilePath = getTrainingFilePath(category);
         client.writeCorpusDataToFile(trainingFilePath, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
 
@@ -298,28 +303,35 @@ public class WordVectorizer {
 
         String[] allWords = NLPTools.detectTokens(cleaned);
 
-        TreeSet<String> uniqueWords = new TreeSet<>();
+        List<String> stopWords = StopWords.getStopWords();
+        TreeSet<String> stopWordsTree = new TreeSet<>(stopWords);
+        TreeMap<String, Integer> uniqueWords = new TreeMap<>();
         for (String word : allWords) {
-            uniqueWords.add(word);
-        }
-
-        List<INDArray> vectors = new ArrayList<>();
-        VocabCache<VocabWord> vocab = vec.getVocab();
-        for (String word : uniqueWords) {
-            if (vocab.containsWord(word)) {
-                vectors.add(vec.getWordVectorMatrix(word));
+            if (!stopWordsTree.contains(word)) {
+                if (!uniqueWords.containsKey(word)) {
+                    uniqueWords.put(word, 1);
+                } else {
+                    int count = uniqueWords.get(word);
+                    uniqueWords.replace(word, ++count);
+                }
             }
         }
 
-        ClusterSet cs = generateKMeansCluster(vectors);
+        outputXMeansClusters(xmeansClusterFilePath, vec, uniqueWords);
+        outputBrownClusters(brownClusterFilePath, vec, uniqueWords);
+    }
 
+    private void outputXMeansClusters(String clusterFilePath, Word2Vec vec, TreeMap<String, Integer> uniqueWords) throws IOException {
+        INDArray matrix = vec.getWordVectors(uniqueWords.keySet());
+        double[][] weights = matrix.toDoubleMatrix();
+        XMeans xmeans = new XMeans(weights, 100);
+        VocabCache<VocabWord> vocab = vec.getVocab();
         StringBuilder dict = new StringBuilder();
-        for (String word : uniqueWords) {
+        for (String word : uniqueWords.keySet()) {
             if (vocab.containsWord(word)) {
-                Point testPoint = new Point("testId", word, vec.getWordVector(word));
-                PointClassification pc = cs.classifyPoint(testPoint);
-                String clusterId = pc.getCluster().getId();
-                dict.append(word + " " + clusterId);
+                double[] wordvec = vec.getWordVector(word);
+                int label = xmeans.predict(wordvec);
+                dict.append(word + " " + label);
                 dict.append(System.lineSeparator());
             }
         }
@@ -327,8 +339,64 @@ public class WordVectorizer {
         FileUtils.writeStringToFile(new File(clusterFilePath), dict.toString(), StandardCharsets.UTF_8);
     }
 
-    public String getClusterFilePath(String category) {
-        String modelFile = "data/ner/" + category + "/cluster.txt";
+    private void outputBrownClusters(String clusterFilePath, Word2Vec vec, TreeMap<String, Integer> uniqueWords) throws IOException {
+        VocabCache<VocabWord> vocab = vec.getVocab();
+        TreeMap<String, double[]> wordVectors = new TreeMap<>();
+        for (String word : uniqueWords.keySet()) {
+            if (vocab.containsWord(word)) {
+                double[] vector = vec.getWordVector(word);
+                wordVectors.put(word, vector);
+            }
+        }
+        double[][] weights = wordVectors.values().toArray(new double[wordVectors.size()][]);
+        double[][] proximity = getProximityMatrix(weights);
+        CompleteLinkage linkage = new CompleteLinkage(proximity);
+        HierarchicalClustering clustering = new HierarchicalClustering(linkage);
+        int[] labels = clustering.partition(100);
+
+//        PlotCanvas canvas = Dendrogram.plot(clustering.getTree(), clustering.getHeight());
+//        JFrame frame = new JFrame();
+//        frame.add(canvas);
+
+        String[] words = wordVectors.keySet().toArray(new String[wordVectors.size()]);
+        StringBuilder dict = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            //form binary representation of label
+            String label = Integer.toBinaryString(labels[i]);
+            String word = words[i];
+            int occurrences = uniqueWords.get(word);
+            dict.append(label);
+            dict.append("\t");
+            dict.append(word);
+            dict.append("\t");
+            dict.append(occurrences);
+            dict.append(System.lineSeparator());
+        }
+
+        FileUtils.writeStringToFile(new File(clusterFilePath), dict.toString(), StandardCharsets.UTF_8);
+    }
+
+    private double[][] getProximityMatrix(double[][] matrix) {
+        int n = matrix.length;
+
+        double[][] proximity = new double[n][];
+        for (int i = 0; i < n; i++) {
+            proximity[i] = new double[i + 1];
+            for (int j = 0; j < i; j++) {
+                proximity[i][j] = Math.distance(matrix[i], matrix[j]);
+            }
+        }
+
+        return proximity;
+    }
+
+    public String getXMeansClusterFilePath(String category) {
+        String modelFile = "data/ner/" + category + "/xmeans-clusters.txt";
+        return modelFile;
+    }
+
+    public String getBrownClusterFilePath(String category) {
+        String modelFile = "data/ner/" + category + "/brown-clusters.txt";
         return modelFile;
     }
 

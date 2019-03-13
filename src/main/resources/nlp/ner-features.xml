@@ -18,6 +18,13 @@
         <bool name="begin">true</bool>
         <bool name="end">false</bool>
     </generator>
+    <generator class="opennlp.tools.util.featuregen.WindowFeatureGeneratorFactory">
+        <int name="prevLength">2</int>
+        <int name="nextLength">2</int>
+        <generator class="opennlp.tools.util.featuregen.BrownClusterTokenClassFeatureGeneratorFactory">
+            <str name="dict">brownCluster</str>
+        </generator>
+    </generator>
     <generator class="opennlp.tools.util.featuregen.DictionaryFeatureGeneratorFactory">
         <str name="dict">ner-dict</str>
         <str name="prefix">dict</str>
@@ -25,5 +32,11 @@
     <generator class="opennlp.tools.util.featuregen.WordClusterFeatureGeneratorFactory">
         <str name="dict">word2vec.cluster</str>
         <bool name="lowerCase">true</bool>
+    </generator>
+    <generator class="opennlp.tools.util.featuregen.BrownClusterTokenFeatureGeneratorFactory">
+        <str name="dict">brownCluster</str>
+    </generator>
+    <generator class="opennlp.tools.util.featuregen.BrownClusterBigramFeatureGeneratorFactory">
+        <str name="dict">brownCluster</str>
     </generator>
 </featureGenerators>
