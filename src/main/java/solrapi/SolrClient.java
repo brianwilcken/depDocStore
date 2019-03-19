@@ -41,15 +41,20 @@ import com.google.common.io.Files;
 
 public class SolrClient {
 
-	private final static String COLLECTION = "dependencies";
+	private String collection = "dependencies";
 	
 	final static Logger logger = LogManager.getLogger(SolrClient.class);
 
 	private HttpSolrClient client;
 	private static ObjectMapper mapper = new ObjectMapper();
-	
+
 	public SolrClient(String solrHostURL) {
 		client = new HttpSolrClient.Builder(solrHostURL).build();
+	}
+
+	public SolrClient(String solrHostURL, String collection) {
+		this(solrHostURL);
+		this.collection = collection;
 	}
 	
 	public static void main(String[] args) {
@@ -126,8 +131,8 @@ public class SolrClient {
 					inputDocuments.add(solrInputDocument);
 				}
 
-				client.add(COLLECTION, inputDocuments);
-				UpdateResponse updateResponse = client.commit(COLLECTION);
+				client.add(collection, inputDocuments);
+				UpdateResponse updateResponse = client.commit(collection);
 				
 				if (updateResponse.getStatus() != 0) {
 					//TODO What should happen if the update fails?
@@ -163,8 +168,8 @@ public class SolrClient {
 
 	public void deleteDocuments(String query) throws SolrServerException {
 	    try {
-			client.deleteByQuery(COLLECTION, query);
-			UpdateResponse updateResponse = client.commit(COLLECTION);
+			client.deleteByQuery(collection, query);
+			UpdateResponse updateResponse = client.commit(collection);
 
             if (updateResponse.getStatus() != 0) {
                 //TODO What should happen if the update fails?
@@ -179,7 +184,7 @@ public class SolrClient {
 		query.setRows(0);
 		query.setQuery(queryStr);
 		try {
-			QueryResponse response = client.query(COLLECTION, query);
+			QueryResponse response = client.query(collection, query);
 			return response.getResults().getNumFound() > 0;
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
@@ -193,7 +198,7 @@ public class SolrClient {
 		query.setQuery(queryStr);
 		query.add("json.facet", facetQuery);
 		try {
-			QueryResponse response = client.query(COLLECTION, query);
+			QueryResponse response = client.query(collection, query);
 			SimpleOrderedMap<?> facets = (SimpleOrderedMap<?>) response.getResponse().get("facets");
 			return facets;
 		} catch (IOException e) {
@@ -208,7 +213,7 @@ public class SolrClient {
 	    query.setParam(CommonParams.STREAM_BODY, searchText);
 	    query.setRows(20);
 	    try {
-			SolrDocumentList response = client.query(COLLECTION, query).getResults();
+			SolrDocumentList response = client.query(collection, query).getResults();
 			return response;
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
@@ -231,7 +236,7 @@ public class SolrClient {
 			query.setFields(fields);
 		}
 		try {
-			SolrDocumentList response = client.query(COLLECTION, query).getResults();
+			SolrDocumentList response = client.query(collection, query).getResults();
 			return response;
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
@@ -259,7 +264,7 @@ public class SolrClient {
 			} catch (NoSuchMethodException | SecurityException e1) {
 				return null;
 			}
-			SolrDocumentList response = client.query(COLLECTION, query).getResults();
+			SolrDocumentList response = client.query(collection, query).getResults();
 			List<T> typedDocs = convertSolrDocsToTypedDocs(cons, response);
 			return typedDocs;
 		} catch (IOException e) {
@@ -405,7 +410,7 @@ public class SolrClient {
 			file.getParentFile().mkdirs();
 			FileOutputStream fos = new FileOutputStream(file);
 			final BlockingQueue<SolrDocument> tmpQueue = new LinkedBlockingQueue<SolrDocument>();
-			client.queryAndStreamResponse(COLLECTION, query, new CallbackHandler(tmpQueue));
+			client.queryAndStreamResponse(collection, query, new CallbackHandler(tmpQueue));
 			throttle.init(tmpQueue.size());
 
 			SolrDocument tmpDoc;

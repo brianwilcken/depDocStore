@@ -2,6 +2,7 @@ package neo4japi;
 
 import com.bericotech.clavin.gazetteer.GeoName;
 import com.google.common.collect.Lists;
+import common.Tools;
 import geoparsing.LocationResolver;
 import neo4japi.domain.*;
 import neo4japi.service.DocumentService;
@@ -11,12 +12,14 @@ import neo4japi.service.FacilityServiceImpl;
 import nlp.EntityRelation;
 import nlp.NLPTools;
 import org.apache.commons.math3.ml.clustering.Clusterable;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrDocument;
 import org.neo4j.ogm.cypher.BooleanOperator;
 import org.neo4j.ogm.cypher.ComparisonOperator;
 import org.neo4j.ogm.cypher.Filter;
 import org.neo4j.ogm.cypher.Filters;
 import org.neo4j.ogm.session.Session;
+import solrapi.SolrClient;
 import webapp.models.GeoNameWithFrequencyScore;
 
 import java.util.*;
@@ -33,8 +36,18 @@ public class Neo4jClient {
 
     public static void main(String[] args) {
         Neo4jClient client = new Neo4jClient();
+        SolrClient solrClient = new SolrClient("http://localhost:8983/solr", "facilities");
 
-        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
+        Map<String, List<DataModelNode>> facilityTypes = client.getFacilityTypes("BaseNode");
+
+        List<DataModelNode> dataModelNodes = facilityTypes.values().stream().flatMap(List::stream).filter(Tools.distinctByKey(p -> p.getUUID())).collect(Collectors.toList());
+
+        for (DataModelNode dataModelNode : dataModelNodes) {
+            client.generateConflationDataset(dataModelNode, solrClient);
+        }
+
+
+        //Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
         //Collection<DataModelNode> dataModelNodes = session.loadAll(DataModelNode.class);
 
         //List<DataModelNode> dataModelNodes = Lists.newArrayList(session.query(DataModelNode.class, "MATCH (n:DataModelNode) WHERE n.name = \"Coal\" RETURN n", Collections.EMPTY_MAP));
@@ -44,9 +57,9 @@ public class Neo4jClient {
 //            System.out.println(facility.getName());
 //        }
 
-        Map<String, List<DataModelNode>> facilityTypes = client.getFacilityTypes("Finished Water System");
 
-        facilityTypes.size();
+//
+//        facilityTypes.size();
 
 //        SolrDocument solrDoc = new SolrDocument();
 //        solrDoc.setField("filename", "facility_document.pdf");
@@ -67,6 +80,18 @@ public class Neo4jClient {
 //
 //        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
 //        session.save(doc);
+    }
+
+    private void generateConflationDataset(final DataModelNode typeNode, SolrClient solrClient) {
+        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
+        List<Facility> results = Lists.newArrayList(session.query(Facility.class, "MATCH (f:Facility)-[m:IsDataModelNode]->(n:DataModelNode {UUID:\"" + typeNode.getUUID() + "\"}) RETURN f", Collections.EMPTY_MAP));
+
+        List<SolrDocument> docs = results.stream().map(p -> p.mutateForSolr(typeNode)).collect(Collectors.toList());
+        try {
+            solrClient.indexDocuments(docs);
+        } catch (SolrServerException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public Map<String, List<Facility>> getFacilitiesInArea(List<GeoNameWithFrequencyScore> geoNames, String category) {

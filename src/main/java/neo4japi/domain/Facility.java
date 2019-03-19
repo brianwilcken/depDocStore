@@ -16,9 +16,11 @@ public class Facility extends Entity implements Clusterable {
 
     private String UUID;
     private String name;
+    private String address;
     private String city;
     private String county;
     private String state;
+    private String zip;
 
     private Double latitude;
     private Double longitude;
@@ -44,6 +46,30 @@ public class Facility extends Entity implements Clusterable {
         latitude = fac.get("latitude") != null ? Double.parseDouble(fac.get("latitude").toString()) : null;
         longitude = fac.get("longitude") != null ? Double.parseDouble(fac.get("longitude").toString()) : null;
         dataModelNode = fac.get("dataModelNode") != null ? fac.get("dataModelNode").toString().replace("_", " ") : null;
+    }
+
+    public SolrDocument mutateForSolr(DataModelNode typeNode) {
+        SolrDocument doc = new SolrDocument();
+        doc.addField("uuid", UUID);
+        doc.addField("typeId", typeNode.getUUID());
+        doc.addField("name", name);
+        doc.addField("type", typeNode.getName());
+        if (address != null)
+            doc.addField("address", address);
+        if (city != null)
+            doc.addField("city", city);
+        if (county != null)
+            doc.addField("county", county);
+        if (state != null)
+            doc.addField("state", state);
+        if (zip != null)
+            doc.addField("zip", zip);
+        if (latitude != null)
+            doc.addField("latitude", latitude);
+        if (longitude != null)
+            doc.addField("longitude", longitude);
+
+        return doc;
     }
 
     public Facility(NamedEntity entity, GeoNameWithFrequencyScore optimalGeoName, List<GeoNameWithFrequencyScore> geoNames) {
@@ -119,6 +145,14 @@ public class Facility extends Entity implements Clusterable {
         this.name = name;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
     public double getLatitude() {
         return latitude;
     }
@@ -165,6 +199,14 @@ public class Facility extends Entity implements Clusterable {
 
     public void setState(String state) {
         this.state = state;
+    }
+
+    public String getZip() {
+        return zip;
+    }
+
+    public void setZip(String zip) {
+        this.zip = zip;
     }
 
     public Set<Facility> getDownstreamDependencies() {
