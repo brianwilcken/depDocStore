@@ -41,6 +41,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class WordVectorizer {
 
@@ -48,31 +49,55 @@ public class WordVectorizer {
 
     private static String wordVectorsPath = Tools.getProperty("wordVectors.location");
     private static String clarkClusterEXE = Tools.getProperty("clarkCluster.exe");
-    private static String clarkClusterParams = Tools.getProperty("clarkCluster.params");
 
     private SolrClient client;
 
     public static void main(String[] args) {
 //        try {
-//
-//            //ProcessBuilder builder = new ProcessBuilder("E:\\Clark_POS_Induction\\cluster_neyessenmorph.exe", "-s", "5", "-m", "5", "-i", "10", "data", "data", "32", "1>", "clusters.nem.32", "2>", "hello.txt");
-//            ProcessBuilder builder = new ProcessBuilder("E:\\Clark_POS_Induction\\test.exe");
+//            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/C", "start", "E:\\Clark_POS_Induction\\cluster_neyessenmorph.exe", "-s", "5", "-m", "5", "-i", "10", "data", "clark-clusters.train", "8 1> clusters.txt 2> stderr.txt");
 //            builder.directory(new File("E:\\Clark_POS_Induction"));
 //            //builder.redirectErrorStream(true);
-//            Process p = builder.start();
-//            int retVal = p.waitFor();
-//            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-//            BufferedReader r2 = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+//            Process proc = builder.start();
 //
-//            String line;
-//            while (true) {
-//                line = r.readLine();
-//                if (line == null) { break; }
-//                System.out.println("cout: " + line);
-//            }
-//            while ((line = r2.readLine()) != null) {
-//                System.out.println("cerr: " + line);
-//            }
+//            BufferedReader stderr = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+//            //BufferedReader stdout = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+//
+//            new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    try {
+//                        while (true) {
+//                            String line = stderr.readLine();
+//                            if (line == null) {
+//                                break;
+//                            }
+//                            System.out.println(line);
+//                        }
+//                    } catch (IOException e) {
+//                        System.out.println(e.getMessage());
+//                    }
+//                }
+//            }).start();
+//
+////            new Thread(new Runnable() {
+////                @Override
+////                public void run() {
+////                    try {
+////                        while (true) {
+////                            String line = stdout.readLine();
+////                            if (line == null) {
+////                                break;
+////                            }
+////                            System.out.println(line);
+////                        }
+////                    } catch (IOException e) {
+////                        System.out.println(e.getMessage());
+////                    }
+////                }
+////            }).start();
+//
+//            int retVal = proc.waitFor();
+//            System.out.println(retVal);
 //        } catch (Exception e) {
 //            e.printStackTrace();
 //        }
@@ -314,7 +339,7 @@ public class WordVectorizer {
     }
 
     public void generateWordClusterDictionary(String category) throws IOException {
-        //String clarkClusterFilePath = getClarkClusterFilePath(category);
+        String clarkClusterFilePath = getClarkClusterFilePath(category);
         String xmeansClusterFilePath = getXMeansClusterFilePath(category);
         String brownClusterFilePath = getBrownClusterFilePath(category);
         String trainingFilePath = getTrainingFilePath(category);
@@ -332,6 +357,7 @@ public class WordVectorizer {
 
         String numberless = Tools.removeAllNumbers(corpus);
         String cleaned = Tools.removeSpecialCharacters(numberless);
+        writeClarkClusterTrainingDataToFile(category, cleaned);
 
         List<CoreLabel> allWords = NLPTools.detectTokensStanford(cleaned);
 
@@ -350,15 +376,14 @@ public class WordVectorizer {
             }
         }
 
-        //outputClarkClusters(category, clarkClusterFilePath, cleaned);
+        //outputClarkClusters(category, clarkClusterFilePath);
         outputXMeansClusters(xmeansClusterFilePath, vec, uniqueWords);
         outputBrownClusters(brownClusterFilePath, vec, uniqueWords);
     }
 
-    private void outputClarkClusters(String category, String clusterFilePath, String corpus) throws IOException {
+    private void writeClarkClusterTrainingDataToFile(String category, String corpus) throws IOException {
         List<CoreMap> sentences = NLPTools.detectSentencesStanford(corpus);
         StringBuilder bldr = new StringBuilder();
-        int count = 0;
         for (CoreMap sentence : sentences) {
             String sent = sentence.toString().replace(".", "");
             List<CoreLabel> tokens = NLPTools.detectTokensStanford(sent);
@@ -368,37 +393,67 @@ public class WordVectorizer {
                 bldr.append(System.lineSeparator());
             }
             bldr.append(System.lineSeparator());
-            if (++count > 10) {
-                break;
-            }
         }
         String clarkTrainingData = bldr.toString();
         String clarkTrainingFilePath = getClarkClusterTrainingFilePath(category);
         FileUtils.writeStringToFile(new File(clarkTrainingFilePath), clarkTrainingData, StandardCharsets.US_ASCII);
+    }
 
-
+    private void outputClarkClusters(String category, String clusterFilePath) throws IOException {
+        String clarkTrainingFilePath = getClarkClusterTrainingFilePath(category);
         logger.info("Starting Clark Cluster exe");
         File dataFile = new File(clarkTrainingFilePath);
         File outFile = new File(clusterFilePath);
         File errorFile = new File("/ClarkClusteringError.txt");
-        String params = clarkClusterParams.replace("<DATA_FILE>", dataFile.getAbsolutePath());
-        params = params.replace("<OUT_FILE>", outFile.getAbsolutePath());
+        String dataFileStr = dataFile.getAbsolutePath();
+        String outFileStr = outFile.getAbsolutePath();
         String exe = (new File(clarkClusterEXE)).getAbsolutePath();
-        String command = exe + " " + params;
-        //Process proc = Runtime.getRuntime().exec(command);
-        ProcessBuilder p = new ProcessBuilder("cmd.exe", "/K", exe);
-
-        p.redirectErrorStream(true);
+        ProcessBuilder p = new ProcessBuilder(exe, "-s", "5", "-m", "5", "-i", "10", "data", dataFileStr, "32 > " + outFileStr);
         Process proc = p.start();
-        BufferedReader r = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-        String line;
-        while (true) {
-            line = r.readLine();
-            if (line == null) { break; }
-            System.out.println(line);
+        BufferedReader stderr = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+        BufferedReader stdout = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while (true) {
+                        String line = stderr.readLine();
+                        if (line == null) {
+                            break;
+                        }
+                        logger.info(line);
+                    }
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
+                }
+            }
+        }).start();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while (true) {
+                        String line = stdout.readLine();
+                        if (line == null) {
+                            break;
+                        }
+                        logger.info(line);
+                    }
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
+                }
+            }
+        }).start();
+
+
+        try {
+            proc.waitFor();
+        } catch (InterruptedException e) {
+            logger.error(e.getMessage(), e);
         }
 
-//        p.redirectOutput(outFile);
 //        p.redirectError(errorFile);
 //        Process proc = p.start();
 //        try {
@@ -407,7 +462,7 @@ public class WordVectorizer {
 //        } catch (InterruptedException e) {
 //            logger.error(e.getMessage(), e);
 //        }
-//        logger.info("Started Clark Cluster exe");
+        logger.info("Finished Clark Cluster exe");
     }
 
     private void outputXMeansClusters(String clusterFilePath, Word2Vec vec, TreeMap<String, Integer> uniqueWords) throws IOException {

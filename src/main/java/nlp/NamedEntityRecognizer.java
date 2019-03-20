@@ -26,6 +26,7 @@ import webapp.models.GeoNameWithFrequencyScore;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -350,6 +351,7 @@ public class NamedEntityRecognizer {
         resources.put("ner-dict", getTrainingDictionary(category));
         resources.put("word2vec.cluster", getWordClusterDictionary(category, 1));
         resources.put("brownCluster", getBrownClusterDictionary(category, 1));
+        resources.put("clark.cluster", getClarkClusterDictionary(category, 1));
 
         int lineNum = 0;
         try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
@@ -493,6 +495,28 @@ public class NamedEntityRecognizer {
             try {
                 if (numAttempts < 2) {
                     vectorizer.generateWordClusterDictionary(category);
+                    return getWordClusterDictionary(category, ++numAttempts);
+                } else {
+                    throw e;
+                }
+            } catch (IOException e1) {
+                throw e1;
+            }
+        }
+    }
+
+    private WordClusterDictionary getClarkClusterDictionary(String category, int numAttempts) throws IOException {
+        String clusterFilePath = vectorizer.getClarkClusterFilePath(category);
+        try {
+            FileInputStream fin = new FileInputStream(new File(clusterFilePath));
+            WordClusterDictionary dict = new WordClusterDictionary(fin);
+            return dict;
+        } catch (IOException e) {
+            try {
+                if (numAttempts < 2) {
+                    //unable to programmatically generate Clark clusters (this must be done manually)
+                    //in case a valid clustering file does not yet exist generate a blank stub to permit model training to continue
+                    FileUtils.writeStringToFile(new File(clusterFilePath), "", StandardCharsets.UTF_8);
                     return getWordClusterDictionary(category, ++numAttempts);
                 } else {
                     throw e;
