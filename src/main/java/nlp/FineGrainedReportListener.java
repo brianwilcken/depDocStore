@@ -19,7 +19,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import opennlp.tools.util.Span;
-import opennlp.tools.util.eval.FMeasure;
 import opennlp.tools.util.eval.Mean;
 
 public abstract class FineGrainedReportListener {
@@ -980,19 +979,25 @@ public abstract class FineGrainedReportListener {
         }
 
         public double getNamedEntityFMeasure() {
-            int numTags = getNumberOfTags() - 1; //exclude "other" tag
             SortedSet<String> tags = getConfusionMatrixTagset();
-            double precision = 0.0d;
-            double recall = 0.0d;
+            long truePositives = 0;
+            long falsePositives = 0;
+            long falseNegatives = 0;
+            //calculate micro-average of precision, recall and f-score
+            //see http://rushdishams.blogspot.com/2011/08/micro-and-macro-average-of-precision.html
             for (String tag : tags) {
                 if (!tag.equals("other")) {
                     FMeasure fMeasure = tagFMeasure.get(tag);
-                    precision += fMeasure.getPrecisionScore();
-                    recall += fMeasure.getRecallScore();
+                    long truePositive = fMeasure.getTruePositive();
+                    long falsePositive = fMeasure.getSelected() - truePositive;
+                    long falseNegative = fMeasure.getTarget() - truePositive;
+                    truePositives += truePositive;
+                    falsePositives += falsePositive;
+                    falseNegatives += falseNegative;
                 }
             }
-            precision = precision / numTags;
-            recall = recall / numTags;
+            double precision = (double) truePositives / (double)(truePositives + falsePositives);
+            double recall = (double) truePositives / (double)(truePositives + falseNegatives);
             if (precision + recall > 0) {
                 return 2 * (precision * recall)
                         / (precision + recall);
