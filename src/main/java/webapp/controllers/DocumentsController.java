@@ -392,6 +392,26 @@ public class DocumentsController {
         }
     }
 
+    @RequestMapping(value="/reviewNERCorpus", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> reviewNERCorpus(String[] category) {
+        logger.info("In trainNERModel method");
+        try {
+            StringBuilder bldr = new StringBuilder();
+            for (String cat : category) {
+                String catCorpus = recognizer.retrieveCorpusData(cat);
+                bldr.append(catCorpus);
+                bldr.append(System.lineSeparator());
+            }
+            String corpus = bldr.toString();
+
+            return ResponseEntity.ok().body(Tools.formJsonResponse(corpus));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
     @RequestMapping(value="/testNER", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> testNERModel(String[] category) {
         logger.info("In testNERModel method");

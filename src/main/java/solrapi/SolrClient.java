@@ -331,6 +331,17 @@ public class SolrClient {
 		fos.write(System.lineSeparator().getBytes());
 	}
 
+	public void formatForNERCorpusReview(String category, SolrDocument doc, FileOutputStream fos) throws IOException {
+		String filename = doc.get("filename").toString();
+		String separator = "***********************************************************";
+		fos.write(separator.getBytes());
+		fos.write(filename.toUpperCase().getBytes(Charset.forName("Cp1252")));
+		fos.write(separator.getBytes());
+		fos.write(System.lineSeparator().getBytes());
+		fos.write(System.lineSeparator().getBytes());
+		formatForNERModelTraining(category, doc, fos);
+	}
+
 	public void formatForNERModelTraining(String category, SolrDocument doc, FileOutputStream fos) throws IOException {
 		final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
 		String annotated = doc.get("annotated").toString();
@@ -351,7 +362,10 @@ public class SolrClient {
 						String sentence = sentences[s];
 						//first remove all annotations to ensure that only category-specific annotations are included in the training data
 						//sentence = sentence.replaceAll(" ?<START:.+?> ", "").replaceAll(" <END> ", "");
-						sentence = sentence.replaceAll("(?<=\\S\\s)<START:.+?> ", "").replaceAll("\\s?<START:.+?> ", "").replaceAll(" <END> ", "");
+						sentence = sentence.replaceAll("(?<=\\S\\s)<START:.+?> ", "")
+								.replaceAll("\\s?<START:.+?> ", "")
+								.replaceAll(" <END>  ?(\\b|\\B)", " ")
+								.replaceAll(" <END> ", "");
 						List<NamedEntity> validLineEntities = lineEntities.get(s).stream()
 								.filter(p -> facilityTypes.contains(p.getSpan().getType()))
 								.collect(Collectors.toList());
@@ -363,7 +377,13 @@ public class SolrClient {
 					}
 				}
 			} else {
-				annotatedLinesForCategory.add(System.lineSeparator());
+				int size = annotatedLinesForCategory.size();
+				if (size > 0) {
+					String lastEntry = annotatedLinesForCategory.get(size - 1);
+					if (!lastEntry.equals(System.lineSeparator())) {
+						annotatedLinesForCategory.add(System.lineSeparator());
+					}
+				}
 			}
 		}
 

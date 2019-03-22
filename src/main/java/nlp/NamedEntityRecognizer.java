@@ -325,6 +325,14 @@ public class NamedEntityRecognizer {
         return sentences;
     }
 
+    public String retrieveCorpusData(String category) throws IOException {
+        String trainingFile = getTrainingFilePath(category);
+        client.writeCorpusDataToFile(trainingFile, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERCorpusReview, new SolrClient.NERThrottle());
+        String corpus = FileUtils.readFileToString(new File(trainingFile), Charset.defaultCharset());
+
+        return corpus;
+    }
+
     public void trainNERModel(String category) throws IOException {
         if (category.contains(":")) {
             category = category.split(":")[0];
