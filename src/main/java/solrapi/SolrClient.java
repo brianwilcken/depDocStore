@@ -19,6 +19,12 @@ import edu.stanford.nlp.util.CoreMap;
 import nlp.NLPTools;
 import nlp.NamedEntity;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -42,6 +48,8 @@ import com.google.common.io.Files;
 public class SolrClient {
 
 	private String collection = "dependencies";
+	private static final String USERNAME = Tools.getProperty("solr.username");
+	private static final String PASSWORD = Tools.getProperty("solr.password");
 	
 	final static Logger logger = LogManager.getLogger(SolrClient.class);
 
@@ -49,7 +57,11 @@ public class SolrClient {
 	private static ObjectMapper mapper = new ObjectMapper();
 
 	public SolrClient(String solrHostURL) {
-		client = new HttpSolrClient.Builder(solrHostURL).build();
+		CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+		credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(USERNAME, PASSWORD));
+		CloseableHttpClient httpClient =    HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).build();
+
+		client = new HttpSolrClient.Builder(solrHostURL).withHttpClient(httpClient).build();
 	}
 
 	public SolrClient(String solrHostURL, String collection) {

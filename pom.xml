@@ -235,6 +235,8 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://localhost:8983/solr</index.url>
+				<index.username>solr</index.username>
+				<index.password>password</index.password>
                 <mongo.url>mongodb://localhost:27017</mongo.url>
 				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<useProxy>false</useProxy>
@@ -263,6 +265,8 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://localhost:8983/solr</index.url>
+				<index.username>solr</index.username>
+				<index.password>LtfXERucp8QPP4vzKMLe</index.password>
 				<mongo.url>mongodb://localhost:27017</mongo.url>
 				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<useProxy>false</useProxy>
@@ -316,6 +320,8 @@
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
 				<index.url>http://localhost:8983/solr</index.url>
+				<index.username>solr</index.username>
+				<index.password>z_pT#AuBMeZ=%szwpMJ-M5+ws5jHh4P3#-^*XC49uaVeP-q9t4bpPe+Ahu-dppYn</index.password>
 				<mongo.url>mongodb://localhost:27017</mongo.url>
 				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<useProxy>true</useProxy>
