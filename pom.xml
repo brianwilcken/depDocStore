@@ -275,8 +275,8 @@
                 <dcInterval>900000</dcInterval>
 				<wsInterval>15000</wsInterval>
 				<neo4j.url>http://localhost:7474</neo4j.url>
-				<neo4j.username>neo4j</neo4j.username>
-				<neo4j.password>inl2018#</neo4j.password>
+				<neo4j.username>aha</neo4j.username>
+				<neo4j.password>ahaSuper8#</neo4j.password>
 			</properties>
 		</profile>
 		<profile>
