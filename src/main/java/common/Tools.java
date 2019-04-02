@@ -2,7 +2,6 @@ package common;
 
 import java.awt.*;
 import java.io.*;
-import java.nio.IntBuffer;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -12,48 +11,27 @@ import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Strings;
-import com.sun.jna.ptr.FloatByReference;
-import com.sun.jna.ptr.PointerByReference;
-import edu.stanford.nlp.ling.TaggedWord;
-import edu.stanford.nlp.util.StringUtils;
 import net.sourceforge.lept4j.*;
-import net.sourceforge.lept4j.util.LeptUtils;
-import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.TesseractException;
-import net.sourceforge.tess4j.util.PdfBoxUtilities;
 import nlp.NLPTools;
-import nlp.NamedEntityRecognizer;
 import nlp.gibberish.GibberishDetector;
-import org.apache.commons.collections.ArrayStack;
-import org.apache.commons.collections.list.SynchronizedList;
 import org.apache.commons.io.FileUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.math3.stat.descriptive.moment.Mean;
-import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.io.RandomAccessFile;
 import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.w3c.dom.css.Rect;
+import textextraction.*;
 import webapp.components.ApplicationContextProvider;
 import webapp.models.JsonResponse;
 import webapp.services.PDFProcessingService;
-import webapp.services.TesseractOCRService;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -63,15 +41,7 @@ public class Tools {
 
 	private static Properties _properties;
 	private static List<Exception> _exceptions;
-	private static Leptonica leptInstance = Leptonica.INSTANCE;
-	//private static Tesseract tesseract = new Tesseract();
 	final static Logger logger = LogManager.getLogger(Tools.class);
-
-
-//	static {
-//		String tessdata = getProperty("tess4j.path");
-//		tesseract.setDatapath(tessdata);
-//	}
 	
 	public static Properties getProperties() {
 		if (_properties == null) {
@@ -359,5 +329,219 @@ public class Tools {
 		} catch (JAXBException | IOException e) {
 			return null;
 		}
+	}
+
+	public static void main(String[] args) {
+		TextExtractionProcessManager mgr = new TextExtractionProcessManager();
+		File tiffFile = new File("E:\\LeptonicaTesting\\test_map_1.tif");
+
+		GibberishDetector detector = new GibberishDetector();
+
+		Pix pix = ImageTools.loadImage(tiffFile);
+		int width = Leptonica.INSTANCE.pixGetWidth(pix);
+		int height = Leptonica.INSTANCE.pixGetHeight(pix);
+
+		Dimension size = new Dimension(width / 4, height / 4);
+		Point ul = new Point(0, 0);
+		Rectangle rect = new Rectangle(ul, size);
+
+		List<TextExtractionTask> extractions = new ArrayList<>();
+
+		float baseRank = 0.3f;
+		int rotStep = 360; //degrees
+		int widthStep = width / 8;
+		int heightStep = height / 8;
+		while(rect.y <= (height - rect.height)) {
+			while(rect.x <= (width - rect.width)) {
+				Rectangle convRect = new Rectangle(rect.getLocation(), rect.getSize());
+
+				Pix pix2 = ImageTools.cropImage(pix, convRect);
+				Pix pix2gray = ImageTools.convertImageToGrayscale(pix2);
+				Pix pix2bin = ImageTools.binarizeImage(pix2gray);
+
+				float rank = baseRank;
+				while (rank <= 1.0f) {
+					Pix pix2rank = Leptonica.INSTANCE.pixBlockrank(pix2bin, null, 2, 2, rank);
+					for (int rot = 0; rot <= 345; rot += rotStep) {
+						TextExtractionTask extraction = new TextExtractionTask(mgr, convRect, rank, rot, tiffFile, pix2rank);
+						extractions.add(extraction);
+						extraction.enqueue();
+					}
+					ImageTools.disposePixs(pix2rank);
+					rank += 0.1f;
+				}
+
+				ImageTools.disposePixs(pix2, pix2gray, pix2bin);
+				rect.x += widthStep;
+			}
+			rect.x = 0;
+			rect.y += heightStep;
+		}
+
+
+		while (extractions.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		List<TextExtractionCandidate> candidates = new ArrayList<>();
+		rect = new Rectangle(ul, size);
+		while(rect.y <= (height - rect.height)) {
+			while(rect.x <= (width - rect.width)) {
+				Point point = new Point(rect.x, rect.y);
+				List<TextExtractionTask> containing = extractions.stream()
+						.filter(p -> p.getRect().contains(point))
+						.collect(Collectors.toList());
+
+				for (int rot = 0; rot <= 345; rot += rotStep) {
+					//look across all ranks for a given rotation
+					final int currRot = rot;
+					List<TextExtractionTask> sameRot = containing.stream()
+							.filter(p -> p.getRot() == currRot)
+							.collect(Collectors.toList());
+
+					List<String> rotStrings = new ArrayList<>();
+					for (TextExtractionTask extraction : sameRot) {
+						String valid = extraction.getValidLine();
+						rotStrings.add(valid);
+					}
+
+					int totalStrings = rotStrings.size();
+					int numContains = 0;
+					for (int i = 0; i < totalStrings; i++) {
+						String str1 = rotStrings.get(i);
+						if (Strings.isNullOrEmpty(str1)) {
+							continue;
+						}
+						for (int j = i + 1; j < totalStrings; j++) {
+							String str2 = rotStrings.get(j);
+							if (Strings.isNullOrEmpty(str2)) {
+								continue;
+							}
+							if (str1.contains(str2)) {
+								++numContains;
+							}
+						}
+					}
+
+					double percentContained = (double)numContains / (double)totalStrings;
+					if (percentContained > 0.33) { //if at least 33% of the ranks have similar strings this is a good indication that a valid string exists
+						Rectangle candidateRect = new Rectangle(rect);
+						TextExtractionTask bestCandidate = sameRot.stream().max(new Comparator<TextExtractionTask>() {
+							@Override
+							public int compare(TextExtractionTask textExtractionTask, TextExtractionTask t1) {
+								return Double.compare(textExtractionTask.getPercentValid(), t1.getPercentValid());
+							}
+						}).orElse(null);
+						if (bestCandidate != null && !detector.isLineGibberish(bestCandidate.getValidLine())) {
+							TextExtractionCandidate candidate = new TextExtractionCandidate(candidateRect, rot, bestCandidate);
+							candidates.add(candidate);
+						}
+					}
+				}
+
+				rect.x += widthStep;
+			}
+			rect.x = 0;
+			rect.y += heightStep;
+		}
+
+
+		rect = new Rectangle(ul, size);
+		List<List<String>> outputLines = new ArrayList<>();
+		while(rect.y <= (height - rect.height)) {
+			List<String> horizontal = new ArrayList<>();
+			while(rect.x <= (width - rect.width)) {
+				Point point = new Point(rect.x, rect.y);
+				List<TextExtractionCandidate> containing = candidates.stream()
+						.filter(p -> p.getRect().contains(point))
+						.collect(Collectors.toList());
+
+				for (int rot = 0; rot <= 345; rot += rotStep) {
+					//look across all ranks for a given rotation
+					final int currRot = rot;
+					List<TextExtractionCandidate> sameRot = containing.stream()
+							.filter(p -> p.getRot() == currRot)
+							.collect(Collectors.toList());
+
+					TextExtractionCandidate bestOverall = sameRot.stream().max(new Comparator<TextExtractionCandidate>() {
+						@Override
+						public int compare(TextExtractionCandidate textExtractionCandidate, TextExtractionCandidate t1) {
+							return Double.compare(textExtractionCandidate.getCandidate().getPercentValid(), t1.getCandidate().getPercentValid());
+						}
+					}).orElse(null);
+
+					if (bestOverall != null) {
+						String entry = bestOverall.getCandidate().getValidLine();
+						if (!horizontal.contains(entry)) {
+							horizontal.add(entry);
+						}
+					}
+				}
+
+				rect.x += widthStep;
+			}
+			outputLines.add(horizontal);
+			rect.x = 0;
+			rect.y += heightStep;
+		}
+
+		List<String> finalOutput = new ArrayList<>();
+		for (int i = 0; i < outputLines.size(); i++) {
+			List<String> currentLine = outputLines.get(i);
+			if (i < outputLines.size() - 1) {
+				List<String> nextLine = outputLines.get(i + 1);
+				for (int j = 0; j < currentLine.size(); j++) {
+					String entry = currentLine.get(j);
+					double sim = 0d;
+					for (int m = 0; m < nextLine.size(); m++) {
+						String other = nextLine.get(m);
+						double currSim = NLPTools.similarity(entry, other);
+						if (currSim > 0.7) {
+							sim = 1000;
+							break;
+						}
+						sim += currSim;
+					}
+					double avgSim = sim / (double)nextLine.size();
+					if (avgSim > 0.5 && !finalOutput.contains(entry)) {
+						finalOutput.add(entry);
+					}
+				}
+			}
+			if (i > 0) {
+				List<String> prevLine = outputLines.get(i - 1);
+				for (int j = 0; j < currentLine.size(); j++) {
+					String entry = currentLine.get(j);
+					double sim = 0d;
+					for (int k = 0; k < prevLine.size(); k++) {
+						String other = prevLine.get(k);
+						double currSim = NLPTools.similarity(entry, other);
+						if (currSim > 0.7) {
+							sim = 1000;
+							break;
+						}
+						sim += currSim;
+					}
+					double avgSim = sim / (double)prevLine.size();
+					if (avgSim > 0.5 && !finalOutput.contains(entry)) {
+						finalOutput.add(entry);
+					}
+				}
+			}
+		}
+
+//		String outPath = tiffFile.getParent() + "\\" + baseName + ".txt";
+//		File outFile = new File(outPath);
+//		try {
+//			FileUtils.writeStringToFile(outFile, bldr.toString(), Charsets.UTF_8);
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+
+		ImageTools.disposePixs(pix);
 	}
 }

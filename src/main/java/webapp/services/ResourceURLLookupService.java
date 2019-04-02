@@ -2,7 +2,7 @@ package webapp.services;
 
 import com.google.common.base.Strings;
 import common.DetectHtml;
-import common.TextExtractor;
+import textextraction.TextExtractor;
 import common.Tools;
 import de.l3s.boilerpipe.BoilerpipeProcessingException;
 import org.apache.commons.io.FilenameUtils;

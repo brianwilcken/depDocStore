@@ -1,9 +1,8 @@
 package webapp.services;
 
-import com.google.common.base.Strings;
+import common.ImageTools;
 import common.Tools;
 import net.sourceforge.tess4j.Tesseract;
-import net.sourceforge.tess4j.TesseractException;
 import nlp.gibberish.GibberishDetector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,7 +14,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.awt.*;
 import java.io.File;
-import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 @Service
@@ -40,19 +39,21 @@ public class TesseractOCRService {
     }
 
     @Async("tesseractProcessExecutor")
-    public Future<Boolean> process(File tiffFile, int page, Rectangle rect, List<String> lsOutput) {
+    public Future<Boolean> process(File tiffFile, int page, Rectangle rect, ConcurrentHashMap<Rectangle, String> rectOutput) {
         try {
             if (tiffFile.exists()) {
                 Tesseract tesseract = new Tesseract();
                 String tessdata = Tools.getProperty("tess4j.path");
                 tesseract.setDatapath(tessdata);
                 logger.info("Begin OCR processing for file " + tiffFile.getName() + " for page " + page + " on rectangle: (" + rect.getX() + ", " + rect.getY() + ") with size: " + rect.width + "x" + rect.height + " pixels");
-                String output = tesseract.doOCR(tiffFile, rect);
+                File cropped = ImageTools.cropAndBinarizeImage(tiffFile, rect);
+                String output = tesseract.doOCR(cropped);
                 logger.info("Finished OCR processing for file " + tiffFile.getName() + " for page " + page + " on rectangle: (" + rect.getX() + ", " + rect.getY() + ") with size: " + rect.width + "x" + rect.height + " pixels");
-                output = detector.removeGibberishLines(output);
-                if (!Strings.isNullOrEmpty(output)) {
-                    lsOutput.add(output);
-                }
+                //output = detector.removeGibberishLines(output);
+                rectOutput.put(rect, output);
+//                if (!Strings.isNullOrEmpty(output)) {
+//                    lsOutput.add(output);
+//                }
             } else {
                 logger.warn("For page " + page + ": UNABLE TO PROCESS NON-EXISTANT IMAGE: " + tiffFile.getName());
             }

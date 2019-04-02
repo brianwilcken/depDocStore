@@ -1,8 +1,7 @@
 package crawler;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import common.DetectHtml;
-import common.TextExtractor;
+import textextraction.TextExtractor;
 import common.Tools;
 import de.l3s.boilerpipe.BoilerpipeProcessingException;
 import de.l3s.boilerpipe.extractors.ArticleExtractor;
@@ -17,10 +16,6 @@ import org.apache.http.HttpHost;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.springframework.scheduling.annotation.Async;
-import solrapi.SolrClient;
-import webapp.controllers.DocumentsController;
 import webapp.services.WebCrawlerService;
 
 import java.io.File;
@@ -28,8 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 public class DocumentsWebCrawler extends WebCrawler {

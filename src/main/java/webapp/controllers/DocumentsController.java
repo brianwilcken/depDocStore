@@ -4,9 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.mongodb.client.gridfs.model.GridFSFile;
-import common.ProcessedDocument;
-import common.ProcessedPage;
-import common.TextExtractor;
+import textextraction.ProcessedDocument;
+import textextraction.ProcessedPage;
+import textextraction.TextExtractor;
 import common.Tools;
 import geoparsing.LocationResolver;
 import mongoapi.DocStoreMongoClient;
@@ -28,7 +28,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import solrapi.SolrClient;
@@ -715,7 +714,7 @@ public class DocumentsController {
     private SolrDocumentList runEntityResolutionPipeline(String docText, String id, SolrDocument doc) throws SolrServerException, IOException {
         SolrDocumentList docs = new SolrDocumentList();
 
-        String parsed = recognizer.deepCleanText(docText);
+        String parsed = NLPTools.deepCleanText(docText);
         if (doc.containsKey("parsed")) {
             doc.replace("parsed", parsed);
         } else {

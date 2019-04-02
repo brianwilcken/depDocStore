@@ -403,6 +403,24 @@ public class NLPTools {
         return text;
     }
 
+    public static String deepCleanText(String document) {
+        String document1 = document.replace("\r\n", " ");
+        String document2 = document1.replace("(", " ");
+        String document3 = document2.replace(")", " ");
+        String document4 = document3.replaceAll("\\P{Print}", " ");
+        //String document4a = Tools.removeAllNumbers(document4);
+        //document = Tools.removeSpecialCharacters(document);
+        String document5 = document4.replaceAll("[\\\\%-*/:-?{-~!\"^_`\\[\\]+]", " ");
+        String document6= document5.replaceAll(" +\\.", ".");
+        String document7 = document6.replaceAll("\\.{2,}", ". ");
+        String document8 = document7.replaceAll(" {2,}", " ");
+        String document9 = fixDocumentWordBreaks(document8);
+        String document10 = document9.replaceAll("(?<=[a-z])-\\s(?=[a-z])", "");
+        String document11 = document10.replaceAll("\\b\\ss\\s\\b", "'s ");
+
+        return document11;
+    }
+
     private static StanfordCoreNLP tokenPipeline;
     private static StanfordCoreNLP getTokenPipeline() {
         if (tokenPipeline == null) {

@@ -1,4 +1,6 @@
-package common;
+package textextraction;
+
+import textextraction.ProcessedPage;
 
 import java.util.ArrayList;
 import java.util.List;
