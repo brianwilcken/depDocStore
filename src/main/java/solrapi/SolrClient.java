@@ -19,18 +19,26 @@ import edu.stanford.nlp.util.CoreMap;
 import nlp.NLPTools;
 import nlp.NamedEntity;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.AuthState;
+import org.apache.http.auth.Credentials;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpCoreContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.*;
 import org.apache.solr.client.solrj.SolrQuery.SortClause;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.StreamingResponseCallback;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
@@ -39,6 +47,7 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.MoreLikeThisParams;
+import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.SimpleOrderedMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,10 +65,33 @@ public class SolrClient {
 	private HttpSolrClient client;
 	private static ObjectMapper mapper = new ObjectMapper();
 
+	private static class PreemptiveAuthInterceptor implements HttpRequestInterceptor {
+
+		public void process(final HttpRequest request, final HttpContext context) throws HttpException, IOException {
+			AuthState authState = (AuthState) context.getAttribute(HttpClientContext.TARGET_AUTH_STATE);
+			// If no auth scheme available yet, try to initialize it
+			// preemptively
+			if (authState.getAuthScheme() == null) {
+				CredentialsProvider credsProvider = (CredentialsProvider)
+						context.getAttribute(HttpClientContext.CREDS_PROVIDER);
+				HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
+				AuthScope authScope = new AuthScope(targetHost.getHostName(), targetHost.getPort());
+				Credentials creds = credsProvider.getCredentials(authScope);
+				if(creds == null){
+
+				}
+				authState.update(new BasicScheme(), creds);
+			}
+		}
+	}
+
 	public SolrClient(String solrHostURL) {
 		CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
 		credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(USERNAME, PASSWORD));
-		CloseableHttpClient httpClient =    HttpClientBuilder.create().setDefaultCredentialsProvider(credentialsProvider).build();
+		CloseableHttpClient httpClient = HttpClientBuilder.create()
+				.addInterceptorFirst(new PreemptiveAuthInterceptor())
+				.setDefaultCredentialsProvider(credentialsProvider)
+				.build();
 
 		client = new HttpSolrClient.Builder(solrHostURL).withHttpClient(httpClient).build();
 	}
@@ -142,6 +174,7 @@ public class SolrClient {
 					SolrInputDocument solrInputDocument = convertSolrDocument(doc);
 					inputDocuments.add(solrInputDocument);
 				}
+
 
 				client.add(collection, inputDocuments);
 				UpdateResponse updateResponse = client.commit(collection);
