@@ -333,7 +333,7 @@ public class Tools {
 
 	public static void main(String[] args) {
 		TextExtractionProcessManager mgr = new TextExtractionProcessManager();
-		File tiffFile = new File("E:\\LeptonicaTesting\\test_map_1.tif");
+		File tiffFile = new File("E:\\LeptonicaTesting\\MASS_ELECT_map-major-facilities.tiff");
 
 		GibberishDetector detector = new GibberishDetector();
 
@@ -341,16 +341,16 @@ public class Tools {
 		int width = Leptonica.INSTANCE.pixGetWidth(pix);
 		int height = Leptonica.INSTANCE.pixGetHeight(pix);
 
-		Dimension size = new Dimension(width / 4, height / 4);
+		Dimension size = new Dimension(width / 6, height / 6);
 		Point ul = new Point(0, 0);
 		Rectangle rect = new Rectangle(ul, size);
 
 		List<TextExtractionTask> extractions = new ArrayList<>();
 
-		float baseRank = 0.3f;
+		float baseRank = 0.1f;
 		int rotStep = 360; //degrees
-		int widthStep = width / 8;
-		int heightStep = height / 8;
+		int widthStep = width / 12;
+		int heightStep = height / 12;
 		while(rect.y <= (height - rect.height)) {
 			while(rect.x <= (width - rect.width)) {
 				Rectangle convRect = new Rectangle(rect.getLocation(), rect.getSize());

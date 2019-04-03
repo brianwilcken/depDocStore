@@ -744,22 +744,24 @@ public class DocumentsController {
                     .collect(Collectors.toList());
             docs.addAll(locDocs);
 
-            List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, geoNames,0.05);
-            String annotated = NLPTools.autoAnnotate(parsed, entities);
-            if (doc.containsKey("annotated")) {
-                doc.replace("annotated", annotated);
-            } else {
-                doc.addField("annotated", annotated);
+            if (geoNames.size() > 0) {
+                List<NamedEntity> entities = recognizer.detectNamedEntities(parsed, categories, geoNames,0.05);
+                String annotated = NLPTools.autoAnnotate(parsed, entities);
+                if (doc.containsKey("annotated")) {
+                    doc.replace("annotated", annotated);
+                } else {
+                    doc.addField("annotated", annotated);
+                }
+
+                NLPTools.calculatePercentAnnotated(doc);
+
+                List<SolrDocument> entityDocs = entities.stream()
+                        .map(p -> p.mutate(id))
+                        .collect(Collectors.toList());
+                docs.addAll(entityDocs);
+
+                //resolveDocumentRelations(id, doc, docs, parsed, entities, 0.7, 5);
             }
-
-            NLPTools.calculatePercentAnnotated(doc);
-
-            List<SolrDocument> entityDocs = entities.stream()
-                    .map(p -> p.mutate(id))
-                    .collect(Collectors.toList());
-            docs.addAll(entityDocs);
-
-            //resolveDocumentRelations(id, doc, docs, parsed, entities, 0.7, 5);
         }
 
         return docs;

@@ -23,6 +23,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
+import textextraction.TextExtractionCandidate;
+import textextraction.TextExtractionProcessManager;
+import textextraction.TextExtractionTask;
 
 import javax.annotation.PostConstruct;
 import java.awt.*;
@@ -42,6 +45,7 @@ public class PDFProcessingService {
     private static final String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
     private static String tessdata = Tools.getProperty("tess4j.path");
     private static Leptonica leptInstance = Leptonica.INSTANCE;
+    private static TextExtractionProcessManager textExtractionProcessManager = new TextExtractionProcessManager();
 
     @Autowired
     private GibberishDetector detector;
@@ -66,7 +70,7 @@ public class PDFProcessingService {
         Tesseract tesseract = new Tesseract();
         tesseract.setDatapath(tessdata);
         final double pdfGibberishThreshold = 0.75; //set this threshold very high to avoid using OCR whenever possible
-        final double ocrGibberishThreshold = 0.35; //set this threshold low to encourage additional image processing when using OCR
+        final double ocrGibberishThreshold = 0.1; //set this threshold low to encourage additional image processing when using OCR
         try {
             logger.info("Attempt to process file " + pdfFile.getName() + " page " + i + " as PDF");
             PDFTextStripper pdfStripper = new PDFTextStripper();
@@ -122,22 +126,6 @@ public class PDFProcessingService {
                         //more information from the page by piecewise analysis.
                         logger.info("Begin processing for file " + tiffFile.getName() + " page " + i + " as a map or engineering schematic.");
                         output = doOCROnMap(tiffFile, i);
-                        double outputGibberish = detector.getPercentGibberish(output);
-
-                        logger.info("Map OCR processing for file " + binFile.getName() + " for page " + i + " percent gibberish: " + outputGibberish);
-                        if (outputGibberish > ocrGibberishThreshold) {
-                            //As a final attempt, remove lines from the image and try extraction again.
-                            logger.info("Map OCR processing for file " + binFile.getName() + " for page " + i + " percent gibberish exceeds maximum allowable amount.  Attempt line removal to declutter image, and try OCR again.");
-                            ImageTools.removeLinesAndBinarize(tiffFile);
-                            String noLinesOutput = doOCROnMap(tiffFile, i);
-                            double noLinesGibberish = detector.getPercentGibberish(noLinesOutput);
-
-                            logger.info("Decluttered Map OCR processing for file " + tiffFile.getName() + " for page " + i + " percent gibberish: " + outputGibberish);
-                            output = outputGibberish < noLinesGibberish ? output : noLinesOutput;
-                        }
-
-                        logger.info("Extract nouns from OCR output for file " + tiffFile.getName() + " for page " + i);
-                        output = extractNouns(output);
                         processedPage.setPageText(output);
                         processedPage.setPageType(ProcessedPage.PageType.Schematic);
                         return new AsyncResult<>(processedPage);
@@ -192,138 +180,275 @@ public class PDFProcessingService {
         return posOutput.toString();
     }
 
+    private class OCRProperties {
+        private float baseRank = 0.1f;
+        private float rankStep;
+        private int rotStep;
+        private int width;
+        private int height;
+        private int div;
+
+        public OCRProperties(float rankStep, int rotStep, int width, int height, int div) {
+            this.rankStep = rankStep;
+            this.rotStep = rotStep;
+            this.width = width;
+            this.height = height;
+            this.div = div;
+        }
+
+        public Rectangle getExtractionRectangle() {
+            Dimension size = new Dimension(width / div, height / div);
+            Point ul = new Point(0, 0);
+            Rectangle rect = new Rectangle(ul, size);
+
+            return rect;
+        }
+
+        public float getBaseRank() {
+            return baseRank;
+        }
+
+        public float getRankStep() {
+            return rankStep;
+        }
+
+        public int getRotStep() {
+            return rotStep;
+        }
+
+        public int getWidthStep() {
+            return width / (div * 2);
+        }
+
+        public int getHeightStep() {
+            return height / (div * 2);
+        }
+
+        public int getWidth() {
+            return width;
+        }
+
+        public int getHeight() {
+            return height;
+        }
+
+        public int getDiv() {
+            return div;
+        }
+    }
+
     private String doOCROnMap(File tiffFile, int page) {
-        ConcurrentHashMap<Rectangle, String> allOutput = new ConcurrentHashMap<>();
+        Pix pix = ImageTools.loadImage(tiffFile);
+        int width = Leptonica.INSTANCE.pixGetWidth(pix);
+        int height = Leptonica.INSTANCE.pixGetHeight(pix);
 
-        //rotate 90 degrees clockwise and extract data
-//		for (int angle = 0; angle <= 270; angle += 90) {
-//			if (angle > 0) {
-//				rotateImage(tiffFile);
-//			}
+        OCRProperties props = new OCRProperties(0.1f, 360, width, height, 6);
 
-        Pix pix = leptInstance.pixRead(tiffFile.getPath());
-        int width = leptInstance.pixGetWidth(pix);
-        int height = leptInstance.pixGetHeight(pix);
-        LeptUtils.disposePix(pix);
-        int minWidth = width / 8;
-        int minHeight = height / 8;
+        Rectangle rect = props.getExtractionRectangle();
 
-        Dimension size = new Dimension(width, height);
-        Point ul = new Point(0, 0);
+        List<TextExtractionTask> extractions = new ArrayList<>();
 
-        Rectangle rect = new Rectangle(ul, size);
-        List<Future<Boolean>> tasks = new ArrayList<>();
-
-        //logger.info("Perform OCR for file " + tiffFile.getName() + " on page " + page + " using rectangles");
-        //doOCRByRectangles(tasks, tiffFile, page, rect, minWidth, minHeight, allOutput);
-
-        Rectangle convRect = new Rectangle(ul, new Dimension(width / 6, height / 6));
-        int widthStep = width / 12;
-        int heightStep = height / 12;
-
-        logger.info("Perform OCR for file " + tiffFile.getName() + " on page " + page + " using box convolution");
-        doOCRByConvolution(tasks, tiffFile, page, convRect, width, height, widthStep, heightStep, allOutput);
-
-        //Track all OCR threads
-        while(tasks.stream().anyMatch(p -> !p.isDone())) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                logger.error(e.getMessage(), e);
-            }
-        }
-//		}
-        //String output = detector.removeGibberishLines(String.join(System.lineSeparator(), allOutput));
-
-        //output = postProcessForOCR(output);
-
-        return "";
-    }
-
-    private String postProcessForOCR(String input) {
-        NamedEntityRecognizer recognizer = new NamedEntityRecognizer(null);
-        String[] sentences = recognizer.detectSentences(input);
-
-        Map<String, Integer> termFrequency = new TreeMap<>();
-        for (String sentence : sentences) {
-            String[] tokens = NLPTools.detectTokens(sentence);
-            for (String token : tokens) {
-                String norm = token.toLowerCase();
-                if (termFrequency.containsKey(norm)) {
-                    Integer freq = termFrequency.get(norm);
-                    termFrequency.replace(norm, ++freq);
-                } else {
-                    termFrequency.put(norm, 1);
-                }
-            }
-        }
-
-        TreeSet<String> highFrequency = termFrequency.entrySet().stream()
-                .filter(p -> p.getValue() > 1)
-                .map(p -> p.getKey())
-                .collect(Collectors.toCollection(TreeSet::new));
-
-        StringBuilder parsed = new StringBuilder();
-
-        for (String sentence : sentences) {
-            String[] tokens = NLPTools.detectTokens(sentence);
-            for (String token : tokens) {
-                String norm = token.toLowerCase();
-                if (highFrequency.contains(norm)) {
-                    parsed.append(token);
-                    parsed.append(" ");
-                }
-            }
-        }
-
-        //remove single and double lowercase character combinations that may be cluttering the text
-        String output = parsed.toString().replaceAll("\\b[a-zA-Z]{1,2}\\b", "");
-
-        //final sterilization pass to filter out noise
-        sentences = recognizer.detectSentences(output);
-
-        output = String.join("\r\n", sentences);
-
-        return output;
-    }
-
-//    private void doOCRByRectangles(List<Future<Boolean>> tasks, File tiffFile, int page, Rectangle rect, int minWidth, int minHeight, List<String> rectOutput) {
-//        Dimension size = rect.getSize();
-//        Dimension halfSize = new Dimension(size.width / 2, size.height / 2);
-//        if (halfSize.width >= minWidth && halfSize.height >= minHeight) {
-//            Point ul = rect.getLocation();
-//            Point ll = new Point(ul.x, ul.y + halfSize.height);
-//            Point ur = new Point(ul.x + halfSize.width, ul.y);
-//            Point lr = new Point(ul.x + halfSize.width, ul.y + halfSize.height);
-//
-//            Rectangle rul = new Rectangle(ul, halfSize);
-//            Rectangle rll = new Rectangle(ll, halfSize);
-//            Rectangle rur = new Rectangle(ur, halfSize);
-//            Rectangle rlr = new Rectangle(lr, halfSize);
-//
-//            logger.info("queue rectangle OCR processing task for file " + tiffFile.getName() + " for page " + page + ", rectangle: (" + rect.getX() + ", " + rect.getY() + ") with size: " + rect.width + "x" + rect.height + " pixels");
-//            Future<Boolean> result = tesseractOCRService.process(tiffFile, page, rect, rectOutput);
-//            tasks.add(result);
-//
-//            doOCRByRectangles(tasks, tiffFile, page, rul, minWidth, minHeight, rectOutput);
-//            doOCRByRectangles(tasks, tiffFile, page, rll, minWidth, minHeight, rectOutput);
-//            doOCRByRectangles(tasks, tiffFile, page, rur, minWidth, minHeight, rectOutput);
-//            doOCRByRectangles(tasks, tiffFile, page, rlr, minWidth, minHeight, rectOutput);
-//        }
-//    }
-
-    private void doOCRByConvolution(List<Future<Boolean>> tasks, File tiffFile, int page, Rectangle rect, int imgWidth, int imgHeight, int widthStep, int heightStep, ConcurrentHashMap<Rectangle, String> convOutput) {
-        while(rect.y <= (imgHeight - rect.height)) {
-            while(rect.x <= (imgWidth - rect.width)) {
+        while(rect.y <= (props.getHeight() - rect.height)) {
+            while(rect.x <= (props.getWidth() - rect.width)) {
                 Rectangle convRect = new Rectangle(rect.getLocation(), rect.getSize());
-                logger.info("queue convolution OCR processing task for file " + tiffFile.getName() + " for page " + page + ", rectangle: (" + rect.getX() + ", " + rect.getY() + ") with size: " + rect.width + "x" + rect.height + " pixels");
-                Future<Boolean> result = tesseractOCRService.process(tiffFile, page, convRect, convOutput);
-                tasks.add(result);
-                rect.x += widthStep;
+
+                Pix pix2 = ImageTools.cropImage(pix, convRect);
+                Pix pix2gray = ImageTools.convertImageToGrayscale(pix2);
+                Pix pix2bin = ImageTools.binarizeImage(pix2gray);
+
+                float rank = props.getBaseRank();
+                while (rank <= 1.0f) {
+                    Pix pix2rank = Leptonica.INSTANCE.pixBlockrank(pix2bin, null, 2, 2, rank);
+                    for (int rot = 0; rot <= 359; rot += props.getRotStep()) {
+                        TextExtractionTask extraction = new TextExtractionTask(textExtractionProcessManager, convRect, rank, rot, tiffFile, pix2rank);
+                        logger.info("Begin OCR processing for file " + extraction.getImagePath());
+                        extractions.add(extraction);
+                        extraction.enqueue();
+                    }
+                    ImageTools.disposePixs(pix2rank);
+                    rank += props.getRankStep();
+                }
+
+                ImageTools.disposePixs(pix2, pix2gray, pix2bin);
+                rect.x += props.getWidthStep();
             }
             rect.x = 0;
-            rect.y += heightStep;
+            rect.y += props.getHeightStep();
         }
+
+        while (extractions.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        List<TextExtractionCandidate> candidates = getExtractionCandidatesByRank(props, extractions);
+        List<List<String>> outputLines = reduceToOutputLines(props, candidates);
+        List<String> finalOutput = produceFinalOutput(outputLines);
+
+        String reduced = finalOutput.stream().reduce((c, n) -> c + System.lineSeparator() + n).orElse("");
+
+        return reduced;
+    }
+
+    private List<TextExtractionCandidate> getExtractionCandidatesByRank(OCRProperties props, List<TextExtractionTask> extractions) {
+        Rectangle rect = props.getExtractionRectangle();
+        List<TextExtractionCandidate> candidates = new ArrayList<>();
+        while(rect.y <= (props.getHeight() - rect.height)) {
+            while(rect.x <= (props.getWidth() - rect.width)) {
+                Point point = new Point(rect.x, rect.y);
+                List<TextExtractionTask> containing = extractions.stream()
+                        .filter(p -> p.getRect().contains(point))
+                        .collect(Collectors.toList());
+
+                for (int rot = 0; rot <= 345; rot += props.getRotStep()) {
+                    //look across all ranks for a given rotation
+                    final int currRot = rot;
+                    List<TextExtractionTask> sameRot = containing.stream()
+                            .filter(p -> p.getRot() == currRot)
+                            .collect(Collectors.toList());
+
+                    List<String> rotStrings = new ArrayList<>();
+                    for (TextExtractionTask extraction : sameRot) {
+                        String valid = extraction.getValidLine();
+                        rotStrings.add(valid);
+                    }
+
+                    int totalStrings = rotStrings.size();
+                    int numContains = 0;
+                    for (int i = 0; i < totalStrings; i++) {
+                        String str1 = rotStrings.get(i);
+                        if (Strings.isNullOrEmpty(str1)) {
+                            continue;
+                        }
+                        for (int j = i + 1; j < totalStrings; j++) {
+                            String str2 = rotStrings.get(j);
+                            if (Strings.isNullOrEmpty(str2)) {
+                                continue;
+                            }
+                            if (str1.contains(str2)) {
+                                ++numContains;
+                            }
+                        }
+                    }
+
+                    double percentContained = (double)numContains / (double)totalStrings;
+                    if (percentContained > 0.33) { //if at least 33% of the ranks have similar strings this is a good indication that a valid string exists
+                        Rectangle candidateRect = new Rectangle(rect);
+                        TextExtractionTask bestCandidate = sameRot.stream().max(new Comparator<TextExtractionTask>() {
+                            @Override
+                            public int compare(TextExtractionTask textExtractionTask, TextExtractionTask t1) {
+                                return Double.compare(textExtractionTask.getPercentValid(), t1.getPercentValid());
+                            }
+                        }).orElse(null);
+                        if (bestCandidate != null && !detector.isLineGibberish(bestCandidate.getValidLine())) {
+                            TextExtractionCandidate candidate = new TextExtractionCandidate(candidateRect, rot, bestCandidate);
+                            candidates.add(candidate);
+                        }
+                    }
+                }
+
+                rect.x += props.getWidthStep();
+            }
+            rect.x = 0;
+            rect.y += props.getHeightStep();
+        }
+
+        return candidates;
+    }
+
+    private List<List<String>> reduceToOutputLines(OCRProperties props, List<TextExtractionCandidate> candidates) {
+        Rectangle rect = props.getExtractionRectangle();
+        List<List<String>> outputLines = new ArrayList<>();
+        while(rect.y <= (props.getHeight() - rect.height)) {
+            List<String> horizontal = new ArrayList<>();
+            while(rect.x <= (props.getWidth() - rect.width)) {
+                Point point = new Point(rect.x, rect.y);
+                List<TextExtractionCandidate> containing = candidates.stream()
+                        .filter(p -> p.getRect().contains(point))
+                        .collect(Collectors.toList());
+
+                for (int rot = 0; rot <= 345; rot += props.getRotStep()) {
+                    //look across all ranks for a given rotation
+                    final int currRot = rot;
+                    List<TextExtractionCandidate> sameRot = containing.stream()
+                            .filter(p -> p.getRot() == currRot)
+                            .collect(Collectors.toList());
+
+                    TextExtractionCandidate bestOverall = sameRot.stream().max(new Comparator<TextExtractionCandidate>() {
+                        @Override
+                        public int compare(TextExtractionCandidate textExtractionCandidate, TextExtractionCandidate t1) {
+                            return Double.compare(textExtractionCandidate.getCandidate().getPercentValid(), t1.getCandidate().getPercentValid());
+                        }
+                    }).orElse(null);
+
+                    if (bestOverall != null) {
+                        String entry = bestOverall.getCandidate().getValidLine();
+                        if (!horizontal.contains(entry)) {
+                            horizontal.add(entry);
+                        }
+                    }
+                }
+
+                rect.x += props.getWidthStep();
+            }
+            outputLines.add(horizontal);
+            rect.x = 0;
+            rect.y += props.getHeightStep();
+        }
+
+        return outputLines;
+    }
+
+    private List<String> produceFinalOutput(List<List<String>> outputLines) {
+        List<String> finalOutput = new ArrayList<>();
+        for (int i = 0; i < outputLines.size(); i++) {
+            List<String> currentLine = outputLines.get(i);
+            if (i < outputLines.size() - 1) {
+                List<String> nextLine = outputLines.get(i + 1);
+                for (int j = 0; j < currentLine.size(); j++) {
+                    String entry = currentLine.get(j);
+                    double sim = 0d;
+                    for (int m = 0; m < nextLine.size(); m++) {
+                        String other = nextLine.get(m);
+                        double currSim = NLPTools.similarity(entry, other);
+                        if (currSim > 0.7) {
+                            sim = 1000;
+                            break;
+                        }
+                        sim += currSim;
+                    }
+                    double avgSim = sim / (double)nextLine.size();
+                    if (avgSim > 0.5 && !finalOutput.contains(entry)) {
+                        finalOutput.add(entry);
+                    }
+                }
+            }
+            if (i > 0) {
+                List<String> prevLine = outputLines.get(i - 1);
+                for (int j = 0; j < currentLine.size(); j++) {
+                    String entry = currentLine.get(j);
+                    double sim = 0d;
+                    for (int k = 0; k < prevLine.size(); k++) {
+                        String other = prevLine.get(k);
+                        double currSim = NLPTools.similarity(entry, other);
+                        if (currSim > 0.7) {
+                            sim = 1000;
+                            break;
+                        }
+                        sim += currSim;
+                    }
+                    double avgSim = sim / (double)prevLine.size();
+                    if (avgSim > 0.5 && !finalOutput.contains(entry)) {
+                        finalOutput.add(entry);
+                    }
+                }
+            }
+        }
+
+        return finalOutput;
     }
 
     private double getAsciiPercentage(String docText) {
