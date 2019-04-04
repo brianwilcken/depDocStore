@@ -78,27 +78,31 @@ public class NERModelData  {
         }
 
         StringBuilder detailedAccuracyBldr = new StringBuilder();
-        String line = rprtLines[++lineNum];
-        do {
-            detailedAccuracyBldr.append(line + System.lineSeparator());
-            line = rprtLines[++lineNum];
-        } while (!line.contains(SECTION_TERMINATOR));
-        detailedAccuracy = detailedAccuracyBldr.toString();
+        try {
+            String line = rprtLines[++lineNum];
+            do {
+                detailedAccuracyBldr.append(line + System.lineSeparator());
+                line = rprtLines[++lineNum];
+            } while (!line.contains(SECTION_TERMINATOR));
+            detailedAccuracy = detailedAccuracyBldr.toString();
 
-        StringBuilder confusionMatrixBldr = new StringBuilder();
-        line = rprtLines[++lineNum];
-        do {
-            confusionMatrixBldr.append(line + System.lineSeparator());
+            StringBuilder confusionMatrixBldr = new StringBuilder();
             line = rprtLines[++lineNum];
-        } while (!line.contains(SECTION_TERMINATOR));
-        confusionMatrix = confusionMatrixBldr.toString();
+            do {
+                confusionMatrixBldr.append(line + System.lineSeparator());
+                line = rprtLines[++lineNum];
+            } while (!line.contains(SECTION_TERMINATOR));
+            confusionMatrix = confusionMatrixBldr.toString();
 
-        do {
-            line = rprtLines[lineNum++];
-            if (line.contains("Number of model sentences:")) {
-                numModelSentences = getNumberFromLine(line);
-            }
-        } while (lineNum < rprtLines.length);
+            do {
+                line = rprtLines[lineNum++];
+                if (line.contains("Number of model sentences:")) {
+                    numModelSentences = getNumberFromLine(line);
+                }
+            } while (lineNum < rprtLines.length);
+        } catch (Exception e) {
+            //do nothing here.... just want to make sure as much report data is written as possible
+        }
     }
 
     private String getNumberFromLine(String line) {
