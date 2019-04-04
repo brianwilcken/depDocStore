@@ -307,6 +307,8 @@ public class NLPTools {
         Pattern docPattern = Pattern.compile(" ?<START:.+?<END>");
         Pattern entityTypePattern = Pattern.compile("(?<=:).+?(?=>)");
 
+        annotated = annotated.replaceAll("[\\(]", "-LP-");
+        annotated = annotated.replaceAll("[\\)]", "-RP-");
         List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(annotated);
         String[] sentences = sentencesList.stream().map(p -> p.toString()).toArray(String[]::new);
 
@@ -327,6 +329,8 @@ public class NLPTools {
                 String type = null;
                 if (typeMatcher.find()) {
                     type = startToken.value().substring(typeMatcher.start(), typeMatcher.end());
+                    type = type.replace("-LP-", "(");
+                    type = type.replace("-RP-", ")");
                 }
                 List<CoreLabel> entityTokens = spanTokens.subList(1, spanTokens.size() - 1); // extract just the tokens that comprise the entity
 
