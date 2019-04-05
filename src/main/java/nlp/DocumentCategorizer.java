@@ -1,13 +1,16 @@
 package nlp;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import common.Tools;
-import opennlp.tools.cmdline.doccat.DoccatFineGrainedReportListener;
 import opennlp.tools.doccat.*;
+import opennlp.tools.util.InputStreamFactory;
 import opennlp.tools.util.ObjectStream;
+import opennlp.tools.util.PlainTextByLineStream;
 import opennlp.tools.util.TrainingParameters;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -133,8 +136,8 @@ public class DocumentCategorizer {
         return best;
     }
 
-    public double trainDoccatModel() throws IOException {
-        double modelAccuracy;
+    public String trainDoccatModel() throws IOException {
+        String evalReport;
         DoccatModel model;
         try {
             //Write training data to file
@@ -145,10 +148,14 @@ public class DocumentCategorizer {
             //Use optimized iterations/cutoff to train model
             OptimizationTuple best = readTrainingParametersFromFile();
             ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(optimalTrainingFile);
-            try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(lineStream)) {
+            TrainTestSplitter splitter = new TrainTestSplitter(42);
+            splitter.trainTestSplit(0.8, lineStream);
+            try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
                 model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(best.i, best.c), new DoccatFactory());
+            }
 
-                modelAccuracy = evaluateDoccatModel(sampleStream, model);
+            try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTest())) {
+                evalReport = evaluateDoccatModel(sampleStream, model);
             }
 
             try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(Tools.getProperty("nlp.doccatModel")))) {
@@ -156,10 +163,75 @@ public class DocumentCategorizer {
             }
         } catch (ClassNotFoundException e) {
             logger.error(e.getMessage(), e);
-            modelAccuracy = -1;
+            evalReport = "";
         }
-        logger.info("Doccat Model Training Complete!  Accuracy: " + (modelAccuracy * 100) + "%");
-        return modelAccuracy;
+        logger.info(evalReport);
+        return evalReport;
+    }
+
+    private class TrainTestSplitter {
+        private List<String> train;
+        private List<String> test;
+        private Random random;
+
+        public TrainTestSplitter(long seed) {
+            train = new ArrayList<>();
+            test = new ArrayList<>();
+            random = new Random(seed);
+        }
+
+        public void trainTestSplit(double percentTrain, ObjectStream<String> lineStream) {
+            try {
+                String line = lineStream.read();
+                while (line != null) {
+                    double rand = random.nextDouble();
+                    if (rand <= percentTrain) {
+                        train.add(line);
+                    } else {
+                        test.add(line);
+                    }
+                    line = lineStream.read();
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        private String convertListToString(List<String> lines) {
+            StringBuilder bldr = new StringBuilder();
+            for (String line : lines) {
+                bldr.append(line);
+                bldr.append(System.lineSeparator());
+            }
+
+            return bldr.toString();
+        }
+
+        private ObjectStream<String> getObjectStream(List<String> lines) {
+            String data = convertListToString(lines);
+            try {
+                InputStreamFactory factory = new InputStreamFactory() {
+                    public InputStream createInputStream() throws IOException {
+                        InputStream stream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+                        return stream;
+                    }
+                };
+
+                ObjectStream<String> lineStream = new PlainTextByLineStream(factory, StandardCharsets.UTF_8);
+                return lineStream;
+            } catch (IOException e) {
+                return null;
+            }
+        }
+
+        public ObjectStream<String> getTrain() {
+            return getObjectStream(train);
+        }
+
+        public ObjectStream<String> getTest() {
+            return getObjectStream(test);
+        }
     }
 
     private double crossValidateDoccatModel(ObjectStream<DocumentSample> samples, TrainingParameters params, int nFolds) {
@@ -179,11 +251,14 @@ public class DocumentCategorizer {
         }
     }
 
-    private double evaluateDoccatModel(ObjectStream<DocumentSample> samples, DoccatModel model) {
+
+
+    private String evaluateDoccatModel(ObjectStream<DocumentSample> samples, DoccatModel model) {
         try {
             DocumentCategorizerME categorizer = new DocumentCategorizerME(model);
 
-            DoccatFineGrainedReportListener reportListener = new DoccatFineGrainedReportListener();
+            ByteArrayOutputStream reportStream = new ByteArrayOutputStream();
+            DoccatFineGrainedReportListener reportListener = new DoccatFineGrainedReportListener(reportStream);
             DoccatEvaluationMonitor[] listeners = { reportListener};
 
             DocumentCategorizerEvaluator evaluator = new DocumentCategorizerEvaluator(categorizer, listeners);
@@ -191,10 +266,11 @@ public class DocumentCategorizer {
             samples.reset();
             evaluator.evaluate(samples);
             reportListener.writeReport();
-            return evaluator.getAccuracy();
+            String report = reportStream.toString();
+            return report;
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
-            return -1;
+            return "";
         }
     }
 }

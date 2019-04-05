@@ -18,27 +18,27 @@ public class DoccatModelTrainingService {
     private static boolean trainingInProgress = false;
 
     @Async("processExecutor")
-    public Future<Double> processAsync(DocumentsController documentsController) {
+    public Future<String> processAsync(DocumentsController documentsController) {
         try {
-            double accuracy = process(documentsController);
+            String report = process(documentsController);
 
-            return new AsyncResult<>(accuracy);
+            return new AsyncResult<>(report);
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
-            return new AsyncResult<Double>(-1.0);
+            return new AsyncResult<>("");
         }
     }
 
-    public double process(DocumentsController documentsController) throws IOException {
+    public String process(DocumentsController documentsController) throws IOException {
         if (!trainingInProgress) {
             trainingInProgress = true;
             logger.info("Begin model training.");
-            double accuracy = documentsController.initiateDoccatModelTraining();
+            String report = documentsController.initiateDoccatModelTraining();
             logger.info("Model training complete.");
             trainingInProgress = false;
 
-            return accuracy;
+            return report;
         }
-        return -1;
+        return "";
     }
 }

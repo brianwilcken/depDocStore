@@ -464,8 +464,8 @@ public class DocumentsController {
         logger.info("In trainDoccatModel method");
         try {
             if (!doAsync) {
-                double accuracy = doccatModelTrainingService.process(this);
-                return ResponseEntity.ok().body(Tools.formJsonResponse(accuracy));
+                String report = doccatModelTrainingService.process(this);
+                return ResponseEntity.ok().body(Tools.formJsonResponse(report));
             } else {
                 doccatModelTrainingService.processAsync(this);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
@@ -934,7 +934,7 @@ public class DocumentsController {
         }
     }
 
-    public double initiateDoccatModelTraining() throws IOException {
+    public String initiateDoccatModelTraining() throws IOException {
         return categorizer.trainDoccatModel();
     }
 
