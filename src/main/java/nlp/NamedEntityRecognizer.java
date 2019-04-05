@@ -1,5 +1,6 @@
 package nlp;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.common.io.Files;
 import common.Tools;
@@ -357,13 +358,18 @@ public class NamedEntityRecognizer {
             model.serialize(modelOut);
         }
 
-        String modelEvaluationReport = evaluateNERModel(category);
-        modelEvaluationReport += System.lineSeparator() + "Number of model sentences: " + lineNum;
+        NERModelEvaluation evaluationReport = evaluateNERModel(category);
+        String stats = evaluationReport.getStats();
+        stats += System.lineSeparator() + "Number of model sentences: " + lineNum;
         String reportFile = getReportFilePath(modelDir);
-        FileUtils.writeStringToFile(new File(reportFile), modelEvaluationReport, Charset.defaultCharset());
+        String refsFile = getReferencesFilePath(modelDir);
+        String predsFile = getPredictionsFilePath(modelDir);
+        FileUtils.writeStringToFile(new File(reportFile), stats, Charset.defaultCharset());
+        FileUtils.writeStringToFile(new File(refsFile), evaluationReport.getRefLines(), Charset.defaultCharset());
+        FileUtils.writeStringToFile(new File(predsFile), evaluationReport.getPredLines(), Charset.defaultCharset());
     }
 
-    public String evaluateNERModel(String category) {
+    public NERModelEvaluation evaluateNERModel(String category) {
         try {
             String testFile = getTestFilePath(category);
 
@@ -389,7 +395,10 @@ public class NamedEntityRecognizer {
 
             reportListener.writeReport();
             String report = reportStream.toString();
-            return report;
+
+            NERModelEvaluation nerModelEvaluation = new NERModelEvaluation(report, reportListener.getReferenceLines(), reportListener.getPredictionLines());
+
+            return nerModelEvaluation;
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
             return null;
@@ -415,6 +424,23 @@ public class NamedEntityRecognizer {
         return modelListing;
     }
 
+    public NERModelEvaluation getModelEvaluation(String category, String version) {
+        String modelDir = getModelDir(category, version);
+        String refsPath = getReferencesFilePath(modelDir);
+        String predsPath = getPredictionsFilePath(modelDir);
+        File refsFile = new File(refsPath);
+        File predsFile = new File(predsPath);
+        try {
+            String refs = refsFile.exists() ? Files.toString(refsFile, Charsets.UTF_8) : "";
+            String preds = predsFile.exists() ? Files.toString(predsFile, Charsets.UTF_8) : "";
+            NERModelEvaluation eval = new NERModelEvaluation("", refs, preds);
+            return eval;
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            return null;
+        }
+    }
+
     private String getModelFilePath(String modelDir) {
         String modelFile = modelDir + "/model.bin";
         return modelFile;
@@ -422,6 +448,16 @@ public class NamedEntityRecognizer {
 
     private String getReportFilePath(String modelDir) {
         String modelFile = modelDir + "/report.txt";
+        return modelFile;
+    }
+
+    private String getReferencesFilePath(String modelDir) {
+        String modelFile = modelDir + "/refs.txt";
+        return modelFile;
+    }
+
+    private String getPredictionsFilePath(String modelDir) {
+        String modelFile = modelDir + "/preds.txt";
         return modelFile;
     }
 

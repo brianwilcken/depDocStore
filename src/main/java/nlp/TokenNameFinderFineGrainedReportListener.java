@@ -1,7 +1,9 @@
 package nlp;
 
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 import opennlp.tools.namefind.NameSample;
@@ -18,6 +20,8 @@ public class TokenNameFinderFineGrainedReportListener
         extends FineGrainedReportListener implements TokenNameFinderEvaluationMonitor {
 
     private SequenceCodec<String> sequenceCodec;
+    private List<String> references;
+    private List<String> predictions;
 
     /**
      * Creates a listener that will print to {@link System#err}
@@ -32,6 +36,8 @@ public class TokenNameFinderFineGrainedReportListener
     public TokenNameFinderFineGrainedReportListener(SequenceCodec<String> seqCodec, OutputStream outputStream) {
         super(outputStream);
         this.sequenceCodec = seqCodec;
+        references = new ArrayList<>();
+        predictions = new ArrayList<>();
     }
 
     // methods inherited from EvaluationMonitor
@@ -52,6 +58,9 @@ public class TokenNameFinderFineGrainedReportListener
         // we don' want it to compute token frequency, so we pass an array of empty strings instead
         // of tokens
         getStats().add(new String[reference.getSentence().length], refTags, predTags);
+
+        references.add(reference.toString());
+        predictions.add(prediction.toString());
     }
 
     @Override
@@ -68,5 +77,23 @@ public class TokenNameFinderFineGrainedReportListener
         printGeneralStatistics();
         printTagsErrorRank();
         printGeneralConfusionTable();
+    }
+
+    public String getReferenceLines() {
+        return getLines(references);
+    }
+
+    public String getPredictionLines() {
+        return getLines(predictions);
+    }
+
+    private String getLines(List<String> lst) {
+        StringBuilder bldr = new StringBuilder();
+        for (String line : lst) {
+            bldr.append(line);
+            bldr.append(System.lineSeparator());
+        }
+
+        return bldr.toString();
     }
 }

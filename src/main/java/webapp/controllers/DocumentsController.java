@@ -417,8 +417,8 @@ public class DocumentsController {
         try {
             Map<String, String> reports = new HashMap<>();
             for (String cat : category) {
-                String report = recognizer.evaluateNERModel(cat);
-                reports.put(cat, report);
+                NERModelEvaluation report = recognizer.evaluateNERModel(cat);
+                reports.put(cat, report.getStats());
             }
 
             return ResponseEntity.ok().body(Tools.formJsonResponse(reports));
@@ -439,6 +439,19 @@ public class DocumentsController {
             }
 
             return ResponseEntity.ok().body(Tools.formJsonResponse(listing));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/NERModelReviewPredictions", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getNERModelPredictions(String category, String version) {
+        logger.info("In getNERModelPredictions method");
+        try {
+            NERModelEvaluation eval = recognizer.getModelEvaluation(category, version);
+            return ResponseEntity.ok().body(Tools.formJsonResponse(eval));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
