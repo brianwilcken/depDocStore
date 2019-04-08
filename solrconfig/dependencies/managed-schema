@@ -440,6 +440,7 @@
   <field name="percentAnnotated" type="plong" multiValued="false"/>
   <field name="totalLines" type="plong" multiValued="false"/>
   <field name="project" type="strings" multiValued="false"/>
+  <field name="organization" type="strings" multiValued="false"/>
   <field name="relationState" type="strings" multiValued="false"/>
   <field name="dependentFacilityUUID" type="strings" multiValued="false"/>
   <field name="providingFacilityUUID" type="strings" multiValued="false"/>
