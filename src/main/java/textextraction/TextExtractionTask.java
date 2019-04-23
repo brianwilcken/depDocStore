@@ -131,11 +131,11 @@ public class TextExtractionTask {
         } catch (TesseractException e) {
             logger.error(e.getMessage(), e);
         } finally {
-//            try {
-//                FileUtils.forceDelete(saved);
-//            } catch (IOException e) {
-//                logger.error(e.getMessage(), e);
-//            }
+            try {
+                FileUtils.forceDelete(saved);
+            } catch (IOException e) {
+                logger.error(e.getMessage(), e);
+            }
         }
     }
 
