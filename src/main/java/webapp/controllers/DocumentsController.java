@@ -513,6 +513,12 @@ public class DocumentsController {
     public ResponseEntity<JsonResponse> crawlResourceURL(@RequestParam Map<String, Object> metadata, @RequestParam("url") String urlString) {
         try {
             logger.info("crawling URL");
+            if (metadata.containsKey("depth")) {
+                int depth = Integer.parseInt(metadata.get("depth").toString());
+                webCrawlerService.setMaxCrawlDepth(depth);
+            } else {
+                webCrawlerService.setMaxCrawlDepth(1);
+            }
             if (metadata.containsKey("async")) {
                 webCrawlerService.processAsync(urlString);
             } else {

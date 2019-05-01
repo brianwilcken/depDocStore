@@ -459,6 +459,7 @@ public class PDFProcessingService {
             }
         }
 
+        //merge text for each nearest neighbor
         Map<Double, List<RectangularRegion>> verticalRegionList = connectedRegionGraph.nodes().stream().collect(Collectors.groupingBy(p -> p.getRectangle().getX()));
         TreeMap<Double, List<RectangularRegion>> orderedVerticalRegionList = new TreeMap<>();
         orderedVerticalRegionList.putAll(verticalRegionList);
@@ -495,7 +496,7 @@ public class PDFProcessingService {
             }
         }
 
-        //merge all text together moving top to bottom and left to right
+        //merge all text together moving left to right and top to bottom
         StringBuilder bldr = new StringBuilder();
         rect = props.getExtractionRectangle();
         Map<Double, List<RectangularRegion>> horizontalRegionList = connectedRegionGraph.nodes().stream().collect(Collectors.groupingBy(p -> p.getRectangle().getY()));

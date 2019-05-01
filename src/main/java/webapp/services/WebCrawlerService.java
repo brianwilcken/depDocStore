@@ -53,6 +53,10 @@ public class WebCrawlerService {
         config.setMaxDownloadSize(104857600); //100MB
     }
 
+    public void setMaxCrawlDepth(int depth) {
+        config.setMaxDepthOfCrawling(depth);
+    }
+
     @Async("processExecutor")
     public void processAsync(String seedURL) throws Exception {
         process(seedURL);
