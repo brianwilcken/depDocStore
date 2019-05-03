@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 import com.google.common.graph.*;
 import edu.stanford.nlp.ling.CoreLabel;
 import net.sourceforge.lept4j.*;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.TesseractException;
 import nlp.NLPTools;
 import nlp.gibberish.GibberishDetector;
 import org.apache.commons.collections.bidimap.TreeBidiMap;
@@ -292,7 +294,7 @@ public class Tools {
 						if (processedPage.getPageType() == ProcessedPage.PageType.PlainText) {
 							parsed.append(processedPage.getPageText());
 						} else if (processedPage.getPageType() == ProcessedPage.PageType.Schematic) {
-							parsed.append("PAGE " + i + " IS A SCHEMATIC");
+							parsed.append("PAGE " + i + " IS A SCHEMATIC" + System.lineSeparator());
 							//pass the schematic page off to an alternate processing path for storage separate to the main document
 							doc.getSchematics().add(processedPage);
 						}
@@ -332,6 +334,28 @@ public class Tools {
 			return null;
 		}
 	}
+
+//	public static void main(String[] args) {
+//		Tesseract tesseract = new Tesseract();
+//		String tessdata = Tools.getProperty("tess4j.path");
+//		tesseract.setDatapath(tessdata);
+//
+//		File tiffFile = new File("E:\\LeptonicaTesting\\test_map_1.tif");
+//		Pix pix = ImageTools.loadImage(tiffFile);
+//		Pix pix2gray = ImageTools.convertImageToGrayscale(pix);
+//		Pix pix2bin = ImageTools.binarizeImage(pix2gray);
+//		Pix pix2rank = Leptonica.INSTANCE.pixBlockrank(pix2bin, null, 1, 1, 0.95f);
+//		File saved = new File("E:\\LeptonicaTesting\\test_map_1_bin.tif");
+//		ImageTools.saveImage(saved.getPath(), pix2rank);
+//		ImageTools.disposePixs(pix, pix2gray, pix2bin, pix2rank);
+//
+//		try {
+//			String output = tesseract.doOCR(saved);
+//			System.out.println(output);
+//		} catch (TesseractException e) {
+//			e.printStackTrace();
+//		}
+//	}
 
 	public static void main(String[] args) {
 		TextExtractionProcessManager mgr = new TextExtractionProcessManager();
