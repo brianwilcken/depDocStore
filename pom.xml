@@ -86,6 +86,11 @@
 			<version>2.9.3</version>
 		</dependency>
 		<dependency>
+			<groupId>com.fasterxml.jackson.dataformat</groupId>
+			<artifactId>jackson-dataformat-csv</artifactId>
+			<version>2.9.3</version>
+		</dependency>
+		<dependency>
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-solrj</artifactId>
 			<version>7.2.1</version>
@@ -220,6 +225,11 @@
 			<!--<artifactId>smile-plot</artifactId>-->
 			<!--<version>1.5.2</version>-->
 		<!--</dependency>-->
+		<dependency>
+			<groupId>cc.mallet</groupId>
+			<artifactId>mallet</artifactId>
+			<version>2.0.8</version>
+		</dependency>
 	</dependencies>
 
 	<profiles>
@@ -242,11 +252,7 @@
 				<useProxy>false</useProxy>
 				<proxy.host>webbalance.inl.gov</proxy.host>
 				<proxy.port>8080</proxy.port>
-				<erAuto>false</erAuto>
-				<dcAuto>false</dcAuto>
 				<wsAuto>false</wsAuto>
-				<erInterval>60000</erInterval>
-				<dcInterval>60000</dcInterval>
 				<wsInterval>15000</wsInterval>
 				<neo4j.url>http://localhost:7474</neo4j.url>
 				<neo4j.username>neo4j</neo4j.username>
@@ -272,11 +278,7 @@
 				<useProxy>false</useProxy>
 				<proxy.host>webbalance.inl.gov</proxy.host>
 				<proxy.port>8080</proxy.port>
-				<erAuto>false</erAuto>
-				<dcAuto>false</dcAuto>
 				<wsAuto>false</wsAuto>
-                <erInterval>3600000</erInterval>
-                <dcInterval>900000</dcInterval>
 				<wsInterval>15000</wsInterval>
 				<neo4j.url>http://localhost:7474</neo4j.url>
 				<neo4j.username>aha</neo4j.username>
@@ -300,11 +302,7 @@
 				<useProxy>true</useProxy>
 				<proxy.host>146.137.176.11</proxy.host>
 				<proxy.port>3128</proxy.port>
-				<erAuto>true</erAuto>
-				<dcAuto>true</dcAuto>
 				<wsAuto>false</wsAuto>
-                <erInterval>900000</erInterval>
-                <dcInterval>300000</dcInterval>
 				<wsInterval>-1</wsInterval>
 			</properties>
 		</profile>
@@ -327,11 +325,7 @@
 				<useProxy>true</useProxy>
 				<proxy.host>146.137.176.11</proxy.host>
 				<proxy.port>3128</proxy.port>
-				<erAuto>true</erAuto>
-				<dcAuto>true</dcAuto>
 				<wsAuto>false</wsAuto>
-                <erInterval>60000</erInterval>
-                <dcInterval>60000</dcInterval>
 				<wsInterval>-1</wsInterval>
 			</properties>
 		</profile>

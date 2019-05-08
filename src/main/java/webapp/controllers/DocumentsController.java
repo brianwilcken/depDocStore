@@ -1,9 +1,12 @@
 package webapp.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.google.common.base.Strings;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import org.springframework.core.io.ClassPathResource;
 import textextraction.ProcessedDocument;
 import textextraction.ProcessedPage;
 import textextraction.TextExtractor;
@@ -35,10 +38,12 @@ import solrapi.model.IndexedDocumentsQueryParams;
 import webapp.models.GeoNameWithFrequencyScore;
 import webapp.models.JsonResponse;
 import webapp.services.*;
+import webapp.services.GoogleSearchService;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -86,6 +91,9 @@ public class DocumentsController {
 
     @Autowired
     private WebCrawlerService webCrawlerService;
+
+    @Autowired
+    private GoogleSearchService googleSearchService;
 
     @Autowired
     private BulkUploadService bulkUploadService;
@@ -527,6 +535,22 @@ public class DocumentsController {
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (MalformedURLException e){
             return ResponseEntity.badRequest().body(Tools.formJsonResponse(null));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/crawlGoogle", method=RequestMethod.POST, consumes=MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> crawlGoogle(@RequestParam Map<String, Object> metadata) {
+        try {
+            logger.info("crawling Google");
+            if (metadata.containsKey("searchTerm")) {
+                String searchTerm = (String)metadata.get("searchTerm");
+                googleSearchService.queryGoogle(searchTerm, 20); //search through up to 2 pages of results
+            }
+            return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);

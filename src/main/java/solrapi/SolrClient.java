@@ -53,6 +53,7 @@ import org.apache.solr.common.util.SimpleOrderedMap;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.io.Files;
+import org.joda.time.DateTime;
 
 public class SolrClient {
 
@@ -108,15 +109,16 @@ public class SolrClient {
 		//retrieveAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
-		//client.writeCorpusDataToFile("data/clustering.csv", client::getDoccatDataQuery, client::formatForClustering);
+		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getClusteringDataQuery, client::formatForClustering, new NERThrottle());
+		client.writeCorpusDataToFile("data/topic-modeling.data", "", client::getClusteringDataQuery, client::formatForTopicModeling, new NERThrottle());
 
-		try {
-			logger.info("Begin dependency data export");
-			client.WriteDataToFile("data/depData.json", "filename:*", 1000000);
-			logger.info("Dependency data export complete");
-		} catch (SolrServerException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			logger.info("Begin dependency data export");
+//			client.WriteDataToFile("data/depData.json", "filename:*", 1000000);
+//			logger.info("Dependency data export complete");
+//		} catch (SolrServerException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 	private static void retrieveAnnotatedData(SolrClient client, String id) {
@@ -338,6 +340,11 @@ public class SolrClient {
 		return query;
 	}
 
+	public SolrQuery getClusteringDataQuery(SolrQuery query) {
+		query.setQuery("parsed:*");
+		return query;
+	}
+
 	public SolrQuery getDoccatDataQuery(SolrQuery query) {
 		query.setQuery("parsed:*");
 		query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
@@ -446,10 +453,28 @@ public class SolrClient {
 		String id = doc.get("id").toString();
 		String filename = doc.get("filename").toString();
 		String parsed = doc.get("parsed").toString();
-		String clusteringStr = id + "," + filename.replace(",", "") + "," + parsed.replace(",", "");
+		String category = doc.containsKey("category") ? doc.get("category").toString() : "NONE";
+		String clusteringStr = id + "," + filename.replace(",", "") + "_<" + category.replace(",", ";") + ">" + "," + parsed.replace(",", "");
 		clusteringStr = clusteringStr.replace("\r", " ")
 				.replace("\n", " ");
 		fos.write(clusteringStr.getBytes(Charset.forName("Cp1252")));
+		fos.write(System.lineSeparator().getBytes());
+	}
+
+	public void formatForTopicModeling(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
+		String created = doc.get("created").toString();
+		String lastUpdated = doc.get("lastUpdated").toString();
+		String filename = doc.get("id").toString() + "|" + doc.get("filename").toString().replace(" ", "_");
+		String parsed = doc.get("parsed").toString();
+		String category = doc.containsKey("category") ? ((List)doc.get("category")).stream().reduce((c,n) -> c + ";" + n).orElse("NONE").toString() : "NONE";
+		if (created.equals(lastUpdated)) {
+			category = "NEW;" + category;
+		}
+		String ldaStr = filename.replace(",", "") + "," + category + "," + parsed.replace(",", "");
+		ldaStr = ldaStr.replace("\r", " ")
+				.replace("\n", " ");
+		fos.write(ldaStr.getBytes(Charset.forName("Cp1252")));
+		fos.write(System.lineSeparator().getBytes());
 	}
 
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {

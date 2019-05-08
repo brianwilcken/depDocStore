@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import MDS
 import mpld3
 
-num_clusters = 7
+num_clusters = 15
 
 data = pd.read_csv('clustering.csv', sep=',', encoding='utf-8')
 
@@ -187,11 +187,19 @@ ax.margins(0.05) # Optional, just adds 5% padding to the autoscaling
 #iterate through groups to layer the plot
 #note that I use the cluster_name and cluster_color dicts with the 'name' lookup to return the appropriate color/label
 for name, group in groups:
+    
+    
     curr_marker = next(cluster_markers)
     curr_color = next(cluster_colors)
+    
+    validCategoryDocs = np.array([[entry[0], entry[1]] for entry in group.values if '[Not_Applicable]' not in entry[3]])
+    if len(validCategoryDocs) > 0:
+        ax.plot(validCategoryDocs[:, 0], validCategoryDocs[:, 1], linestyle='',
+                marker='s', ms=15, color=curr_color, alpha=0.2)
+    
     #mark each point where the Mahalanobis distance < max_distance
     ax.plot(cluster_distance[name][:, 0], cluster_distance[name][:, 1], linestyle='',
-            marker='o', ms=10, color=curr_color, alpha=0.3)
+            marker='o', ms=10, color=curr_color, alpha=0.5)
     #plot the cluster
     points = ax.plot(group.x, group.y, marker=curr_marker, linestyle='', ms=6, 
             label=cluster_names[name], color=curr_color, mec='none')

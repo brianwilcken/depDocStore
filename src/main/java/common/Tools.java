@@ -293,6 +293,7 @@ public class Tools {
 					if (processedPage.getPageState() != ProcessedPage.PageState.Error) {
 						if (processedPage.getPageType() == ProcessedPage.PageType.PlainText) {
 							parsed.append(processedPage.getPageText());
+							processedPage.cleanup();
 						} else if (processedPage.getPageType() == ProcessedPage.PageType.Schematic) {
 							parsed.append("PAGE " + i + " IS A SCHEMATIC" + System.lineSeparator());
 							//pass the schematic page off to an alternate processing path for storage separate to the main document

@@ -72,8 +72,8 @@ public class PDFProcessingService {
         processedPage.setPageType(ProcessedPage.PageType.PlainText);
         Tesseract tesseract = new Tesseract();
         tesseract.setDatapath(tessdata);
-        final double pdfGibberishThreshold = 0.75; //set this threshold very high to avoid using OCR whenever possible
-        final double ocrGibberishThreshold = 0.1; //set this threshold low to encourage additional image processing when using OCR
+        final double pdfGibberishThreshold = Double.parseDouble(Tools.getProperty("textExtraction.pdfGibberishThreshold")); //set this threshold very high to avoid using OCR whenever possible
+        final double ocrGibberishThreshold = Double.parseDouble(Tools.getProperty("textExtraction.ocrGibberishThreshold")); //set this threshold low to encourage additional image processing when using OCR
         try {
             logger.info("Attempt to process file " + pdfFile.getName() + " page " + i + " as PDF");
             PDFTextStripper pdfStripper = new PDFTextStripper();

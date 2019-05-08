@@ -25,6 +25,7 @@ public class TemporaryRepoCleanupService {
                 logger.info("Try to delete file from temporary repo (attempt #" + attempt + "): " + filename);
                 File delFile = new File(temporaryFileRepo + "\\" + filename);
                 FileUtils.forceDelete(delFile);
+                logger.info("Success deleting file from temporary repo: " + filename);
             }
         } catch (IOException e) {
             logger.error(e.getMessage(), e);

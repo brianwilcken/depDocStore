@@ -58,10 +58,14 @@ public class ResourceURLLookupService {
         process(url, metadata);
     }
 
+    public boolean verifyURLFilenameIsFile(String filename) {
+        return !Strings.isNullOrEmpty(filename) && TextExtractor.canExtractText(new File(filename));
+    }
+
     public void process(URL url, Map<String, Object> metadata) {
         try {
             String filename = Tools.removeFilenameSpecialCharacters(FilenameUtils.getName(url.getFile()));
-            if (!Strings.isNullOrEmpty(filename) && TextExtractor.canExtractText(new File(filename))) {
+            if (verifyURLFilenameIsFile(filename)) {
                 RequestCallback requestCallback = request -> request.getHeaders()
                         .setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
 

@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 public class DocumentsWebCrawler extends WebCrawler {
@@ -85,13 +87,15 @@ public class DocumentsWebCrawler extends WebCrawler {
                 String docText = getArticleBody(html);
                 String title = htmlParseData.getTitle();
                 String filename = title.replace(" ", "_") + ".txt";
-                filename = filename.replaceAll("[\\\\/:*?\"<>|]", "");
+                filename = Tools.removeFilenameSpecialCharacters(filename);
                 String filepath = temporaryFileRepo + filename;
                 InputStream in = IOUtils.toInputStream(docText, "UTF-8");
                 File file = Tools.WriteFileToDisk(filepath, in);
                 webCrawlerService.processNewDocument(filename, file, url);
             } else if (TextExtractor.extractors.containsKey(page.getContentType())) {
                 String filename = FilenameUtils.getName(page.getWebURL().getURL());
+                filename = Tools.removeFilenameSpecialCharacters(filename);
+                filename = URLDecoder.decode(filename, StandardCharsets.UTF_8.name()).replace(" ", "_");
                 String filepath = temporaryFileRepo + filename;
                 File file = new File(filepath);
                 FileUtils.writeByteArrayToFile(file, page.getContentData());

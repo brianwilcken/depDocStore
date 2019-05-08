@@ -166,7 +166,6 @@ public class NamedEntityRecognizer {
                     try {
                         pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
                     } catch (Exception e) {
-                        logger.error(e.getMessage(), e);
                         continue;
                     }
                     for (int s = 0; s < sentences.size(); s++) {
