@@ -16,7 +16,13 @@ public class StanfordCoreNLPWithThreadControl extends StanfordCoreNLP {
     public static final Semaphore semaphore;
 
     static {
-        semaphore = new Semaphore(16);
+        int cores = Runtime.getRuntime().availableProcessors();
+        if (cores > 2) {
+            int usedCores = cores / 2;
+            semaphore = new Semaphore(usedCores);
+        } else {
+            semaphore = new Semaphore(1);
+        }
     }
 
     public StanfordCoreNLPWithThreadControl(Properties props) {

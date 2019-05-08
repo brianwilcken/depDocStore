@@ -47,14 +47,10 @@ public class PDFProcessingService {
 
     private static final String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
     private static String tessdata = Tools.getProperty("tess4j.path");
-    private static Leptonica leptInstance = Leptonica.INSTANCE;
     private static TextExtractionProcessManager textExtractionProcessManager = new TextExtractionProcessManager();
 
     @Autowired
     private GibberishDetector detector;
-
-    @Autowired
-    private TesseractOCRService tesseractOCRService;
 
     @Autowired
     private WorkExecutorHeartbeatService workExecutorHeartbeatService;
@@ -274,7 +270,6 @@ public class PDFProcessingService {
                     Pix pix2rank = Leptonica.INSTANCE.pixBlockrank(pix2bin, null, 1, 1, rank);
                     for (int rot = 0; rot <= 359; rot += props.getRotStep()) {
                         TextExtractionTask extraction = new TextExtractionTask(textExtractionProcessManager, convRect, rank, rot, tiffFile, pix2rank);
-                        logger.info("Begin OCR processing for file " + extraction.getImagePath());
                         extractions.get(convRect).put(String.format("%.2f", rank), extraction);
                         extraction.enqueue();
                     }

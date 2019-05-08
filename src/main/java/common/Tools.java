@@ -255,25 +255,22 @@ public class Tools {
 
 	public static ProcessedDocument extractPDFText(File pdfFile) {
 		PDFProcessingService pdfProcessingService = ApplicationContextProvider.getApplicationContext().getBean(PDFProcessingService.class);
-		//String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
 		StringBuilder parsed = new StringBuilder();
-		//final double pdfGibberishThreshold = 0.75; //set this threshold very high to avoid using OCR whenever possible
-		//final double ocrGibberishThreshold = 0.05; //set this threshold low to encourage additional image processing when using OCR
 		ProcessedDocument doc = new ProcessedDocument();
+		RandomAccessFile randomAccessFile = null;
+		COSDocument cosDoc = null;
+		PDDocument pdDoc = null;
 		try {
 			logger.info("Begin PDF text extraction for file: " + pdfFile.getName());
-			RandomAccessFile randomAccessFile = new RandomAccessFile(pdfFile, "r");
+			randomAccessFile = new RandomAccessFile(pdfFile, "r");
 			PDFParser parser = new PDFParser(randomAccessFile);
 			parser.parse();
-			COSDocument cosDoc = parser.getDocument();
-			PDDocument pdDoc = new PDDocument(cosDoc);
+			cosDoc = parser.getDocument();
+			pdDoc = new PDDocument(cosDoc);
 			int pageCount = pdDoc.getNumberOfPages();
-			logger.info("PDF contains " + pageCount + " page(s).");
 
 			Map<Integer, Future<ProcessedPage>> pdfTasks = new HashMap<>();
-
 			for (int i = 1; i <= pageCount; i++) {
-				logger.info("Queueing Page " + i + " for processing");
 				Future<ProcessedPage> pdfTask = pdfProcessingService.process(pdfFile, pdDoc, i);
 				pdfTasks.put(i, pdfTask);
 			}
@@ -308,12 +305,22 @@ public class Tools {
 			}
 
 			logger.info("PDF data extraction complete for file: " + pdfFile.getName());
-
-			randomAccessFile.close();
-			pdDoc.close();
-			cosDoc.close();
 		} catch (IOException  e) {
 			logger.error(e.getMessage(), e);
+		} finally {
+			try {
+				if (randomAccessFile != null) {
+					randomAccessFile.close();
+				}
+				if (pdDoc != null) {
+					pdDoc.close();
+				}
+				if (cosDoc != null) {
+					cosDoc.close();
+				}
+			} catch (IOException e) {
+				logger.error(e.getMessage(), e);
+			}
 		}
 
 		//clean text to resolve broken hyphenated words
