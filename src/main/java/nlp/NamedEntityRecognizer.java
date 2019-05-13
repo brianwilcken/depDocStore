@@ -309,7 +309,7 @@ public class NamedEntityRecognizer {
 
     public String retrieveCorpusData(String category) throws IOException {
         String trainingFile = getTrainingFilePath(category);
-        client.writeCorpusDataToFile(trainingFile, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERCorpusReview, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFile, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERCorpusReview, new SolrClient.NERThrottle());
         String corpus = FileUtils.readFileToString(new File(trainingFile), Charset.defaultCharset());
 
         return corpus;
@@ -323,7 +323,7 @@ public class NamedEntityRecognizer {
         String modelDir = getModelDir(category, true);
         String modelFile = getModelFilePath(modelDir);
 
-        client.writeCorpusDataToFile(trainingFile, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFile, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
 
         if (lineStream.read() == null) {
@@ -372,7 +372,7 @@ public class NamedEntityRecognizer {
         try {
             String testFile = getTestFilePath(category);
 
-            client.writeCorpusDataToFile(testFile, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
+            client.writeCorpusDataToFile(testFile, null, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
             ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(testFile);
 
             if (lineStream.read() == null) {

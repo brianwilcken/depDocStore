@@ -1,6 +1,5 @@
 package webapp.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import common.Tools;
 import crawler.DocumentsWebCrawlerFactory;
 import edu.uci.ics.crawler4j.crawler.CrawlConfig;
@@ -13,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import solrapi.SolrClient;
 import webapp.controllers.DocumentsController;
 
 import java.io.File;
@@ -24,10 +22,6 @@ import java.util.Map;
 public class WebCrawlerService {
 
     private static final String crawlStorageFolder = Tools.getProperty("webCrawler.crawlStorageFolder");
-    private static final String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
-
-    private static final ObjectMapper mapper = new ObjectMapper();
-    private static final SolrClient solrClient = new SolrClient(Tools.getProperty("solr.url"));
 
     @Autowired
     private DocumentsController controller;
@@ -41,6 +35,7 @@ public class WebCrawlerService {
         config.setCrawlStorageFolder(crawlStorageFolder);
         config.setIncludeHttpsPages(true);
         config.setMaxDepthOfCrawling(1);
+        config.setMaxPagesToFetch(1000);
         config.setIncludeBinaryContentInCrawling(true);
         config.setMaxDownloadSize(104857600); //100MB
     }
@@ -62,7 +57,7 @@ public class WebCrawlerService {
 
         DocumentsWebCrawlerFactory factory = new DocumentsWebCrawlerFactory(seedURL, this);
         crawlController.addSeed(seedURL);
-        crawlController.start(factory, 1);
+        crawlController.start(factory, 4);
         crawlController.shutdown();
     }
 

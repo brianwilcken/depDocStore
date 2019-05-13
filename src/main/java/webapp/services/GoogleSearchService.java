@@ -11,12 +11,14 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 @Service
 public class GoogleSearchService {
@@ -24,7 +26,7 @@ public class GoogleSearchService {
     final static Logger logger = LogManager.getLogger(GoogleSearchService.class);
     private static String USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36";
     private final ArticleExtractor articleExtractor;
-    private static final int REQUEST_DELAY = 30000;
+    private static final int REQUEST_DELAY = 10000;
 
     @Autowired
     private WebCrawlerService webCrawlerService;
@@ -36,7 +38,8 @@ public class GoogleSearchService {
         articleExtractor = new ArticleExtractor();
     }
 
-    public int queryGoogle(String searchTerm, int resultLimit) {
+    @Async("GoogleSearchProcessExecutor")
+    public Future<Integer> queryGoogle(String searchTerm, int resultLimit) {
         int totalArticles = 0;
         int start = 0;
 
@@ -78,7 +81,7 @@ public class GoogleSearchService {
                 results = getGoogleSearchResults(searchTerm, start);
             }
         }
-        return totalArticles;
+        return new AsyncResult<>(totalArticles);
     }
 
     private Elements getGoogleSearchResults(String queryTerm, int start) {

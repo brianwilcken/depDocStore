@@ -3,9 +3,11 @@ package solrapi;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -13,6 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Strings;
 import common.FacilityTypes;
 import common.Tools;
 import edu.stanford.nlp.util.CoreMap;
@@ -110,7 +113,7 @@ public class SolrClient {
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
 		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getClusteringDataQuery, client::formatForClustering, new NERThrottle());
-		client.writeCorpusDataToFile("data/topic-modeling.data", "", client::getClusteringDataQuery, client::formatForTopicModeling, new NERThrottle());
+		client.writeCorpusDataToFile("PythonDataClustering/topic-modeling.data", "id,filename,parsed","", client::getClusteringDataQuery, client::formatForTopicModeling, new NERThrottle());
 
 //		try {
 //			logger.info("Begin dependency data export");
@@ -367,34 +370,34 @@ public class SolrClient {
 		return func;
 	}
 
-	public void formatForWord2VecModelTraining(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
+	public void formatForWord2VecModelTraining(String unused, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String parsed = doc.get("parsed").toString();
 		parsed = parsed.replace("\r", " ").replace("\n", " ");
-		fos.write(parsed.getBytes(Charset.forName("Cp1252")));
-		fos.write(System.lineSeparator().getBytes());
+		writer.write(parsed);
+		writer.write(System.lineSeparator());
 	}
 
-	public void formatForDoccatModelTraining(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
+	public void formatForDoccatModelTraining(String unused, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String parsed = doc.get("parsed").toString();
 		String normalized = NLPTools.normalizeText(parsed);
 		List<String> categories = (List<String>)doc.get("category");
 		String output = categories.stream().map(category -> category + "\t" + normalized).reduce((p1, p2) -> p1 + System.lineSeparator() + p2).orElse("");
-		fos.write(output.getBytes(Charset.forName("Cp1252")));
-		fos.write(System.lineSeparator().getBytes());
+		writer.write(output);
+		writer.write(System.lineSeparator());
 	}
 
-	public void formatForNERCorpusReview(String category, SolrDocument doc, FileOutputStream fos) throws IOException {
+	public void formatForNERCorpusReview(String category, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String filename = doc.get("filename").toString();
 		String separator = "***********************************************************";
-		fos.write(separator.getBytes());
-		fos.write(filename.toUpperCase().getBytes(Charset.forName("Cp1252")));
-		fos.write(separator.getBytes());
-		fos.write(System.lineSeparator().getBytes());
-		fos.write(System.lineSeparator().getBytes());
-		formatForNERModelTraining(category, doc, fos);
+		writer.write(separator);
+		writer.write(filename.toUpperCase());
+		writer.write(separator);
+		writer.write(System.lineSeparator());
+		writer.write(System.lineSeparator());
+		formatForNERModelTraining(category, doc, writer);
 	}
 
-	public void formatForNERModelTraining(String category, SolrDocument doc, FileOutputStream fos) throws IOException {
+	public void formatForNERModelTraining(String category, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
 		String annotated = doc.get("annotated").toString();
 		List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
@@ -443,13 +446,13 @@ public class SolrClient {
 
 		if (annotatedLinesForCategory.size() > 0) {
 			String onlyAnnotated = String.join("\r\n", annotatedLinesForCategory);
-			fos.write(onlyAnnotated.getBytes(Charset.forName("Cp1252")));
-			fos.write(System.lineSeparator().getBytes());
-			fos.write(System.lineSeparator().getBytes());
+			writer.write(onlyAnnotated);
+			writer.write(System.lineSeparator());
+			writer.write(System.lineSeparator());
 		}
 	}
 
-	public void formatForClustering(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
+	public void formatForClustering(String unused, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String id = doc.get("id").toString();
 		String filename = doc.get("filename").toString();
 		String parsed = doc.get("parsed").toString();
@@ -457,11 +460,11 @@ public class SolrClient {
 		String clusteringStr = id + "," + filename.replace(",", "") + "_<" + category.replace(",", ";") + ">" + "," + parsed.replace(",", "");
 		clusteringStr = clusteringStr.replace("\r", " ")
 				.replace("\n", " ");
-		fos.write(clusteringStr.getBytes(Charset.forName("Cp1252")));
-		fos.write(System.lineSeparator().getBytes());
+		writer.write(clusteringStr);
+		writer.write(System.lineSeparator());
 	}
 
-	public void formatForTopicModeling(String unused, SolrDocument doc, FileOutputStream fos) throws IOException {
+	public void formatForTopicModeling(String unused, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String created = doc.get("created").toString();
 		String lastUpdated = doc.get("lastUpdated").toString();
 		String filename = doc.get("id").toString() + "|" + doc.get("filename").toString().replace(" ", "_");
@@ -473,8 +476,8 @@ public class SolrClient {
 		String ldaStr = filename.replace(",", "") + "," + category + "," + parsed.replace(",", "");
 		ldaStr = ldaStr.replace("\r", " ")
 				.replace("\n", " ");
-		fos.write(ldaStr.getBytes(Charset.forName("Cp1252")));
-		fos.write(System.lineSeparator().getBytes());
+		writer.write(ldaStr);
+		writer.write(System.lineSeparator());
 	}
 
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
@@ -490,15 +493,17 @@ public class SolrClient {
 		}
 	}
 
-	public Map<String, String> writeCorpusDataToFile(String trainingFilePath, String category, Function<SolrQuery, SolrQuery> queryGetter,
-											  Tools.CheckedTriConsumer<String, SolrDocument, FileOutputStream> consumer, TrainingDataThrottle throttle) {
+	public Map<String, String> writeCorpusDataToFile(String trainingFilePath, String header, String category, Function<SolrQuery, SolrQuery> queryGetter,
+											  Tools.CheckedTriConsumer<String, SolrDocument, OutputStreamWriter> dataFormatter, TrainingDataThrottle throttle) {
 		Map<String, String> corpusDocs = new HashMap<>();
 		SolrQuery query = queryGetter.apply(new SolrQuery());
 		query.setRows(1000000);
-		try {
-			File file = new File(trainingFilePath);
-			file.getParentFile().mkdirs();
-			FileOutputStream fos = new FileOutputStream(file);
+		File file = new File(trainingFilePath);
+		file.getParentFile().mkdirs();
+		try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)){
+			if (!Strings.isNullOrEmpty(header)) {
+				writer.write(header + System.lineSeparator());
+			}
 			final BlockingQueue<SolrDocument> tmpQueue = new LinkedBlockingQueue<SolrDocument>();
 			client.queryAndStreamResponse(collection, query, new CallbackHandler(tmpQueue));
 			throttle.init(tmpQueue.size());
@@ -512,11 +517,11 @@ public class SolrClient {
 						String filename = tmpDoc.get("filename").toString();
 						corpusDocs.put(filename, id);
 					}
-					consumer.apply(category, tmpDoc, fos);
+					dataFormatter.apply(category, tmpDoc, writer);
 				}
 			} while (!(tmpDoc instanceof StopDoc));
 
-			fos.close();
+			writer.close();
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 		}

@@ -94,7 +94,7 @@ public class DocumentCategorizer {
                 OptimizationTuple optimizationTuple = tracker.getNext();
 
                 String doccatTrainingFile = Tools.getProperty("nlp.doccatTrainingFile") + optimizationTuple.i + optimizationTuple.c;
-                solrClient.writeCorpusDataToFile(doccatTrainingFile, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
+                solrClient.writeCorpusDataToFile(doccatTrainingFile, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
                         new SolrClient.DoccatThrottle());
 
                 ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(doccatTrainingFile);
@@ -142,7 +142,7 @@ public class DocumentCategorizer {
         try {
             //Write training data to file
             String optimalTrainingFile = Tools.getProperty("nlp.doccatTrainingFile");
-            solrClient.writeCorpusDataToFile(optimalTrainingFile, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
+            solrClient.writeCorpusDataToFile(optimalTrainingFile, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
                     new SolrClient.DoccatThrottle());
 
             //Use optimized iterations/cutoff to train model

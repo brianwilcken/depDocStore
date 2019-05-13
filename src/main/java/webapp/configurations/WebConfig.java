@@ -85,4 +85,16 @@ public class WebConfig implements WebMvcConfigurer, AsyncConfigurer {
 
         return threadPoolTaskExecutor;
     }
+
+    @Bean(name="GoogleSearchProcessExecutor")
+    public TaskExecutor googleSearchWorkExecutor() {
+        ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+        threadPoolTaskExecutor.setThreadNamePrefix("GoogleSearchAsync-");
+        threadPoolTaskExecutor.setCorePoolSize(4);
+        threadPoolTaskExecutor.setMaxPoolSize(4);
+        threadPoolTaskExecutor.setQueueCapacity(10000);
+        threadPoolTaskExecutor.afterPropertiesSet();
+
+        return threadPoolTaskExecutor;
+    }
 }

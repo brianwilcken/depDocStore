@@ -46,8 +46,10 @@ public class PDFProcessingService {
     final static Logger logger = LogManager.getLogger(PDFProcessingService.class);
 
     private static final String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
+    private static final boolean allowMapOCR = Boolean.parseBoolean(Tools.getProperty("textExtraction.allowMapOCR"));
     private static String tessdata = Tools.getProperty("tess4j.path");
     private static TextExtractionProcessManager textExtractionProcessManager = new TextExtractionProcessManager();
+
 
     @Autowired
     private GibberishDetector detector;
@@ -119,7 +121,7 @@ public class PDFProcessingService {
                         //At this point it is very likely that the current page comprises scanned text.
                         //No further processing is needed.
                         return new AsyncResult<>(processedPage);
-                    } else {
+                    } else if (allowMapOCR) {
                         logger.info("OCR processing for file " + binFile.getName() + " page " + i + " finished, but output contains too much gibberish text.");
                         //The page likely contains a map or an engineering schematic.  It may be possible to extract
                         //more information from the page by piecewise analysis.
@@ -127,6 +129,10 @@ public class PDFProcessingService {
                         output = doOCROnMap(tiffFile, i);
                         processedPage.setPageText(output);
                         processedPage.setPageType(ProcessedPage.PageType.Schematic);
+                        return new AsyncResult<>(processedPage);
+                    } else {
+                        logger.info("OCR processing for file " + binFile.getName() + " page " + i + " finished, but output is unusable, and map OCR is not enabled.  Output will be ignored!");
+                        processedPage.setPageText("");
                         return new AsyncResult<>(processedPage);
                     }
                 } catch (TesseractException e) {

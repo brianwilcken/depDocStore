@@ -548,7 +548,8 @@ public class DocumentsController {
             logger.info("crawling Google");
             if (metadata.containsKey("searchTerm")) {
                 String searchTerm = (String)metadata.get("searchTerm");
-                googleSearchService.queryGoogle(searchTerm, 20); //search through up to 2 pages of results
+                Future<Integer> numResults = googleSearchService.queryGoogle(searchTerm, 9);
+                numResults.get();
             }
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (Exception e) {

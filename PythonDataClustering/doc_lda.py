@@ -51,15 +51,11 @@ dictionary.filter_extremes(no_below=3, no_above=0.5, keep_n=100000)
 
 bow_corpus = [dictionary.doc2bow(doc) for doc in docs]
     
-from gensim import models
-tfidf = models.TfidfModel(bow_corpus)
-corpus_tfidf = tfidf[bow_corpus]
-
 from gensim.models.wrappers import LdaMallet
 
 path_to_mallet_binary = "/mallet-2.0.8/bin/mallet"
 path_to_mallet_output = "/mallet-2.0.8/output/"
-mallet_lda_model = LdaMallet(path_to_mallet_binary, corpus=bow_corpus, num_topics=20, id2word=dictionary, prefix=path_to_mallet_output, workers=8)
+mallet_lda_model = LdaMallet(path_to_mallet_binary, corpus=bow_corpus, num_topics=50, id2word=dictionary, prefix=path_to_mallet_output, workers=8)
 
 
 
