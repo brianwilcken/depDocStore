@@ -15,13 +15,18 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.google.common.base.Strings;
 import common.FacilityTypes;
 import common.Tools;
 import edu.stanford.nlp.util.CoreMap;
+import edu.stanford.nlp.util.StringUtils;
 import nlp.NLPTools;
 import nlp.NamedEntity;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
@@ -155,17 +160,48 @@ public class SolrClient {
 	}
 
 	public void UpdateDocumentsFromJsonFile(String filePath) throws SolrServerException {
-		String file = Tools.GetFileString(filePath, "Cp1252");
+		JsonFactory jsonfactory = new JsonFactory();
+		File source = new File(filePath);
 		try {
-			SolrDocument[] docs = mapper.readValue(file, SolrDocument[].class);
-			List<SolrDocument> docsList = Arrays.asList(docs);
-			for (SolrDocument doc : docsList) {
-				String created = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long)doc.get("created")));
-				String lastUpdated = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long)doc.get("lastUpdated")));
-				doc.replace("created", created);
-				doc.replace("lastUpdated", lastUpdated);
+			JsonParser parser = jsonfactory.createParser(source);
+
+			SolrDocumentList docs = new SolrDocumentList();
+			int docNum = 0;
+			while (parser.nextToken() != JsonToken.END_ARRAY) {
+				if (parser.currentToken() == JsonToken.START_OBJECT) {
+					++docNum;
+					SolrDocument doc = new SolrDocument();
+					while (parser.nextToken() != JsonToken.END_OBJECT) {
+						String field = parser.getCurrentName();
+						parser.nextValue();
+						if (parser.currentToken() == JsonToken.START_ARRAY) {
+							List<String> values = new ArrayList<>();
+							while (parser.nextToken() != JsonToken.END_ARRAY) {
+								values.add(parser.getText());
+							}
+							doc.put(field, values);
+						} else {
+							String value = parser.getText();
+							if (field.equals("lastUpdated") || field.equals("created")) {
+								doc.put(field, Tools.getFormattedDateTimeString(Instant.ofEpochMilli(Long.parseLong(value))));
+							} else if (StringUtils.isNumeric(value)) {
+								long number = Long.parseLong(value);
+								doc.put(field, number);
+							} else {
+								doc.put(field, value);
+							}
+						}
+					}
+					docs.add(doc);
+					if (docNum % 100 == 0) {
+						indexDocuments(docs);
+						docs.clear();
+						logger.info("Indexed so far: " + docNum + " documents");
+					}
+				}
 			}
-			indexDocuments(docsList);
+			indexDocuments(docs);
+			logger.info("Total Documents Indexed: " + docNum);
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
 		}
@@ -179,7 +215,6 @@ public class SolrClient {
 					SolrInputDocument solrInputDocument = convertSolrDocument(doc);
 					inputDocuments.add(solrInputDocument);
 				}
-
 
 				client.add(collection, inputDocuments);
 				UpdateResponse updateResponse = client.commit(collection);
@@ -481,13 +516,27 @@ public class SolrClient {
 	}
 
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
-		ObjectWriter writer = new ObjectMapper().writer().withDefaultPrettyPrinter();
+		ObjectWriter objWriter = new ObjectMapper().writer().withDefaultPrettyPrinter();
 		SolrDocumentList docs = QuerySolrDocuments(queryStr, rows, 0, null, null, filterQueries);
-		try {
-			String output = writer.writeValueAsString(docs);
-			File file = new File(filePath);
+
+		File file = new File(filePath);
+		try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)){
 			file.getParentFile().mkdirs();
-			Files.write(output, file, Charset.forName("Cp1252"));
+			writer.write("[ ");
+			for (int i = 0; i < docs.size(); i++) {
+				SolrDocument doc = docs.get(i);
+				if (doc.containsKey("_version_")) {
+					doc.remove("_version_");
+				}
+				String output = objWriter.writeValueAsString(doc);
+				writer.write(output);
+				if (i != docs.size() - 1) {
+					writer.write(", ");
+					writer.write(System.lineSeparator());
+				}
+			}
+			writer.write("]");
+			writer.close();
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
 		}

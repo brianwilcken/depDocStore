@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import solrapi.SolrClient;
 import solrapi.model.IndexedDocumentsQueryParams;
+import webapp.models.DocumentsResponse;
 import webapp.models.GeoNameWithFrequencyScore;
 import webapp.models.JsonResponse;
 import webapp.services.*;
@@ -112,11 +113,12 @@ public class DocumentsController {
     public ResponseEntity<JsonResponse> getDocuments(IndexedDocumentsQueryParams params) {
         logger.info("In getDocuments method");
         try {
-            SolrQuery.SortClause sort = new SolrQuery.SortClause("lastUpdated", "desc");
-            SolrDocumentList docs = solrClient.QuerySolrDocuments(params.getQuery(), params.getQueryRows(), params.getQueryStart(), sort, params.getFields(), params.getFilterQueries());
-            JsonResponse response = Tools.formJsonResponse(docs, params.getQueryTimeStamp());
+            SolrQuery.SortClause sort = new SolrQuery.SortClause(params.getSortColumn(), params.getSortDirection());
+            SolrDocumentList docs = solrClient.QuerySolrDocuments(params.getQuery(), params.getQueryRows(), params.getQueryStart(), sort, params.getFields(), null);
+            DocumentsResponse documentsResponse = new DocumentsResponse(docs, docs.getNumFound());
+            JsonResponse jsonResponse = Tools.formJsonResponse(documentsResponse, params.getQueryTimeStamp());
             logger.info("Returning documents");
-            return ResponseEntity.ok().body(response);
+            return ResponseEntity.ok().body(jsonResponse);
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);

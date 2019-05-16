@@ -247,6 +247,8 @@
 				<index.url>http://localhost:8983/solr</index.url>
 				<index.username>solr</index.username>
 				<index.password>password</index.password>
+				<!--<index.username>solr</index.username>-->
+				<!--<index.password>LtfXERucp8QPP4vzKMLe</index.password>-->
                 <mongo.url>mongodb://localhost:27017</mongo.url>
 				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<neo4j.url>http://localhost:7474</neo4j.url>

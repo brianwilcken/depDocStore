@@ -11,7 +11,7 @@ public abstract class IndexedDocumentsQuery {
 	
 	protected String getFilterQuery(String type, String[] params) {
 		if (params != null) {
-			String fq = Arrays.stream(params).map(p -> type + ":" + p).reduce((c, n) -> c + " OR " + n).get();
+			String fq = Arrays.stream(params).map(p -> (!p.equals("\" \"") ? type + ":" + p : "-" + type + ":*")).reduce((c, n) -> c + " OR " + n).get();
 			return fq;
 		}
 		else {

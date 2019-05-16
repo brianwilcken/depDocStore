@@ -111,51 +111,59 @@
     -->
 
     <field name="id" type="string" indexed="true" stored="true" required="true" multiValued="false" />
-	<field name="annotated" type="text_general" multiValued="false" indexed="true" stored="true"/>
-	<field name="annotatedBy" type="strings"/>
-	<field name="assetUUID" type="strings" multiValued="false"/>
-	<field name="category" type="string" multiValued="true" indexed="true" required="false" stored="true"/>
-	<field name="coref" type="strings" multiValued="false"/>
-	<field name="created" type="pdate" indexed="true" required="false" stored="false"/>
-	<field name="dependentFacilityUUID" type="strings" multiValued="false"/>
-	<field name="docId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="docStoreId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="docText" type="text_en_splitting" termVectors="true" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="doc_id" type="strings"/>
-	<field name="end" type="plong" multiValued="false"/>
-	<field name="entity" type="strings" multiValued="false"/>
-	<field name="entityId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="filename" type="strings" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="hello" type="strings"/>
-	<field name="hello2" type="strings"/>
-	<field name="includeInNERTesting" type="boolean" multiValued="false"/>
-	<field name="includeInNERTraining" type="boolean" multiValued="false"/>
-	<field name="key1" type="strings"/>
-	<field name="key2" type="strings"/>
-	<field name="lastUpdated" type="pdate" indexed="true" required="false" stored="false"/>
-	<field name="latitude" type="pdoubles" multiValued="false"/>
-	<field name="line" type="plong" multiValued="false"/>
-	<field name="longitude" type="pdoubles" multiValued="false"/>
-	<field name="name" type="strings" multiValued="false"/>
-	<field name="objectEntityId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="parsed" type="text_general" multiValued="false" indexed="true" stored="true"/>
-	<field name="percentAnnotated" type="plong" multiValued="false"/>
-	<field name="project" type="strings" multiValued="false"/>
-	<field name="organization" type="strings" multiValued="false"/>
-	<field name="providingFacilityUUID" type="strings" multiValued="false"/>
-	<field name="publish_date" type="strings"/>
-	<field name="relation" type="strings" multiValued="false"/>
-	<field name="relationState" type="strings" multiValued="false"/>
-	<field name="source" type="strings"/>
-	<field name="start" type="plong" multiValued="false"/>
-	<field name="subjectEntityId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="tags" type="strings"/>
-	<field name="text" type="strings"/>
-	<field name="title" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="totalLines" type="plong" multiValued="false"/>
-	<field name="type" type="strings" multiValued="false"/>
-	<field name="url" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
-	<field name="username" type="strings" multiValued="false"/>
+    <field name="annotated" type="text_general" multiValued="false" indexed="true" stored="true"/>
+    <field name="annotatedBy" type="strings"/>
+    <field name="assetUUID" type="strings" multiValued="false"/>
+    <field name="category" type="string" multiValued="true" indexed="true" required="false" stored="true"/>
+    <field name="coref" type="strings" multiValued="false"/>
+    <field name="created" type="pdate" indexed="true" required="false" stored="false"/>
+    <field name="dependentFacilityUUID" type="strings" multiValued="false"/>
+    <field name="docId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
+    <field name="docStoreId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
+    <field name="docText" type="text_en_splitting" termVectors="true" multiValued="false" indexed="true" required="false" stored="true"/>
+    <field name="doc_id" type="strings"/>
+    <field name="end" type="plong" multiValued="false"/>
+    <field name="entity" type="strings" multiValued="false"/>
+    <field name="entityId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
+    <field name="filename" type="text_en_splitting" termVectors="true" multiValued="false" indexed="true" required="false" stored="true"/>
+    <copyField source="filename" dest="filename_str"/>
+    <field name="filename_str" type="strings" multiValued="false" indexed="true"/>
+    <field name="hello" type="strings"/>
+    <field name="hello2" type="strings"/>
+    <field name="includeInNERTesting" type="boolean" multiValued="false"/>
+    <field name="includeInNERTraining" type="boolean" multiValued="false"/>
+    <field name="key1" type="strings"/>
+    <field name="key2" type="strings"/>
+    <field name="lastUpdated" type="pdate" indexed="true" required="false" stored="false"/>
+    <field name="latitude" type="pdoubles" multiValued="false"/>
+    <field name="line" type="plong" multiValued="false"/>
+    <field name="longitude" type="pdoubles" multiValued="false"/>
+    <field name="name" type="strings" multiValued="false"/>
+    <field name="objectEntityId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
+    <field name="parsed" type="text_general" multiValued="false" indexed="true" stored="true"/>
+    <field name="percentAnnotated" type="plong" multiValued="false"/>
+    <field name="project" type="text_en_splitting" termVectors="true" multiValued="false" indexed="true" required="false" stored="true"/>
+    <copyField source="project" dest="project_str"/>
+    <field name="project_str" type="strings" multiValued="false" indexed="true"/>
+    <field name="organization" type="text_en_splitting" termVectors="true" multiValued="false" indexed="true" required="false" stored="true"/>
+    <copyField source="organization" dest="organization_str"/>
+    <field name="organization_str" type="strings" multiValued="false" indexed="true"/>
+    <field name="providingFacilityUUID" type="strings" multiValued="false"/>
+    <field name="publish_date" type="strings"/>
+    <field name="relation" type="strings" multiValued="false"/>
+    <field name="relationState" type="strings" multiValued="false"/>
+    <field name="source" type="strings"/>
+    <field name="start" type="plong" multiValued="false"/>
+    <field name="subjectEntityId" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
+    <field name="tags" type="strings"/>
+    <field name="text" type="strings"/>
+    <field name="title" type="string" multiValued="false" indexed="true" required="false" stored="true"/>
+    <field name="totalLines" type="plong" multiValued="false"/>
+    <field name="type" type="strings" multiValued="false"/>
+    <field name="url" type="text_en_splitting" termVectors="true" multiValued="false" indexed="true" required="false" stored="true"/>
+    <copyField source="url" dest="url_str"/>
+    <field name="url_str" type="strings" multiValued="false" indexed="true"/>
+    <field name="username" type="strings" multiValued="false"/>
     <!-- docValues are enabled by default for long type so we don't need to index the version field  -->
     <field name="_version_" type="plong" indexed="false" stored="false"/>
 
