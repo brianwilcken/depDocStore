@@ -244,11 +244,12 @@
 			<properties>
 				<log.file>C:/log/nicc-lp-app.log</log.file>
 				<log.path>C:/log/time-based-logs</log.path>
-				<index.url>http://localhost:8983/solr</index.url>
-				<index.username>solr</index.username>
-				<index.password>password</index.password>
+				<!--<index.url>http://localhost:8983/solr</index.url>-->
 				<!--<index.username>solr</index.username>-->
-				<!--<index.password>LtfXERucp8QPP4vzKMLe</index.password>-->
+				<!--<index.password>password</index.password>-->
+				<index.url>http://134.20.2.51:8983/solr</index.url>
+				<index.username>solr</index.username>
+				<index.password>LtfXERucp8QPP4vzKMLe</index.password>
                 <mongo.url>mongodb://localhost:27017</mongo.url>
 				<tempFileRepo>C:/tempFileRepo/</tempFileRepo>
 				<neo4j.url>http://localhost:7474</neo4j.url>

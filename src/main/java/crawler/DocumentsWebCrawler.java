@@ -32,7 +32,7 @@ public class DocumentsWebCrawler extends WebCrawler {
     final static Logger logger = LogManager.getLogger(DocumentsWebCrawler.class);
 
     private static final String temporaryFileRepo = Tools.getProperty("mongodb.temporaryFileRepo");
-    private static final Pattern FILTERS = Pattern.compile(".*(\\.(css|js|gif|jpg|png|mp3|mp4|zip|gz))$");
+    private static final Pattern FILTERS = Pattern.compile(".*(\\.(css|js|gif|jpg|png|mp3|mp4|zip|gz|wmv))$");
 
     private static final ArticleExtractor articleExtractor = new ArticleExtractor();
 
