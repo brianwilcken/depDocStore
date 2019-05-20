@@ -530,9 +530,9 @@ public class DocumentsController {
                 webCrawlerService.setMaxCrawlDepth(1);
             }
             if (metadata.containsKey("async")) {
-                webCrawlerService.processAsync(urlString);
+                webCrawlerService.processAsync(urlString, metadata);
             } else {
-                webCrawlerService.process(urlString);
+                webCrawlerService.process(urlString, metadata);
             }
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
         } catch (MalformedURLException e){
@@ -550,7 +550,7 @@ public class DocumentsController {
             logger.info("crawling Google");
             if (metadata.containsKey("searchTerm")) {
                 String searchTerm = (String)metadata.get("searchTerm");
-                Future<Integer> numResults = googleSearchService.queryGoogle(searchTerm, 9);
+                Future<Integer> numResults = googleSearchService.queryGoogle(searchTerm, metadata, 9);
                 numResults.get();
             }
             return ResponseEntity.ok().body(Tools.formJsonResponse(null));
@@ -622,6 +622,7 @@ public class DocumentsController {
                 filename = filename.replace(" ", "_") + ".txt";
                 filename = Tools.removeFilenameSpecialCharacters(filename);
                 doc.addField("filename", filename);
+                doc.addField("sourceFileType", "html");
                 id = Hex.encodeHexString(MessageDigest.getInstance("SHA-1").digest(mapper.writeValueAsBytes(filename)));
                 doc.addField("id", id);
 
@@ -691,6 +692,7 @@ public class DocumentsController {
             processedDocument = TextExtractor.extractText(uploadedFile);
             String docText = processedDocument.getExtractedText();
             doc.addField("docText", docText);
+            doc.addField("sourceFileType", processedDocument.getSourceFileType());
 
             if (Strings.isNullOrEmpty(docText) && processedDocument.getSchematics().size() == 0) {
                 return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Tools.formJsonResponse("Unable to extract text from file."));
@@ -740,6 +742,7 @@ public class DocumentsController {
 
             page.addField("id", pageId);
             page.addField("filename", pageFile.getName());
+            page.addField("sourceFileType", "pdf");
             page.addField("created", doc.get("created"));
             page.addField("lastUpdated", doc.get("lastUpdated"));
             String docText = !Strings.isNullOrEmpty(processedPage.getPageText()) ? processedPage.getPageText() : "UNABLE TO EXTRACT DATA FROM PAGE";

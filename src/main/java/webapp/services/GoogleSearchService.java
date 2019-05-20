@@ -39,7 +39,7 @@ public class GoogleSearchService {
     }
 
     @Async("GoogleSearchProcessExecutor")
-    public Future<Integer> queryGoogle(String searchTerm, int resultLimit) {
+    public Future<Integer> queryGoogle(String searchTerm, Map<String, Object> searchData, int resultLimit) {
         int totalArticles = 0;
         int start = 0;
 
@@ -58,12 +58,13 @@ public class GoogleSearchService {
                             logger.info("Downloading a file: " + filename);
                             Map<String, Object> metadata = new HashMap<>();
                             metadata.put("url", href);
+                            metadata.putAll(searchData);
                             resourceURLLookupService.process(url, metadata);
                             logger.info("File download and processing complete: " + filename);
                         } else {
                             logger.info("Crawling this address: " + href);
                             webCrawlerService.setMaxCrawlDepth(2);
-                            webCrawlerService.process(href);
+                            webCrawlerService.process(href, searchData);
                             logger.info("Successfully crawled: " + href);
                         }
 

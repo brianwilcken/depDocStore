@@ -45,35 +45,27 @@ public class WebCrawlerService {
     }
 
     @Async("processExecutor")
-    public void processAsync(String seedURL) throws Exception {
-        process(seedURL);
+    public void processAsync(String seedURL, Map<String, Object> searchData) throws Exception {
+        process(seedURL, searchData);
     }
 
-    public void process(String seedURL) throws Exception {
+    public void process(String seedURL, Map<String, Object> searchData) throws Exception {
         PageFetcher pageFetcher = new PageFetcher(config);
         RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
         RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
         CrawlController crawlController = new CrawlController(config, pageFetcher, robotstxtServer);
 
-        DocumentsWebCrawlerFactory factory = new DocumentsWebCrawlerFactory(seedURL, this);
+        DocumentsWebCrawlerFactory factory = new DocumentsWebCrawlerFactory(seedURL, searchData, this);
         crawlController.addSeed(seedURL);
         crawlController.start(factory, 4);
         crawlController.shutdown();
     }
 
     @Async("processExecutor")
-    public void processNewDocument(String filename, File uploadedFile, String url) {
+    public void processNewDocument(String filename, File uploadedFile, String url, Map<String, Object> searchData) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("url", url);
+        metadata.putAll(searchData);
         controller.processNewDocument(filename, metadata, uploadedFile);
-    }
-
-    public static void main(String[] args) {
-        try {
-            WebCrawlerService crawler = new WebCrawlerService();
-            crawler.process("https://www.cctexas.com/departments/water-department");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

@@ -164,6 +164,8 @@
     <copyField source="url" dest="url_str"/>
     <field name="url_str" type="strings" multiValued="false" indexed="true"/>
     <field name="username" type="strings" multiValued="false"/>
+    <field name="contributor" type="strings" multiValued="false"/>
+    <field name="sourceFileType" type="strings" multiValued="false"/>
     <!-- docValues are enabled by default for long type so we don't need to index the version field  -->
     <field name="_version_" type="plong" indexed="false" stored="false"/>
 

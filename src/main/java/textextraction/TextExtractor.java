@@ -56,6 +56,7 @@ public class TextExtractor {
 
     private static ProcessedDocument extractPDFText(File file) {
         ProcessedDocument pd = Tools.extractPDFText(file);
+        pd.setSourceFileType("pdf");
         return pd;
     }
 
@@ -64,6 +65,7 @@ public class TextExtractor {
             String docText = com.google.common.io.Files.toString(file, Charsets.UTF_8);
             ProcessedDocument pd = new ProcessedDocument();
             pd.setExtractedText(docText);
+            pd.setSourceFileType("html");
             return pd;
         } catch (IOException e) {
             return null;
@@ -78,6 +80,7 @@ public class TextExtractor {
             String docText = docExtractor.getText();
             ProcessedDocument pd = new ProcessedDocument();
             pd.setExtractedText(docText);
+            pd.setSourceFileType("msword");
             return pd;
         } catch (IOException e) {
             return null;
@@ -92,6 +95,7 @@ public class TextExtractor {
             String docText = docxExtractor.getText();
             ProcessedDocument pd = new ProcessedDocument();
             pd.setExtractedText(docText);
+            pd.setSourceFileType("msword");
             return pd;
         } catch (IOException e) {
             return null;

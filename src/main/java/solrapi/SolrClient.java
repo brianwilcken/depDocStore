@@ -111,14 +111,14 @@ public class SolrClient {
 	}
 	
 	public static void main(String[] args) {
-		SolrClient client = new SolrClient("http://localhost:8983/solr");
+		SolrClient client = new SolrClient("http://134.20.2.51:8983/solr");
 		//client.writeCorpusDataToFile(Tools.getProperty("nlp.waterNerTrainingFile"), client::getWaterDataQuery, client::formatForNERModelTraining);
 
 		//retrieveAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
 		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getClusteringDataQuery, client::formatForClustering, new NERThrottle());
-		client.writeCorpusDataToFile("PythonDataClustering/topic-modeling.data", "id,filename,parsed","", client::getClusteringDataQuery, client::formatForTopicModeling, new NERThrottle());
+		client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/topic-modeling.data", "id,filename,parsed","", client::getClusteringDataQuery, client::formatForTopicModeling, new NERThrottle());
 
 //		try {
 //			logger.info("Begin dependency data export");
@@ -185,8 +185,12 @@ public class SolrClient {
 							if (field.equals("lastUpdated") || field.equals("created")) {
 								doc.put(field, Tools.getFormattedDateTimeString(Instant.ofEpochMilli(Long.parseLong(value))));
 							} else if (StringUtils.isNumeric(value)) {
-								long number = Long.parseLong(value);
-								doc.put(field, number);
+								try {
+									long number = Long.parseLong(value);
+									doc.put(field, number);
+								} catch (NumberFormatException e) {
+									logger.error(e.getMessage(), e);
+								}
 							} else {
 								doc.put(field, value);
 							}
@@ -528,6 +532,18 @@ public class SolrClient {
 				if (doc.containsKey("_version_")) {
 					doc.remove("_version_");
 				}
+				if (doc.containsKey("filename_str")) {
+					doc.remove("filename_str");
+				}
+				if (doc.containsKey("url_str")) {
+					doc.remove("url_str");
+				}
+				if (doc.containsKey("project_str")) {
+					doc.remove("project_str");
+				}
+				if (doc.containsKey("organization_str")) {
+					doc.remove("organization_str");
+				}
 				String output = objWriter.writeValueAsString(doc);
 				writer.write(output);
 				if (i != docs.size() - 1) {
@@ -539,6 +555,38 @@ public class SolrClient {
 			writer.close();
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
+		}
+	}
+
+	private void massModifyCorpus(Function<SolrQuery, SolrQuery> queryGetter, String field, Object value) {
+		SolrQuery query = queryGetter.apply(new SolrQuery());
+		query.setRows(1000000);
+		SolrDocumentList docBuffer = new SolrDocumentList();
+		final BlockingQueue<SolrDocument> tmpQueue = new LinkedBlockingQueue<SolrDocument>();
+		try {
+			client.queryAndStreamResponse(collection, query, new CallbackHandler(tmpQueue));
+
+			SolrDocument tmpDoc;
+			long docCount = 0;
+			do {
+                tmpDoc = tmpQueue.take();
+                if (!(tmpDoc instanceof StopDoc)) {
+                    ++docCount;
+                    if (tmpDoc.containsKey(field)) {
+                        tmpDoc.replace(field, value);
+                    } else {
+                        tmpDoc.put(field, value);
+                    }
+                    docBuffer.add(tmpDoc);
+                }
+                if (docBuffer.size() >= 100) {
+                    indexDocuments(docBuffer);
+                    docBuffer.clear();
+                    logger.info("Updated " + docCount + " documents");
+                }
+            } while (!(tmpDoc instanceof StopDoc));
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 

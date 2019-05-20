@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class DocumentsWebCrawler extends WebCrawler {
@@ -37,11 +38,13 @@ public class DocumentsWebCrawler extends WebCrawler {
     private static final ArticleExtractor articleExtractor = new ArticleExtractor();
 
     private String urlSeed;
+    private Map<String, Object> searchData;
     private WebURL hostURL;
     private WebCrawlerService webCrawlerService;
 
-    public DocumentsWebCrawler(String urlSeed, WebCrawlerService webCrawlerService) {
+    public DocumentsWebCrawler(String urlSeed, Map<String, Object> searchData, WebCrawlerService webCrawlerService) {
         this.urlSeed = urlSeed;
+        this.searchData = searchData;
         this.webCrawlerService = webCrawlerService;
 
         hostURL = new WebURL();
@@ -91,7 +94,7 @@ public class DocumentsWebCrawler extends WebCrawler {
                 String filepath = temporaryFileRepo + filename;
                 InputStream in = IOUtils.toInputStream(docText, "UTF-8");
                 File file = Tools.WriteFileToDisk(filepath, in);
-                webCrawlerService.processNewDocument(filename, file, url);
+                webCrawlerService.processNewDocument(filename, file, url, searchData);
             } else if (TextExtractor.extractors.containsKey(page.getContentType())) {
                 String filename = FilenameUtils.getName(page.getWebURL().getURL());
                 filename = Tools.removeFilenameSpecialCharacters(filename);
@@ -99,7 +102,7 @@ public class DocumentsWebCrawler extends WebCrawler {
                 String filepath = temporaryFileRepo + filename;
                 File file = new File(filepath);
                 FileUtils.writeByteArrayToFile(file, page.getContentData());
-                webCrawlerService.processNewDocument(filename, file, url);
+                webCrawlerService.processNewDocument(filename, file, url, searchData);
             }
         } catch (IOException e) {
             logger.error(e.getMessage(), e);

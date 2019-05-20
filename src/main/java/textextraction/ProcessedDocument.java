@@ -8,6 +8,7 @@ import java.util.List;
 public class ProcessedDocument {
     private List<ProcessedPage> schematics;
     private String extractedText;
+    private String sourceFileType;
 
     public void cleanup() {
         for (ProcessedPage processedPage : schematics) {
@@ -33,5 +34,13 @@ public class ProcessedDocument {
 
     public void setExtractedText(String extractedText) {
         this.extractedText = extractedText;
+    }
+
+    public String getSourceFileType() {
+        return sourceFileType;
+    }
+
+    public void setSourceFileType(String sourceFileType) {
+        this.sourceFileType = sourceFileType;
     }
 }
