@@ -407,6 +407,18 @@ public class NLPTools {
         return text;
     }
 
+    public static List<String> removeProbabilitiesFromCategories(List<String> categories) {
+        List<String> categoriesNoProb = new ArrayList<>();
+        for (String category : categories) {
+            if (category.contains("|")) {
+                String[] catProb = category.split("\\|");
+                category = catProb[0];
+            }
+            categoriesNoProb.add(category);
+        }
+        return categoriesNoProb;
+    }
+
     public static String deepCleanText(String document) {
         String document1 = document.replace("\r\n", " ");
         String document2 = document1.replace("(", " ");

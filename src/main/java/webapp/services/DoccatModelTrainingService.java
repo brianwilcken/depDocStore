@@ -18,9 +18,9 @@ public class DoccatModelTrainingService {
     private static boolean trainingInProgress = false;
 
     @Async("processExecutor")
-    public Future<String> processAsync(DocumentsController documentsController) {
+    public Future<String> processAsync(DocumentsController documentsController, int iterations) {
         try {
-            String report = process(documentsController);
+            String report = process(documentsController, iterations);
 
             return new AsyncResult<>(report);
         } catch (IOException e) {
@@ -29,13 +29,17 @@ public class DoccatModelTrainingService {
         }
     }
 
-    public String process(DocumentsController documentsController) throws IOException {
+    public String process(DocumentsController documentsController, int iterations) throws IOException {
         if (!trainingInProgress) {
             trainingInProgress = true;
             logger.info("Begin model training.");
-            String report = documentsController.initiateDoccatModelTraining();
+            String report;
+            try {
+                report = documentsController.initiateDoccatModelTraining(iterations);
+            } finally {
+                trainingInProgress = false;
+            }
             logger.info("Model training complete.");
-            trainingInProgress = false;
 
             return report;
         }

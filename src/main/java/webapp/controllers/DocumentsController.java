@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.google.common.base.Strings;
 import com.mongodb.client.gridfs.model.GridFSFile;
+import org.apache.solr.common.util.SimpleOrderedMap;
 import org.springframework.core.io.ClassPathResource;
 import textextraction.ProcessedDocument;
 import textextraction.ProcessedPage;
@@ -65,6 +66,7 @@ public class DocumentsController {
     private DocStoreMongoClient mongoClient;
     private Neo4jClient neo4jClient;
     private DocumentCategorizer categorizer;
+    private TopicModeller topicModeller;
     private NamedEntityRecognizer recognizer;
     private WordVectorizer vectorizer;
     private final LocationResolver locationResolver;
@@ -104,6 +106,7 @@ public class DocumentsController {
         mongoClient = new DocStoreMongoClient(Tools.getProperty("mongodb.url"));
         neo4jClient = new Neo4jClient();
         categorizer = new DocumentCategorizer(solrClient);
+        topicModeller = new TopicModeller(solrClient);
         recognizer = new NamedEntityRecognizer(solrClient);
         vectorizer = new WordVectorizer(solrClient);
         locationResolver = new LocationResolver();
@@ -352,6 +355,25 @@ public class DocumentsController {
         }
     }
 
+    @RequestMapping(value="/documentAnnotators", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getDocumentAnnotators() {
+        logger.info("In getDocumentAnnotators method");
+        try {
+            SimpleOrderedMap<?> facets = solrClient.QueryFacets("*:*", "{users:{type:terms,field:annotatedBy,limit:10000}}");
+            List<String> users = ((ArrayList<SimpleOrderedMap<?>>)((SimpleOrderedMap<?>)facets.get("users")).get("buckets"))
+                    .stream()
+                    .map(p -> p.get("val").toString())
+                    .sorted()
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok().body(Tools.formJsonResponse(users));
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
     @RequestMapping(value="/dependencies/relations/{linkName}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> getDependencyRelations(@PathVariable(name="linkName") String linkName) {
         logger.info("In getDependencyRelations method");
@@ -470,14 +492,14 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/trainDoccat", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> trainDoccatModel(boolean doAsync) {
+    public ResponseEntity<JsonResponse> trainDoccatModel(boolean doAsync, int iterations) {
         logger.info("In trainDoccatModel method");
         try {
             if (!doAsync) {
-                String report = doccatModelTrainingService.process(this);
+                String report = doccatModelTrainingService.process(this, iterations);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(report));
             } else {
-                doccatModelTrainingService.processAsync(this);
+                doccatModelTrainingService.processAsync(this, iterations);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
         } catch (Exception e) {
@@ -777,12 +799,18 @@ public class DocumentsController {
             doc.replace("parsed", parsed);
         }
 
-        List<String> categories = categorizer.detectBestCategories(parsed, 0);
-        logger.info("categories detected: " + categories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse(""));
+        List<String> doccatCategories = categorizer.detectBestCategories(parsed, 0);
+        List<String> ldaCategories = topicModeller.inferCategoriesByTopics(parsed);
+        List<String> categories = NLPTools.removeProbabilitiesFromCategories(doccatCategories);
+        logger.info("categories detected: " + doccatCategories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse(""));
         if (doc.containsKey("category")) {
             doc.replace("category", categories);
+            doc.replace("doccatCategory", doccatCategories);
+            doc.replace("ldaCategory", ldaCategories);
         } else {
             doc.addField("category", categories);
+            doc.addField("doccatCategory", doccatCategories);
+            doc.addField("ldaCategory", ldaCategories);
         }
 
         if (!categories.contains("Not_Applicable")) {
@@ -970,8 +998,8 @@ public class DocumentsController {
         }
     }
 
-    public String initiateDoccatModelTraining() throws IOException {
-        return categorizer.trainDoccatModel();
+    public String initiateDoccatModelTraining(int iterations) throws IOException {
+        return categorizer.trainDoccatModel(iterations);
     }
 
     @RequestMapping(value="/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)

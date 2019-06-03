@@ -206,6 +206,7 @@ public class NamedEntityRecognizer {
 
     public List<NamedEntity> detectNamedEntities(List<CoreMap> sentences, List<String> categories, double threshold, int... numTries) {
         List<NamedEntity> namedEntities = new ArrayList<>();
+        String currentCategory = null;
         try {
             for (String category : categories) {
                 String modelFile;
@@ -217,6 +218,7 @@ public class NamedEntityRecognizer {
                 } else {
                     modelFile = getModelFilePath(getModelDir(category, false));
                 }
+                currentCategory = category;
                 TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
                 NameFinderME nameFinder = new NameFinderME(model);
 
@@ -257,11 +259,9 @@ public class NamedEntityRecognizer {
             }
             return namedEntities;
         } catch (IOException e) {
-            if(numTries.length == 0) {
+            if(numTries.length == 0 && currentCategory != null) {
                 try {
-                    for (String category : categories) {
-                        trainNERModel(category); //model may not yet exist, but maybe there is data to train it...
-                    }
+                    trainNERModel(currentCategory); //model may not yet exist, but maybe there is data to train it...
                 } catch (IOException e1) {
                     logger.error(e.getMessage(), e1);
                 }
@@ -309,7 +309,7 @@ public class NamedEntityRecognizer {
 
     public String retrieveCorpusData(String category) throws IOException {
         String trainingFile = getTrainingFilePath(category);
-        client.writeCorpusDataToFile(trainingFile, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERCorpusReview, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFile, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERCorpusReview, new SolrClient.NERThrottle());
         String corpus = FileUtils.readFileToString(new File(trainingFile), Charset.defaultCharset());
 
         return corpus;
@@ -323,7 +323,7 @@ public class NamedEntityRecognizer {
         String modelDir = getModelDir(category, true);
         String modelFile = getModelFilePath(modelDir);
 
-        client.writeCorpusDataToFile(trainingFile, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFile, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
 
         if (lineStream.read() == null) {
@@ -372,7 +372,7 @@ public class NamedEntityRecognizer {
         try {
             String testFile = getTestFilePath(category);
 
-            client.writeCorpusDataToFile(testFile, null, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
+            client.writeCorpusDataToFile(testFile, null, null, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
             ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(testFile);
 
             if (lineStream.read() == null) {

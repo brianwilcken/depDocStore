@@ -17,6 +17,7 @@ public class IndexedDocumentsQueryParams extends IndexedDocumentsQuery {
     private String[] docText;
     private String[] url;
     private String[] category;
+    private String[] annotatedBy;
     private String[] project;
     private String[] organization;
     private String[] id;
@@ -47,6 +48,7 @@ public class IndexedDocumentsQueryParams extends IndexedDocumentsQuery {
         fqs.add(getFilterQuery("docText", docText));
         fqs.add(getFilterQuery("url", url));
         fqs.add(getFilterQuery("category", category));
+        fqs.add(getFilterQuery("annotatedBy", annotatedBy));
         fqs.add(getFilterQuery("project", project));
         fqs.add(getFilterQuery("organization", organization));
         fqs.add(getFilterQuery("id", id));
@@ -167,6 +169,14 @@ public class IndexedDocumentsQueryParams extends IndexedDocumentsQuery {
 
     public void setCategory(String[] category) {
         this.category = category;
+    }
+
+    public String[] getAnnotatedBy() {
+        return annotatedBy;
+    }
+
+    public void setAnnotatedBy(String[] annotatedBy) {
+        this.annotatedBy = annotatedBy;
     }
 
     public String[] getProject() {

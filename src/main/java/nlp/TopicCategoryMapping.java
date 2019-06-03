@@ -10,11 +10,11 @@ import java.util.Map;
 public class TopicCategoryMapping {
     public String topic;
     public String category1;
-    public int weight1;
+    public double weight1;
     public String category2;
-    public int weight2;
+    public double weight2;
     public String category3;
-    public int weight3;
+    public double weight3;
 
     public void updateCategoryWeight(List<CategoryWeight> categoryWeight, double probability) {
         updateForSpecificCategory(category1, weight1, categoryWeight, probability);
@@ -26,7 +26,7 @@ public class TopicCategoryMapping {
         }
     }
 
-    private void updateForSpecificCategory(String category, final int weight, List<CategoryWeight> categoryWeights, final double probability) {
+    private void updateForSpecificCategory(String category, final double weight, List<CategoryWeight> categoryWeights, final double probability) {
         if(categoryWeights.stream().anyMatch(p -> p.category.equals(category))) {
             categoryWeights.stream().filter(p -> p.category.equals(category)).forEach(p -> {
                 p.catWeight += (probability * weight);

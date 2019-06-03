@@ -8,10 +8,12 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -25,8 +27,9 @@ import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.util.StringUtils;
 import nlp.NLPTools;
 import nlp.NamedEntity;
+import nlp.TextChunkTopic;
+import nlp.TopicModeller;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
@@ -55,13 +58,10 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.MoreLikeThisParams;
-import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.SimpleOrderedMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.io.Files;
-import org.joda.time.DateTime;
 
 public class SolrClient {
 
@@ -72,7 +72,9 @@ public class SolrClient {
 	final static Logger logger = LogManager.getLogger(SolrClient.class);
 
 	private HttpSolrClient client;
-	private static ObjectMapper mapper = new ObjectMapper();
+	private static ObjectWriter objWriter = new ObjectMapper().writer().withDefaultPrettyPrinter();
+
+	private TopicModeller topicModeller;
 
 	private static class PreemptiveAuthInterceptor implements HttpRequestInterceptor {
 
@@ -117,8 +119,13 @@ public class SolrClient {
 		//retrieveAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
-		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getClusteringDataQuery, client::formatForClustering, new NERThrottle());
-		client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/topic-modeling.data", "id,filename,parsed","", client::getClusteringDataQuery, client::formatForTopicModeling, new NERThrottle());
+		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getAllDocumentsDataQuery, client::formatForClustering, new NERThrottle());
+		//client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/topic-modeling.data", client::writeTopicModellingHeader,"", client::getAllDocumentsDataQuery, client::formatForTopicModeling, new NERThrottle());
+
+		//client.runParsedUpdateJob("contributor:dixocl");
+		//client.runLDACategoryUpdateJob("parsed:* AND -ldaCategory:* AND -annotatedBy:*", 0, 1000000);
+		//client.runLDACategoryRemovalJob("ldaCategory:*");
+		client.runFileListingJob("parsed:*", 0, 600000);
 
 //		try {
 //			logger.info("Begin dependency data export");
@@ -127,6 +134,231 @@ public class SolrClient {
 //		} catch (SolrServerException e) {
 //			e.printStackTrace();
 //		}
+	}
+
+	public void runParsedUpdateJob(String strQuery) {
+		Semaphore semaphore = new Semaphore(16);
+		int rows = 1000;
+		List<BatchSolrJob> jobs = new ArrayList<>();
+		for (int start = 0; start <= 1000000; start += rows) {
+			SolrQuery query = new SolrQuery(strQuery);
+			query.setStart(start);
+			query.setRows(rows);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateParsedAttribute, null, this::indexDocuments);
+			jobs.add(job);
+			Thread thread = new Thread(job);
+			job.setMyThread(thread);
+			thread.start();
+		}
+
+		while (jobs.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+
+			}
+		}
+	}
+
+	public void runLDACategoryRemovalJob(String strQuery) {
+		Semaphore semaphore = new Semaphore(16);
+		int rows = 1000;
+		List<BatchSolrJob> jobs = new ArrayList<>();
+		for (int start = 0; start <= 1000000; start += rows) {
+			SolrQuery query = new SolrQuery(strQuery);
+			query.setStart(start);
+			query.setRows(rows);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::removeLDACategoryAttribute, null, this::indexDocuments);
+			jobs.add(job);
+			Thread thread = new Thread(job);
+			job.setMyThread(thread);
+			thread.start();
+		}
+
+		while (jobs.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+
+			}
+		}
+	}
+
+	public void runLDACategoryUpdateJob(String strQuery, int queryStart, int queryEnd) {
+		Semaphore semaphore = new Semaphore(32);
+		TopicModeller topicModeller = new TopicModeller(this);
+		int rows = 1000;
+		List<BatchSolrJob> jobs = new ArrayList<>();
+		for (int start = queryStart; start <= queryEnd; start += rows) {
+			SolrQuery query = new SolrQuery(strQuery);
+			query.setStart(start);
+			query.setRows(rows);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateLDACategoryAttribute, new Object[] {topicModeller}, null);
+			jobs.add(job);
+			Thread thread = new Thread(job);
+			job.setMyThread(thread);
+			thread.start();
+		}
+
+		while (jobs.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+
+			}
+		}
+	}
+
+	public void runFileListingJob(String strQuery, int queryStart, int queryEnd) {
+		File fileListing = new File("data/fileListing/listing.txt");
+		fileListing.getParentFile().mkdirs();
+		Semaphore semaphore = new Semaphore(32);
+		int rows = 10000;
+		List<BatchSolrJob> jobs = new ArrayList<>();
+		List<File> files = new ArrayList<>();
+		for (int start = queryStart; start <= queryEnd; start += rows) {
+			File batchFile = new File(fileListing.getPath() + "_" + start);
+			files.add(batchFile);
+			Object[] args = new Object[] {batchFile, (Tools.CheckedTriConsumer<Object[], SolrDocument, OutputStreamWriter>)this::formatForFilenameListing, new NERThrottle(), null};
+			SolrQuery query = new SolrQuery(strQuery);
+			query.setStart(start);
+			query.setRows(rows);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::writeCorpusDocsToFile, args, null);
+			jobs.add(job);
+			Thread thread = new Thread(job);
+			job.setMyThread(thread);
+			thread.start();
+		}
+
+		while (jobs.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+
+			}
+		}
+	}
+
+	private class BatchSolrJob implements Runnable {
+		private SolrQuery query;
+		private boolean emptyJob;
+		private Tools.CheckedBiConsumer<SolrDocumentList, Object[]> consumer;
+		private Tools.CheckedConsumer<SolrDocumentList> postConsumer;
+		private Object[] args;
+		private Semaphore semaphore;
+		private Thread myThread;
+
+		public BatchSolrJob(SolrQuery query, Semaphore semaphore, Tools.CheckedBiConsumer<SolrDocumentList, Object[]> consumer, Object[] args, Tools.CheckedConsumer<SolrDocumentList> postConsumer) {
+			this.query = query;
+			emptyJob = false;
+			this.consumer = consumer;
+			this.postConsumer = postConsumer;
+			this.args = args;
+			this.semaphore = semaphore;
+		}
+
+		public void run() {
+			try {
+				semaphore.acquire();
+				SolrDocumentList docs = client.query(collection, query).getResults();
+				if (docs.size() == 0) {
+					emptyJob = true;
+					logger.info("batch of " + query.getRows() + " documents starting at " + query.getStart() + " is EMPTY!");
+					return;
+				}
+				consumer.apply(docs, args);
+				if (postConsumer != null) {
+					postConsumer.apply(docs);
+				}
+				logger.info("processed batch of " + query.getRows() + " documents starting at " + query.getStart());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+			} finally {
+				semaphore.release();
+			}
+		}
+
+		public boolean isEmptyJob() {
+			return emptyJob;
+		}
+
+		public Thread getMyThread() {
+			return myThread;
+		}
+
+		public void setMyThread(Thread myThread) {
+			this.myThread = myThread;
+		}
+	}
+
+	private void updateParsedAttribute(SolrDocumentList docs, Object[] notUsed) {
+		for (SolrDocument doc : docs) {
+			String docText = doc.get("docText").toString();
+			String parsed = NLPTools.deepCleanText(docText);
+			parsed = NLPTools.redactTextForNLP(NLPTools.detectPOSStanford(parsed), 0.7, 1000);
+			doc.replace("parsed", parsed);
+			doc.replace("lastUpdated", Tools.getFormattedDateTimeString(Instant.now()));
+		}
+	}
+
+	private void removeLDACategoryAttribute(SolrDocumentList docs, Object[] notUsed) {
+		for (SolrDocument doc : docs) {
+			if (doc.containsKey("ldaCategory")) {
+				doc.remove("ldaCategory");
+				logger.info(doc.get("filename").toString() + " LDA category removed");
+			}
+		}
+	}
+
+	private void updateLDACategoryAttribute(SolrDocumentList docs, Object[] args) {
+		TopicModeller topicModeller = (TopicModeller)args[0];
+		for (SolrDocument doc : docs) {
+			String parsed = doc.get("parsed").toString();
+			List<String> ldaCategories = topicModeller.inferCategoriesByTopics(parsed);
+			if (ldaCategories != null) {
+				List<String> categories = NLPTools.removeProbabilitiesFromCategories(ldaCategories);
+				if (doc.containsKey("ldaCategory")) {
+					doc.replace("ldaCategory", ldaCategories);
+				} else {
+					doc.put("ldaCategory", ldaCategories);
+				}
+				if (doc.containsKey("category")) {
+					doc.replace("category", categories);
+				} else {
+					doc.put("category", categories);
+				}
+				logger.info(doc.get("filename").toString() + " [" + parsed.length() + "] --> " + ldaCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
+				try {
+					indexDocument(doc);
+				} catch (SolrServerException e) {
+					logger.error(e.getMessage(), e);
+				}
+			} else {
+				logger.error(doc.get("filename").toString() + " --> ERROR GENERATING CATEGORY!!");
+			}
+		}
+	}
+
+	private void removeCopyFieldsAndVersion(SolrDocument doc) {
+		if (doc.containsKey("_version_")) {
+			doc.remove("_version_");
+		}
+		if (doc.containsKey("filename_str")) {
+			doc.remove("filename_str");
+		}
+		if (doc.containsKey("url_str")) {
+			doc.remove("url_str");
+		}
+		if (doc.containsKey("project_str")) {
+			doc.remove("project_str");
+		}
+		if (doc.containsKey("organization_str")) {
+			doc.remove("organization_str");
+		}
+	}
+
+	public void setTopicModeller(TopicModeller topicModeller) {
+		this.topicModeller = topicModeller;
 	}
 
 	private static void retrieveAnnotatedData(SolrClient client, String id) {
@@ -216,6 +448,7 @@ public class SolrClient {
 			if (!docs.isEmpty()) {
 				List<SolrInputDocument> inputDocuments = new ArrayList<>();
 				for (SolrDocument doc : docs) {
+					removeCopyFieldsAndVersion(doc);
 					SolrInputDocument solrInputDocument = convertSolrDocument(doc);
 					inputDocuments.add(solrInputDocument);
 				}
@@ -382,14 +615,14 @@ public class SolrClient {
 		return query;
 	}
 
-	public SolrQuery getClusteringDataQuery(SolrQuery query) {
+	public SolrQuery getAllDocumentsDataQuery(SolrQuery query) {
 		query.setQuery("parsed:*");
 		return query;
 	}
 
 	public SolrQuery getDoccatDataQuery(SolrQuery query) {
-		query.setQuery("parsed:*");
-		query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
+		query.setQuery("parsed:* AND ldaCategory:*");
+		//query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
 		return query;
 	}
 
@@ -409,23 +642,64 @@ public class SolrClient {
 		return func;
 	}
 
-	public void formatForWord2VecModelTraining(String unused, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+	public void formatForFilenameListing(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+		String filename = doc.get("filename").toString();
+		writer.write(filename);
+		writer.write(System.lineSeparator());
+		writer.flush();
+	}
+
+
+	public void formatForCompleteDocumentOutput(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+		removeCopyFieldsAndVersion(doc);
+		String output = objWriter.writeValueAsString(doc);
+		writer.write(output);
+		Boolean lastElement = (Boolean)args[1];
+		if (!lastElement) {
+			writer.write(", ");
+		}
+		writer.write(System.lineSeparator());
+		writer.flush();
+	}
+
+	public void formatForWord2VecModelTraining(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String parsed = doc.get("parsed").toString();
 		parsed = parsed.replace("\r", " ").replace("\n", " ");
 		writer.write(parsed);
 		writer.write(System.lineSeparator());
+		writer.flush();
 	}
 
-	public void formatForDoccatModelTraining(String unused, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+	public void formatForDoccatModelTraining(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String parsed = doc.get("parsed").toString();
-		String normalized = NLPTools.normalizeText(parsed);
 		List<String> categories = (List<String>)doc.get("category");
-		String output = categories.stream().map(category -> category + "\t" + normalized).reduce((p1, p2) -> p1 + System.lineSeparator() + p2).orElse("");
-		writer.write(output);
-		writer.write(System.lineSeparator());
+		String output = null;
+		if (categories.size() == 1) {
+			String normalized = NLPTools.normalizeText(parsed);
+			if (!Strings.isNullOrEmpty(normalized)) {
+				output = categories.stream()
+						.map(category -> category + "\t" + normalized)
+						.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
+						.orElse("");
+			}
+		} else {
+			List<TextChunkTopic> chunks = topicModeller.getTextChunkTopics(parsed, 10);
+			chunks.stream().forEach(p -> p.setLdaCategory(NLPTools.removeProbabilitiesFromCategories(p.getLdaCategory())));
+			chunks.stream().forEach(p -> p.setChunkText(NLPTools.normalizeText(p.getChunkText())));
+			output = chunks.stream()
+					.filter(p -> !Strings.isNullOrEmpty(p.getChunkText()))
+					.map(p -> p.getLdaCategory().get(0) + "\t" + p.getChunkText())
+					.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
+					.orElse("");
+		}
+
+		if (!Strings.isNullOrEmpty(output)) {
+			writer.write(output);
+			writer.write(System.lineSeparator());
+		}
 	}
 
-	public void formatForNERCorpusReview(String category, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+	public void formatForNERCorpusReview(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String filename = doc.get("filename").toString();
 		String separator = "***********************************************************";
 		writer.write(separator);
@@ -433,10 +707,12 @@ public class SolrClient {
 		writer.write(separator);
 		writer.write(System.lineSeparator());
 		writer.write(System.lineSeparator());
-		formatForNERModelTraining(category, doc, writer);
+		writer.flush();
+		formatForNERModelTraining(args, doc, writer);
 	}
 
-	public void formatForNERModelTraining(String category, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+	public void formatForNERModelTraining(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+		String category = (String)args[0];
 		final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
 		String annotated = doc.get("annotated").toString();
 		List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
@@ -488,10 +764,11 @@ public class SolrClient {
 			writer.write(onlyAnnotated);
 			writer.write(System.lineSeparator());
 			writer.write(System.lineSeparator());
+			writer.flush();
 		}
 	}
 
-	public void formatForClustering(String unused, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+	public void formatForClustering(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String id = doc.get("id").toString();
 		String filename = doc.get("filename").toString();
 		String parsed = doc.get("parsed").toString();
@@ -501,9 +778,10 @@ public class SolrClient {
 				.replace("\n", " ");
 		writer.write(clusteringStr);
 		writer.write(System.lineSeparator());
+		writer.flush();
 	}
 
-	public void formatForTopicModeling(String unused, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+	public void formatForTopicModeling(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String created = doc.get("created").toString();
 		String lastUpdated = doc.get("lastUpdated").toString();
 		String filename = doc.get("id").toString() + "|" + doc.get("filename").toString().replace(" ", "_");
@@ -517,41 +795,44 @@ public class SolrClient {
 				.replace("\n", " ");
 		writer.write(ldaStr);
 		writer.write(System.lineSeparator());
+		writer.flush();
+	}
+
+	public void writeTopicModellingHeader(OutputStreamWriter writer) throws IOException {
+		writer.write("id,filename,parsed" + System.lineSeparator());
+	}
+
+	public void writeAllDocumentsHeader(OutputStreamWriter writer) throws IOException {
+		writer.write("[" + System.lineSeparator());
+	}
+
+	public void writeAllDocumentsFooter(OutputStreamWriter writer) throws IOException {
+		writer.write("]");
 	}
 
 	public void WriteDataToFile(String filePath, String queryStr, int rows, String... filterQueries) throws SolrServerException {
-		ObjectWriter objWriter = new ObjectMapper().writer().withDefaultPrettyPrinter();
 		SolrDocumentList docs = QuerySolrDocuments(queryStr, rows, 0, null, null, filterQueries);
-
 		File file = new File(filePath);
 		try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)){
 			file.getParentFile().mkdirs();
 			writer.write("[ ");
+			logger.info(docs.size() + " documents to export...");
 			for (int i = 0; i < docs.size(); i++) {
 				SolrDocument doc = docs.get(i);
-				if (doc.containsKey("_version_")) {
-					doc.remove("_version_");
-				}
-				if (doc.containsKey("filename_str")) {
-					doc.remove("filename_str");
-				}
-				if (doc.containsKey("url_str")) {
-					doc.remove("url_str");
-				}
-				if (doc.containsKey("project_str")) {
-					doc.remove("project_str");
-				}
-				if (doc.containsKey("organization_str")) {
-					doc.remove("organization_str");
-				}
+				removeCopyFieldsAndVersion(doc);
 				String output = objWriter.writeValueAsString(doc);
 				writer.write(output);
 				if (i != docs.size() - 1) {
 					writer.write(", ");
 					writer.write(System.lineSeparator());
 				}
+				writer.flush();
+				if (i % 100 == 0) {
+					logger.info("Exported so far: " + i + " documents");
+				}
 			}
 			writer.write("]");
+			writer.flush();
 			writer.close();
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
@@ -590,39 +871,113 @@ public class SolrClient {
 		}
 	}
 
-	public Map<String, String> writeCorpusDataToFile(String trainingFilePath, String header, String category, Function<SolrQuery, SolrQuery> queryGetter,
-											  Tools.CheckedTriConsumer<String, SolrDocument, OutputStreamWriter> dataFormatter, TrainingDataThrottle throttle) {
-		Map<String, String> corpusDocs = new HashMap<>();
-		SolrQuery query = queryGetter.apply(new SolrQuery());
-		query.setRows(1000000);
-		File file = new File(trainingFilePath);
-		file.getParentFile().mkdirs();
+	private void writeCorpusDocsToFile(SolrDocumentList docs, Object[] args) throws Exception {
+		File file = (File)args[0];
+		Tools.CheckedTriConsumer<Object[], SolrDocument, OutputStreamWriter> dataFormatter = (Tools.CheckedTriConsumer<Object[], SolrDocument, OutputStreamWriter>)args[1];
+		TrainingDataThrottle throttle = (TrainingDataThrottle)args[2];
+		String category = (String)args[3];
+		Boolean lastElement = false;
+		Object[] formatterArgs = new Object[] {category, lastElement};
+		long[] increment = (long[])args[4];
+		long start = increment[0];
+		long end = increment[1];
+		long span = increment[2];
 		try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)){
-			if (!Strings.isNullOrEmpty(header)) {
-				writer.write(header + System.lineSeparator());
-			}
-			final BlockingQueue<SolrDocument> tmpQueue = new LinkedBlockingQueue<SolrDocument>();
-			client.queryAndStreamResponse(collection, query, new CallbackHandler(tmpQueue));
-			throttle.init(tmpQueue.size());
-
-			SolrDocument tmpDoc;
-			do {
-				tmpDoc = tmpQueue.take();
-				if (!(tmpDoc instanceof StopDoc) && throttle.check(tmpDoc)) {
-					if (tmpDoc.containsKey("id")) {
-						String id = tmpDoc.get("id").toString();
-						String filename = tmpDoc.get("filename").toString();
-						corpusDocs.put(filename, id);
+			for (int i = 0; i < docs.size(); i++) {
+				SolrDocument doc = docs.get(i);
+				if (throttle.check(doc)) {
+					//detect if this is the final document across all batches
+					if (i == docs.size() - 1 && start + span > end) {
+						formatterArgs[1] = true;
 					}
-					dataFormatter.apply(category, tmpDoc, writer);
+					dataFormatter.apply(formatterArgs, doc, writer);
 				}
-			} while (!(tmpDoc instanceof StopDoc));
+			}
 
 			writer.close();
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 		}
-		return corpusDocs;
+
+	}
+
+	public void writeCorpusDataToFile(String outputPath, Tools.CheckedConsumer<OutputStreamWriter> header, Tools.CheckedConsumer<OutputStreamWriter> footer, String category, Function<SolrQuery, SolrQuery> queryGetter,
+											  Tools.CheckedTriConsumer<Object[], SolrDocument, OutputStreamWriter> dataFormatter, TrainingDataThrottle throttle) {
+		int rows = 10000;
+		File file = new File(outputPath);
+		file.getParentFile().mkdirs();
+
+		try (FileOutputStream fos = new FileOutputStream(file);
+			 OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)){
+			if (header != null) {
+				header.apply(writer);
+			}
+
+			SolrQuery initQuery = queryGetter.apply(new SolrQuery());
+			initQuery.setRows(0);
+			SolrDocumentList results = client.query(collection, initQuery).getResults();
+			long numFound = results.getNumFound();
+			throttle.init(numFound);
+
+			Semaphore semaphore = new Semaphore(4);
+			List<BatchSolrJob> jobs = new ArrayList<>();
+			List<File> files = new ArrayList<>();
+			for (int start = 0; start < numFound; start += rows) {
+				File batchFile = new File(outputPath + "_" + start);
+				files.add(batchFile);
+				long[] increment = {start, numFound, rows};
+				Object[] args = new Object[] {batchFile, dataFormatter, throttle, category, increment};
+				SolrQuery query = queryGetter.apply(new SolrQuery());
+				query.setRows(rows);
+				query.setStart(start);
+
+				BatchSolrJob job = new BatchSolrJob(query, semaphore, this::writeCorpusDocsToFile, args, null);
+				jobs.add(job);
+				Thread thread = new Thread(job);
+				job.setMyThread(thread);
+				thread.start();
+			}
+
+			while (jobs.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+
+				}
+			}
+
+			for (File batchFile : files) {
+				List<String> lines = Files.readAllLines(batchFile.toPath());
+				if (lines.size() > 0) {
+					String line = lines.get(0);
+					try {
+						writer.write(line);
+					} catch (IOException e) {
+						logger.error(e.getMessage(), e);
+					}
+					for (int i = 1; i < lines.size(); i++) {
+						line = lines.get(i);
+						if (!Strings.isNullOrEmpty(line)) {
+							try {
+								writer.write(System.lineSeparator() + line);
+							} catch (IOException e) {
+								logger.error(e.getMessage(), e);
+							}
+						}
+					}
+				}
+
+				Files.delete(batchFile.toPath());
+			}
+
+			if (footer != null) {
+				footer.apply(writer);
+			}
+
+			writer.close();
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+		}
 	}
 
 	private class StopDoc extends SolrDocument {
@@ -669,14 +1024,14 @@ public class SolrClient {
 			this.throttlePercent = throttlePercent;
 		}
 
-		public abstract void init(int numDocs);
+		public abstract void init(long numDocs);
 
 		public abstract boolean check(SolrDocument doc);
 	}
 
 	public static class DoccatThrottle extends TrainingDataThrottle {
 
-		private int numDocs;
+		private long numDocs;
 		private int throttleForCount;
 
 		public DoccatThrottle() {
@@ -684,7 +1039,7 @@ public class SolrClient {
 		}
 
 		@Override
-		public void init(int numDocs) {
+		public void init(long numDocs) {
 			this.numDocs = numDocs;
 		}
 
@@ -716,7 +1071,7 @@ public class SolrClient {
 		}
 
 		@Override
-		public void init(int numDocs) {
+		public void init(long numDocs) {
 
 		}
 

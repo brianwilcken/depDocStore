@@ -160,7 +160,7 @@ public class WordVectorizer {
         String modelFilePath = getModelFilePath(category);
         String trainingFilePath = getTrainingFilePath(category);
 
-        client.writeCorpusDataToFile(trainingFilePath, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFilePath, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
 
         SentenceIterator iter = new LineSentenceIterator(new File(trainingFilePath));
 
@@ -343,7 +343,7 @@ public class WordVectorizer {
         String xmeansClusterFilePath = getXMeansClusterFilePath(category);
         String brownClusterFilePath = getBrownClusterFilePath(category);
         String trainingFilePath = getTrainingFilePath(category);
-        client.writeCorpusDataToFile(trainingFilePath, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFilePath, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
 
         Word2Vec vec;
         try {

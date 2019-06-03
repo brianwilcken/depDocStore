@@ -2,9 +2,8 @@ package nlp;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import common.Tools;
 import opennlp.tools.doccat.*;
@@ -12,9 +11,14 @@ import opennlp.tools.util.InputStreamFactory;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.PlainTextByLineStream;
 import opennlp.tools.util.TrainingParameters;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import opennlp.tools.tokenize.TokenizerModel;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.common.SolrDocument;
+import org.apache.solr.common.SolrDocumentList;
 import org.springframework.core.io.ClassPathResource;
 import solrapi.SolrClient;
 
@@ -36,8 +40,22 @@ public class DocumentCategorizer {
     }
 
     public static void main(String[] args) {
-        DocumentCategorizer cat = new DocumentCategorizer(new SolrClient("http://localhost:8983/solr"));
-        cat.optimizeModelTrainingParameters();
+        SolrClient client = new SolrClient("http://localhost:8983/solr");
+        DocumentCategorizer cat = new DocumentCategorizer(client);
+
+        try {
+            SolrDocumentList docs = client.QuerySolrDocuments("id:8be8db4af950cf739daa3d127d43c77c44e95099", 1, 0, null, null);
+            SolrDocument doc = docs.get(0);
+
+            String parsed = doc.get("parsed").toString();
+            List<String> category = cat.detectBestCategories(parsed, 0);
+
+        } catch (SolrServerException | IOException e) {
+            logger.error(e.getMessage(), e);
+        }
+
+
+        //cat.optimizeModelTrainingParameters();
     }
 
     public List<String> detectBestCategories(String document, int... numTries) throws IOException {
@@ -48,27 +66,37 @@ public class DocumentCategorizer {
             String[] docCatTokens = GetDocCatTokens(document);
 
             //Categorize
-            double[] outcomes = categorizer.categorize(docCatTokens);
+            SortedMap<Double, Set<String>> outcomes = categorizer.sortedScoreMap(docCatTokens);
+            StandardDeviation standardDev = new StandardDeviation();
+            Double[] probs = outcomes.keySet().toArray(new Double[outcomes.size()]);
+            Arrays.sort(probs, Collections.reverseOrder());
+            Double maxProb = probs[0];
+            final double stdDev = standardDev.evaluate(ArrayUtils.toPrimitive(probs));
+
             List<String> categories = new ArrayList<>();
-            String bestCategory = categorizer.getBestCategory(outcomes);
-            if (!bestCategory.equals("Not_Applicable")) {
-                for (int i = 0; i < outcomes.length; i++) {
-                    if (outcomes[i] >= CATEGORY_THRESHOLD) {
-                        categories.add(Tools.removeUTF8BOM(categorizer.getCategory(i)));
-                    }
-                }
-                if (categories.size() == 0) {
-                    categories.add(bestCategory);
+            if (outcomes.get(maxProb).contains("Not_Applicable")) {
+                final double closeEnough = stdDev * 0.125; // 1/8th standard deviation from the max
+                double secondBest = probs[1];
+                if (secondBest >= (maxProb - closeEnough)) {
+                    categories.addAll(outcomes.entrySet().stream()
+                            .filter(p -> !p.getValue().contains("Not_Applicable") && p.getKey() >= (maxProb - closeEnough))
+                            .map(p -> p.getValue().toArray(new String[1])[0] + "|" + p.getKey())
+                            .collect(Collectors.toList()));
+                } else {
+                    categories.add(outcomes.get(maxProb).toArray(new String[1])[0] + "|" + maxProb);
                 }
             } else {
-                categories.add(bestCategory); //Not_Applicable
+                categories.addAll(outcomes.entrySet().stream()
+                        .filter(p -> !p.getValue().contains("Not_Applicable") && p.getKey() >= (maxProb - (1.5 * stdDev)))
+                        .map(p -> p.getValue().toArray(new String[1])[0] + "|" + p.getKey())
+                        .collect(Collectors.toList()));
             }
 
             return categories;
         } catch (IOException e) {
             //model may not exist
             if(numTries.length == 0) {
-                trainDoccatModel();
+                trainDoccatModel(300);
                 return detectBestCategories(document, 1);
             } else {
                 //something is very wrong!
@@ -94,7 +122,7 @@ public class DocumentCategorizer {
                 OptimizationTuple optimizationTuple = tracker.getNext();
 
                 String doccatTrainingFile = Tools.getProperty("nlp.doccatTrainingFile") + optimizationTuple.i + optimizationTuple.c;
-                solrClient.writeCorpusDataToFile(doccatTrainingFile, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
+                solrClient.writeCorpusDataToFile(doccatTrainingFile, null, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
                         new SolrClient.DoccatThrottle());
 
                 ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(doccatTrainingFile);
@@ -136,34 +164,28 @@ public class DocumentCategorizer {
         return best;
     }
 
-    public String trainDoccatModel() throws IOException {
+    public String trainDoccatModel(int iterations) throws IOException {
         String evalReport;
         DoccatModel model;
-        try {
-            //Write training data to file
-            String optimalTrainingFile = Tools.getProperty("nlp.doccatTrainingFile");
-            solrClient.writeCorpusDataToFile(optimalTrainingFile, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
-                    new SolrClient.DoccatThrottle());
+        //Write training data to file
+        String optimalTrainingFile = Tools.getProperty("nlp.doccatTrainingFile");
+        solrClient.writeCorpusDataToFile(optimalTrainingFile, null, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
+                new SolrClient.DoccatThrottle());
 
-            //Use optimized iterations/cutoff to train model
-            OptimizationTuple best = readTrainingParametersFromFile();
-            ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(optimalTrainingFile);
-            TrainTestSplitter splitter = new TrainTestSplitter(42);
-            splitter.trainTestSplit(0.8, lineStream);
-            try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
-                model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(best.i, best.c), new DoccatFactory());
-            }
+        //Use optimized iterations/cutoff to train model
+        ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(optimalTrainingFile);
+        TrainTestSplitter splitter = new TrainTestSplitter(42);
+        splitter.trainTestSplit(0.8, lineStream);
+        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
+            model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(iterations, 2), new DoccatFactory());
+        }
 
-            try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTest())) {
-                evalReport = evaluateDoccatModel(sampleStream, model);
-            }
+        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTest())) {
+            evalReport = evaluateDoccatModel(sampleStream, model);
+        }
 
-            try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(Tools.getProperty("nlp.doccatModel")))) {
-                model.serialize(modelOut);
-            }
-        } catch (ClassNotFoundException e) {
-            logger.error(e.getMessage(), e);
-            evalReport = "";
+        try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(Tools.getProperty("nlp.doccatModel")))) {
+            model.serialize(modelOut);
         }
         logger.info(evalReport);
         return evalReport;
