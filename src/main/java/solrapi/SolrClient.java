@@ -120,12 +120,12 @@ public class SolrClient {
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
 		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getAllDocumentsDataQuery, client::formatForClustering, new NERThrottle());
-		//client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/topic-modeling.data", client::writeTopicModellingHeader,"", client::getAllDocumentsDataQuery, client::formatForTopicModeling, new NERThrottle());
+		client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/topic-modeling.data", client::writeTopicModellingHeader,null, "", client::getAllDocumentsDataQuery, client::formatForTopicModeling, new NERThrottle());
 
-		//client.runParsedUpdateJob("contributor:dixocl");
-		//client.runLDACategoryUpdateJob("parsed:* AND -ldaCategory:* AND -annotatedBy:*", 0, 1000000);
+		//client.runParsedUpdateJob("docText:* AND -parsed:*");
+		//client.runLDACategoryUpdateJob("-ldaCategory:*", 0, 1000000);
 		//client.runLDACategoryRemovalJob("ldaCategory:*");
-		client.runFileListingJob("parsed:*", 0, 600000);
+		//client.runFileListingJob("parsed:*", 0, 600000);
 
 //		try {
 //			logger.info("Begin dependency data export");
@@ -193,7 +193,7 @@ public class SolrClient {
 			SolrQuery query = new SolrQuery(strQuery);
 			query.setStart(start);
 			query.setRows(rows);
-			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateLDACategoryAttribute, new Object[] {topicModeller}, null);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateLDACategoryAttribute, new Object[] {topicModeller}, this::indexDocuments);
 			jobs.add(job);
 			Thread thread = new Thread(job);
 			job.setMyThread(thread);
@@ -328,11 +328,11 @@ public class SolrClient {
 					doc.put("category", categories);
 				}
 				logger.info(doc.get("filename").toString() + " [" + parsed.length() + "] --> " + ldaCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
-				try {
-					indexDocument(doc);
-				} catch (SolrServerException e) {
-					logger.error(e.getMessage(), e);
-				}
+//				try {
+//					indexDocument(doc);
+//				} catch (SolrServerException e) {
+//					logger.error(e.getMessage(), e);
+//				}
 			} else {
 				logger.error(doc.get("filename").toString() + " --> ERROR GENERATING CATEGORY!!");
 			}
@@ -1051,9 +1051,9 @@ public class SolrClient {
 					return false;
 				} else {
 					//randomization such that not always given document is added
-					//50% likelihood the document is added
+					//25% likelihood the document is added
 					double random = Math.random();
-					if (random > 0.5) {
+					if (random > 0.75) {
 						throttleForCount++;
 						return true;
 					}

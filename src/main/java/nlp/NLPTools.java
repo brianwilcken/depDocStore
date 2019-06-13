@@ -48,6 +48,7 @@ public class NLPTools {
         mlParams.put(TrainingParameters.TRAINER_TYPE_PARAM, EventTrainer.EVENT_VALUE);
         mlParams.put(TrainingParameters.ITERATIONS_PARAM, iterations);
         mlParams.put(TrainingParameters.CUTOFF_PARAM, cutoff);
+        mlParams.put(TrainingParameters.THREADS_PARAM, Runtime.getRuntime().availableProcessors());
 
         return mlParams;
     }

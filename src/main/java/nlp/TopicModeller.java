@@ -92,7 +92,8 @@ public class TopicModeller {
 
         //topicModeller.writeTopicVectorRepresentation(20);
 
-        SolrDocumentList docs = client.QuerySolrDocuments("id:verdictmedia_66610", 1, 0, null, null);
+        //SolrDocumentList docs = client.QuerySolrDocuments("id:verdictmedia_66610", 1, 0, null, null);
+        SolrDocumentList docs = client.QuerySolrDocuments("id:5a95854c559dc71643d92feb6d1276e0f3156190", 1, 0, null, null);
         SolrDocument doc = docs.get(0);
         String parsed = doc.get("parsed").toString();
         List<String> docCategories = topicModeller.inferCategoriesByTopics(parsed);
@@ -201,43 +202,86 @@ public class TopicModeller {
         }
         //normalize category weights
         double weightSum = categoryWeights.stream().map(p -> p.catWeight).mapToDouble(Double::doubleValue).sum();
-        categoryWeights.stream().forEach(p -> {
-            p.catWeight = p.catWeight / weightSum;
-        });
-        //sort to get best category
-        categoryWeights.sort(new Comparator<CategoryWeight>() {
-            @Override
-            public int compare(CategoryWeight c1, CategoryWeight c2) {
-                return Double.compare(c2.catWeight, c1.catWeight); //descending sort
-            }
-        });
-
-        double[] weights = categoryWeights.stream().map(p -> p.catWeight).mapToDouble(Double::doubleValue).toArray();
-        StandardDeviation standardDev = new StandardDeviation();
-        final double stdDev = standardDev.evaluate(weights);
-        final double maxWeight = weights[0];
         String category;
-        if (categoryWeights.get(0).category.equals("Not_Applicable")) {
-            final double closeEnough = stdDev * 0.125; // 1/8th standard deviation from the max
-            double secondBest = weights[1];
-            if (secondBest >= (maxWeight - closeEnough)) {
-                category = categoryWeights.stream()
-                        .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - closeEnough))
-                        .map(p -> p.category + "|" + p.catWeight)
+        if (weightSum > 0.25) {
+//            categoryWeights.stream().forEach(p -> {
+//                p.catWeight = p.catWeight / weightSum;
+//            });
+            //sort to get best category
+            categoryWeights.sort(new Comparator<CategoryWeight>() {
+                @Override
+                public int compare(CategoryWeight c1, CategoryWeight c2) {
+                    return Double.compare(c2.catWeight, c1.catWeight); //descending sort
+                }
+            });
+
+            double[] weights = categoryWeights.stream().map(p -> p.catWeight).mapToDouble(Double::doubleValue).toArray();
+            StandardDeviation standardDev = new StandardDeviation();
+            final double stdDev = standardDev.evaluate(weights);
+            final double maxWeight = weights[0];
+            categoryWeights = categoryWeights.stream()
+                    .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - (2 * stdDev))).collect(Collectors.toList());
+            if (categoryWeights.size() <= 3) {
+                category = categoryWeights.stream().map(p -> p.category + "|" + p.catWeight)
                         .reduce((c, n) -> c + ";" + n).orElse("");
             } else {
-                category = categoryWeights.get(0).category + "|" + categoryWeights.get(0).catWeight;
+                category = "Not_Applicable|" + (1 - weightSum);
             }
         } else {
-            category = categoryWeights.stream()
-                    .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - (2 * stdDev)))
-                    .map(p -> p.category + "|" + p.catWeight)
-                    .reduce((c, n) -> c + ";" + n).orElse("");
-
+            category = "Not_Applicable|" + (1 - weightSum);
         }
 
         return category;
     }
+
+//    //old version
+//    private String resolveCategoryByTopics(double[] topicDistribution) {
+//        List<CategoryWeight> categoryWeights = new ArrayList<>();
+//        for (int i = 0; i < topicDistribution.length; i++) {
+//            String topicText = getTopicText(i, 20);
+//            TopicCategoryMapping mapping = topicsToCategories.get(topicText);
+//            double probability = topicDistribution[i];
+//            mapping.updateCategoryWeight(categoryWeights, probability);
+//        }
+//        //normalize category weights
+//        double weightSum = categoryWeights.stream().map(p -> p.catWeight).mapToDouble(Double::doubleValue).sum();
+//        categoryWeights.stream().forEach(p -> {
+//            p.catWeight = p.catWeight / weightSum;
+//        });
+//        //sort to get best category
+//        categoryWeights.sort(new Comparator<CategoryWeight>() {
+//            @Override
+//            public int compare(CategoryWeight c1, CategoryWeight c2) {
+//                return Double.compare(c2.catWeight, c1.catWeight); //descending sort
+//            }
+//        });
+//
+//        double[] weights = categoryWeights.stream().map(p -> p.catWeight).mapToDouble(Double::doubleValue).toArray();
+//        StandardDeviation standardDev = new StandardDeviation();
+//        final double stdDev = standardDev.evaluate(weights);
+//        final double maxWeight = weights[0];
+//        String category;
+//        if (categoryWeights.get(0).category.equals("Not_Applicable")) {
+//            final double closeEnough = stdDev * 0.125; // 1/8th standard deviation from the max
+//            double secondBest = weights[1];
+//            if (secondBest >= (maxWeight - closeEnough)) {
+//                category = categoryWeights.stream()
+//                        .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - closeEnough))
+//                        .map(p -> p.category + "|" + p.catWeight)
+//                        .reduce((c, n) -> c + ";" + n).orElse("");
+//            } else {
+//                category = categoryWeights.get(0).category + "|" + categoryWeights.get(0).catWeight;
+//            }
+//        } else {
+//            category = categoryWeights.stream()
+//                    .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - (2 * stdDev)))
+//                    .map(p -> p.category + "|" + p.catWeight)
+//                    .reduce((c, n) -> c + ";" + n).orElse("");
+//
+//        }
+//
+//        return category;
+//    }
 
 
 

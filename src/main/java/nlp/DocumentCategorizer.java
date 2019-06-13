@@ -43,16 +43,29 @@ public class DocumentCategorizer {
         SolrClient client = new SolrClient("http://localhost:8983/solr");
         DocumentCategorizer cat = new DocumentCategorizer(client);
 
-        try {
-            SolrDocumentList docs = client.QuerySolrDocuments("id:8be8db4af950cf739daa3d127d43c77c44e95099", 1, 0, null, null);
-            SolrDocument doc = docs.get(0);
+        String optimalTrainingFile = Tools.getProperty("nlp.doccatTrainingFile");
+        ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(optimalTrainingFile);
+        TrainTestSplitter splitter = new TrainTestSplitter(42, optimalTrainingFile);
+        splitter.trainTestSplit(0.8, lineStream);
 
-            String parsed = doc.get("parsed").toString();
-            List<String> category = cat.detectBestCategories(parsed, 0);
-
-        } catch (SolrServerException | IOException e) {
+        DoccatModel model;
+        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
+            model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(100, 2), new DoccatFactory());
+        } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
+
+
+//        try {
+//            SolrDocumentList docs = client.QuerySolrDocuments("id:8be8db4af950cf739daa3d127d43c77c44e95099", 1, 0, null, null);
+//            SolrDocument doc = docs.get(0);
+//
+//            String parsed = doc.get("parsed").toString();
+//            List<String> category = cat.detectBestCategories(parsed, 0);
+//
+//        } catch (SolrServerException | IOException e) {
+//            logger.error(e.getMessage(), e);
+//        }
 
 
         //cat.optimizeModelTrainingParameters();
@@ -174,7 +187,7 @@ public class DocumentCategorizer {
 
         //Use optimized iterations/cutoff to train model
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(optimalTrainingFile);
-        TrainTestSplitter splitter = new TrainTestSplitter(42);
+        TrainTestSplitter splitter = new TrainTestSplitter(42, optimalTrainingFile);
         splitter.trainTestSplit(0.8, lineStream);
         try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
             model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(iterations, 2), new DoccatFactory());
@@ -191,51 +204,49 @@ public class DocumentCategorizer {
         return evalReport;
     }
 
-    private class TrainTestSplitter {
-        private List<String> train;
-        private List<String> test;
+    private static class TrainTestSplitter {
+        private File train;
+        private File test;
         private Random random;
 
-        public TrainTestSplitter(long seed) {
-            train = new ArrayList<>();
-            test = new ArrayList<>();
+        public TrainTestSplitter(long seed, String trainingFile) {
+            train = new File(trainingFile + "_split_train");
+            test = new File(trainingFile + "_split_test");
             random = new Random(seed);
         }
 
         public void trainTestSplit(double percentTrain, ObjectStream<String> lineStream) {
             try {
+                OutputStreamWriter trainWriter = new OutputStreamWriter(new FileOutputStream(train), StandardCharsets.UTF_8);
+                OutputStreamWriter testWriter = new OutputStreamWriter(new FileOutputStream(test), StandardCharsets.UTF_8);
+
                 String line = lineStream.read();
                 while (line != null) {
                     double rand = random.nextDouble();
                     if (rand <= percentTrain) {
-                        train.add(line);
+                        trainWriter.write(line);
+                        trainWriter.write(System.lineSeparator());
+                        trainWriter.flush();
                     } else {
-                        test.add(line);
+                        testWriter.write(line);
+                        testWriter.write(System.lineSeparator());
+                        testWriter.flush();
                     }
                     line = lineStream.read();
                 }
 
+                trainWriter.close();
+                testWriter.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         }
 
-        private String convertListToString(List<String> lines) {
-            StringBuilder bldr = new StringBuilder();
-            for (String line : lines) {
-                bldr.append(line);
-                bldr.append(System.lineSeparator());
-            }
-
-            return bldr.toString();
-        }
-
-        private ObjectStream<String> getObjectStream(List<String> lines) {
-            String data = convertListToString(lines);
+        private ObjectStream<String> getObjectStream(final File file) {
             try {
                 InputStreamFactory factory = new InputStreamFactory() {
                     public InputStream createInputStream() throws IOException {
-                        InputStream stream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+                        InputStream stream = new FileInputStream(file);
                         return stream;
                     }
                 };
