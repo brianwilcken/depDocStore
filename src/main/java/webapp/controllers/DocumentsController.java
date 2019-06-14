@@ -492,14 +492,14 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/trainDoccat", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> trainDoccatModel(boolean doAsync, int iterations) {
+    public ResponseEntity<JsonResponse> trainDoccatModel(boolean doAsync, int iterations, double percentEntropy) {
         logger.info("In trainDoccatModel method");
         try {
             if (!doAsync) {
-                String report = doccatModelTrainingService.process(this, iterations);
+                String report = doccatModelTrainingService.process(this, iterations, percentEntropy);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(report));
             } else {
-                doccatModelTrainingService.processAsync(this, iterations);
+                doccatModelTrainingService.processAsync(this, iterations, percentEntropy);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
         } catch (Exception e) {
@@ -998,8 +998,8 @@ public class DocumentsController {
         }
     }
 
-    public String initiateDoccatModelTraining(int iterations) throws IOException {
-        return categorizer.trainDoccatModel(iterations);
+    public String initiateDoccatModelTraining(int iterations, double percentEntropy) throws IOException {
+        return categorizer.trainDoccatModel(iterations, percentEntropy);
     }
 
     @RequestMapping(value="/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)

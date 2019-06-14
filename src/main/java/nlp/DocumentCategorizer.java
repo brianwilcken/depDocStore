@@ -109,7 +109,7 @@ public class DocumentCategorizer {
         } catch (IOException e) {
             //model may not exist
             if(numTries.length == 0) {
-                trainDoccatModel(300);
+                trainDoccatModel(300, 0.1);
                 return detectBestCategories(document, 1);
             } else {
                 //something is very wrong!
@@ -136,7 +136,7 @@ public class DocumentCategorizer {
 
                 String doccatTrainingFile = Tools.getProperty("nlp.doccatTrainingFile") + optimizationTuple.i + optimizationTuple.c;
                 solrClient.writeCorpusDataToFile(doccatTrainingFile, null, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
-                        new SolrClient.DoccatThrottle());
+                        new SolrClient.DoccatThrottle(0.1));
 
                 ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(doccatTrainingFile);
 
@@ -177,13 +177,13 @@ public class DocumentCategorizer {
         return best;
     }
 
-    public String trainDoccatModel(int iterations) throws IOException {
+    public String trainDoccatModel(int iterations, double entropyPercent) throws IOException {
         String evalReport;
         DoccatModel model;
         //Write training data to file
         String optimalTrainingFile = Tools.getProperty("nlp.doccatTrainingFile");
         solrClient.writeCorpusDataToFile(optimalTrainingFile, null, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
-                new SolrClient.DoccatThrottle());
+                new SolrClient.DoccatThrottle(entropyPercent));
 
         //Use optimized iterations/cutoff to train model
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(optimalTrainingFile);

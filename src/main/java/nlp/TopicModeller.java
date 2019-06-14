@@ -46,7 +46,7 @@ public class TopicModeller {
 
     static {
         try {
-            model = new ParallelTopicModel(200);
+            model = new ParallelTopicModel(15);
             instanceList = InstanceList.load(new File(Tools.getProperty("mallet.corpus")));
             pipe = (SerialPipes)instanceList.getPipe();
             model.addInstances(instanceList);
@@ -93,7 +93,7 @@ public class TopicModeller {
         //topicModeller.writeTopicVectorRepresentation(20);
 
         //SolrDocumentList docs = client.QuerySolrDocuments("id:verdictmedia_66610", 1, 0, null, null);
-        SolrDocumentList docs = client.QuerySolrDocuments("id:5a95854c559dc71643d92feb6d1276e0f3156190", 1, 0, null, null);
+        SolrDocumentList docs = client.QuerySolrDocuments("id:7e9d379455ae0113083408fbd5472f1dee082523", 1, 0, null, null);
         SolrDocument doc = docs.get(0);
         String parsed = doc.get("parsed").toString();
         List<String> docCategories = topicModeller.inferCategoriesByTopics(parsed);

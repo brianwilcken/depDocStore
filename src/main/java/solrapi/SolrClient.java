@@ -120,10 +120,10 @@ public class SolrClient {
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
 		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getAllDocumentsDataQuery, client::formatForClustering, new NERThrottle());
-		client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/topic-modeling.data", client::writeTopicModellingHeader,null, "", client::getAllDocumentsDataQuery, client::formatForTopicModeling, new NERThrottle());
+		//client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/topic-modeling.data", client::writeTopicModellingHeader,null, "", client::getAllDocumentsDataQuery, client::formatForTopicModeling, new NERThrottle());
 
 		//client.runParsedUpdateJob("docText:* AND -parsed:*");
-		//client.runLDACategoryUpdateJob("-ldaCategory:*", 0, 1000000);
+		client.runLDACategoryUpdateJob("parsed:* AND -ldaCategory:*", 0, 1000000);
 		//client.runLDACategoryRemovalJob("ldaCategory:*");
 		//client.runFileListingJob("parsed:*", 0, 600000);
 
@@ -162,7 +162,7 @@ public class SolrClient {
 
 	public void runLDACategoryRemovalJob(String strQuery) {
 		Semaphore semaphore = new Semaphore(16);
-		int rows = 1000;
+		int rows = 5000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
 		for (int start = 0; start <= 1000000; start += rows) {
 			SolrQuery query = new SolrQuery(strQuery);
@@ -1034,8 +1034,8 @@ public class SolrClient {
 		private long numDocs;
 		private int throttleForCount;
 
-		public DoccatThrottle() {
-			super("Not_Applicable", 0.5);
+		public DoccatThrottle(double throttlePercent) {
+			super("Not_Applicable", throttlePercent);
 		}
 
 		@Override
@@ -1051,9 +1051,9 @@ public class SolrClient {
 					return false;
 				} else {
 					//randomization such that not always given document is added
-					//25% likelihood the document is added
+					//50% likelihood the document is added
 					double random = Math.random();
-					if (random > 0.75) {
+					if (random > 0.5) {
 						throttleForCount++;
 						return true;
 					}
