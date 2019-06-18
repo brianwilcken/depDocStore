@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Strings;
 import common.Tools;
 import opennlp.tools.doccat.*;
 import opennlp.tools.util.InputStreamFactory;
@@ -40,21 +41,37 @@ public class DocumentCategorizer {
     }
 
     public static void main(String[] args) {
-        SolrClient client = new SolrClient("http://localhost:8983/solr");
+        SolrClient client = new SolrClient("http://134.20.2.51:8983/solr");
         DocumentCategorizer cat = new DocumentCategorizer(client);
+        TopicModeller topicModeller = new TopicModeller(client);
+        client.setTopicModeller(topicModeller);
 
         String optimalTrainingFile = Tools.getProperty("nlp.doccatTrainingFile");
+        client.writeCorpusDataToFile(optimalTrainingFile, null, null, "", client::getDoccatDataQuery, client::formatForDoccatModelTraining,
+                new SolrClient.DoccatThrottle(10));
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(optimalTrainingFile);
         TrainTestSplitter splitter = new TrainTestSplitter(42, optimalTrainingFile);
         splitter.trainTestSplit(0.8, lineStream);
 
-        DoccatModel model;
-        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
-            model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(100, 2), new DoccatFactory());
+        DoccatModel model = null;
+        try {
+            model = NLPTools.getModel(DoccatModel.class, Tools.getProperty("nlp.doccatModel"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTest())) {
+            String evalReport = cat.evaluateDoccatModel(sampleStream, model);
+            System.out.println(evalReport);
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
 
+
+//        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
+//            model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(100, 2), new DoccatFactory());
+//        } catch (IOException e) {
+//            logger.error(e.getMessage(), e);
+//        }
 
 //        try {
 //            SolrDocumentList docs = client.QuerySolrDocuments("id:8be8db4af950cf739daa3d127d43c77c44e95099", 1, 0, null, null);
@@ -223,14 +240,16 @@ public class DocumentCategorizer {
                 String line = lineStream.read();
                 while (line != null) {
                     double rand = random.nextDouble();
-                    if (rand <= percentTrain) {
-                        trainWriter.write(line);
-                        trainWriter.write(System.lineSeparator());
-                        trainWriter.flush();
-                    } else {
-                        testWriter.write(line);
-                        testWriter.write(System.lineSeparator());
-                        testWriter.flush();
+                    if (!Strings.isNullOrEmpty(line)) {
+                        if (rand <= percentTrain) {
+                            trainWriter.write(line);
+                            trainWriter.write(System.lineSeparator());
+                            trainWriter.flush();
+                        } else {
+                            testWriter.write(line);
+                            testWriter.write(System.lineSeparator());
+                            testWriter.flush();
+                        }
                     }
                     line = lineStream.read();
                 }

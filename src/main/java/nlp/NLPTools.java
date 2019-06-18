@@ -26,6 +26,7 @@ import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.util.Version;
 import org.apache.solr.common.SolrDocument;
 import org.springframework.core.io.ClassPathResource;
@@ -41,6 +42,15 @@ import java.util.stream.Collectors;
 
 public class NLPTools {
     final static Logger logger = LogManager.getLogger(NLPTools.class);
+    private static final String stopwordsText = Tools.getResource(Tools.getProperty("nlp.stopwords"));
+    private static final Stemmer stemmer = new PorterStemmer();
+    private static TreeSet stopwords;
+
+    static {
+        List<String> wordsList = Arrays.asList(stopwordsText.split("\\n"));
+        stopwords = new TreeSet<>();
+        stopwords.addAll(wordsList);
+    }
 
     public static TrainingParameters getTrainingParameters(int iterations, int cutoff) {
         TrainingParameters mlParams = new TrainingParameters();
@@ -536,34 +546,21 @@ public class NLPTools {
     public static String normalizeText(String text) {
         try {
             text = text.replace("\r", " ").replace("\n", " ");
-            Stemmer stemmer = new PorterStemmer();
-            //produce a token stream for use by the stopword filters
-            StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
-            TokenStream stream = analyzer.tokenStream("", text);
-
-            //get a handle to the filter that will remove stop words
-            StopFilter stopFilter = new StopFilter(Version.LUCENE_4_9, stream, analyzer.getStopwordSet());
-            stream.reset();
+            String reduced = Tools.removeSpecialCharacters(Tools.removeAllNumbers(text.toString()));
+            reduced = reduced.replace(".", " ").replace("'", " ");
             StringBuilder str = new StringBuilder();
-            //iterate through each token observed by the stop filter
-            while(stopFilter.incrementToken()) {
-                //get the next token that passes the filter
-                CharTermAttribute attr = stopFilter.getAttribute(CharTermAttribute.class);
-                //lemmatize the token and append it to the final output
-                str.append(stemmer.stem(attr.toString()) + " ");
+            List<CoreLabel> tokens = detectTokensStanford(reduced);
+            for (CoreLabel token : tokens) {
+                String word = token.word().toLowerCase();
+                if (!stopwords.contains(word) && word.length() > 1) {
+                    str.append(stemmer.stem(word) + " ");
+                }
             }
-            analyzer.close();
-            stopFilter.end();
-            stopFilter.close();
-            stream.end();
-            stream.close();
-            return str.toString();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            String normalized = Tools.removeSpecialCharacters(Tools.removeAllNumbers(str.toString()));
+            return normalized;
+        } catch (Exception e) {
+            return null;
         }
-
-        return null;
     }
 
     public static String redactTextForNLP(List<CoreMap> sentenceAnnotations, double threshold, int maxLength) {

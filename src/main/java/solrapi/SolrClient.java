@@ -120,10 +120,10 @@ public class SolrClient {
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
 		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getAllDocumentsDataQuery, client::formatForClustering, new NERThrottle());
-		//client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/topic-modeling.data", client::writeTopicModellingHeader,null, "", client::getAllDocumentsDataQuery, client::formatForTopicModeling, new NERThrottle());
+		client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/petroleum-topic-modeling.data", client::writeTopicModellingHeader,null, "", client.getCategorySpecificDataQuery("Petroleum"), client::formatForTopicModeling, new NERThrottle());
 
 		//client.runParsedUpdateJob("docText:* AND -parsed:*");
-		client.runLDACategoryUpdateJob("parsed:* AND -ldaCategory:*", 0, 1000000);
+		//client.runLDACategoryUpdateJob("parsed:* AND -ldaCategory:*", 0, 1000000);
 		//client.runLDACategoryRemovalJob("ldaCategory:*");
 		//client.runFileListingJob("parsed:*", 0, 600000);
 
@@ -626,6 +626,14 @@ public class SolrClient {
 		return query;
 	}
 
+	public static Function<SolrQuery, SolrQuery> getCategorySpecificDataQuery(final String category) {
+		Function<SolrQuery, SolrQuery> func = query -> {
+			query.setQuery("category:" + category);
+			return query;
+		};
+		return func;
+	}
+
 	public static Function<SolrQuery, SolrQuery> getCategorySpecificNERModelTrainingDataQuery(final String category) {
 		Function<SolrQuery, SolrQuery> func = query -> {
 			query.setQuery("category:" + category + " AND includeInNERTraining:true");
@@ -676,7 +684,7 @@ public class SolrClient {
 		String output = null;
 		if (categories.size() == 1) {
 			String normalized = NLPTools.normalizeText(parsed);
-			if (!Strings.isNullOrEmpty(normalized)) {
+			if (!Strings.isNullOrEmpty(normalized) && normalized.trim().length() > 0) {
 				output = categories.stream()
 						.map(category -> category + "\t" + normalized)
 						.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
@@ -687,7 +695,7 @@ public class SolrClient {
 			chunks.stream().forEach(p -> p.setLdaCategory(NLPTools.removeProbabilitiesFromCategories(p.getLdaCategory())));
 			chunks.stream().forEach(p -> p.setChunkText(NLPTools.normalizeText(p.getChunkText())));
 			output = chunks.stream()
-					.filter(p -> !Strings.isNullOrEmpty(p.getChunkText()))
+					.filter(p -> !Strings.isNullOrEmpty(p.getChunkText()) && p.getChunkText().trim().length() > 0)
 					.map(p -> p.getLdaCategory().get(0) + "\t" + p.getChunkText())
 					.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
 					.orElse("");
