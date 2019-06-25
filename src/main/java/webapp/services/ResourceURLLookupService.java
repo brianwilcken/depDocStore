@@ -2,6 +2,7 @@ package webapp.services;
 
 import com.google.common.base.Strings;
 import common.DetectHtml;
+import org.springframework.http.HttpHeaders;
 import textextraction.TextExtractor;
 import common.Tools;
 import de.l3s.boilerpipe.BoilerpipeProcessingException;
@@ -66,8 +67,11 @@ public class ResourceURLLookupService {
         try {
             String filename = Tools.removeFilenameSpecialCharacters(FilenameUtils.getName(url.getFile()));
             if (verifyURLFilenameIsFile(filename)) {
-                RequestCallback requestCallback = request -> request.getHeaders()
-                        .setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
+                RequestCallback requestCallback = request -> {
+                    HttpHeaders hdrs = request.getHeaders();
+                    hdrs.setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
+                    hdrs.add("User-Agent", USER_AGENT);
+                };
 
                 ResponseExtractor<Void> responseExtractor = response -> {
                     Path path = Paths.get(temporaryFileRepo + filename);

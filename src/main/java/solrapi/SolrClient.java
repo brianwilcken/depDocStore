@@ -120,10 +120,10 @@ public class SolrClient {
 		//updateAnnotatedData(client, "0bb9ead9-c71a-43fa-8e80-35e5d566c15e");
 
 		//client.writeCorpusDataToFile("data/clustering.csv", "", client::getAllDocumentsDataQuery, client::formatForClustering, new NERThrottle());
-		client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/petroleum-topic-modeling.data", client::writeTopicModellingHeader,null, "", client.getCategorySpecificDataQuery("Petroleum"), client::formatForTopicModeling, new NERThrottle());
+		//client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/non-sector-topic-modeling.data", client::writeTopicModellingHeader,null, "", client.getAdhocDataQuery("-sector:* AND parsed:*"), client::formatForTopicModeling, new NERThrottle());
 
 		//client.runParsedUpdateJob("docText:* AND -parsed:*");
-		//client.runLDACategoryUpdateJob("parsed:* AND -ldaCategory:*", 0, 1000000);
+		client.runLDACategoryUpdateJob("parsed:* AND -sector:* AND -ldaCategory:*", 0, 70000);
 		//client.runLDACategoryRemovalJob("ldaCategory:*");
 		//client.runFileListingJob("parsed:*", 0, 600000);
 
@@ -140,11 +140,11 @@ public class SolrClient {
 		Semaphore semaphore = new Semaphore(16);
 		int rows = 1000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
-		for (int start = 0; start <= 1000000; start += rows) {
+		for (int start = 0; start <= 67000; start += rows) {
 			SolrQuery query = new SolrQuery(strQuery);
 			query.setStart(start);
 			query.setRows(rows);
-			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateParsedAttribute, null, this::indexDocuments);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateParsedAttribute, null, null);
 			jobs.add(job);
 			Thread thread = new Thread(job);
 			job.setMyThread(thread);
@@ -158,17 +158,19 @@ public class SolrClient {
 
 			}
 		}
+
+		saveBatchSolrJobDocs(jobs);
 	}
 
 	public void runLDACategoryRemovalJob(String strQuery) {
 		Semaphore semaphore = new Semaphore(16);
-		int rows = 5000;
+		int rows = 1000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
-		for (int start = 0; start <= 1000000; start += rows) {
+		for (int start = 0; start <= 1000; start += rows) {
 			SolrQuery query = new SolrQuery(strQuery);
 			query.setStart(start);
 			query.setRows(rows);
-			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::removeLDACategoryAttribute, null, this::indexDocuments);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::removeLDACategoryAttribute, null, null);
 			jobs.add(job);
 			Thread thread = new Thread(job);
 			job.setMyThread(thread);
@@ -182,10 +184,12 @@ public class SolrClient {
 
 			}
 		}
+
+		saveBatchSolrJobDocs(jobs);
 	}
 
 	public void runLDACategoryUpdateJob(String strQuery, int queryStart, int queryEnd) {
-		Semaphore semaphore = new Semaphore(32);
+		Semaphore semaphore = new Semaphore(16);
 		TopicModeller topicModeller = new TopicModeller(this);
 		int rows = 1000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
@@ -193,7 +197,7 @@ public class SolrClient {
 			SolrQuery query = new SolrQuery(strQuery);
 			query.setStart(start);
 			query.setRows(rows);
-			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateLDACategoryAttribute, new Object[] {topicModeller}, this::indexDocuments);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateLDACategoryAttribute, new Object[] {topicModeller}, null);
 			jobs.add(job);
 			Thread thread = new Thread(job);
 			job.setMyThread(thread);
@@ -206,6 +210,62 @@ public class SolrClient {
 			} catch (InterruptedException e) {
 
 			}
+		}
+
+		saveBatchSolrJobDocs(jobs);
+	}
+
+	private void saveBatchSolrJobDocs(List<BatchSolrJob> jobs) {
+		Semaphore semaphore = new Semaphore(16);
+		List<SaveToSolrJob> saveJobs = new ArrayList<>();
+		for (BatchSolrJob job : jobs) {
+			if (!job.isEmptyJob()) {
+				SaveToSolrJob saveJob = new SaveToSolrJob(semaphore, job);
+				saveJobs.add(saveJob);
+				Thread thread = new Thread(saveJob);
+				saveJob.setMyThread(thread);
+				thread.start();
+			}
+		}
+
+		while (saveJobs.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+
+			}
+		}
+	}
+
+	private class SaveToSolrJob implements Runnable {
+		private Semaphore semaphore;
+		private Thread myThread;
+		private BatchSolrJob job;
+
+		public SaveToSolrJob(Semaphore semaphore, BatchSolrJob job) {
+			this.semaphore = semaphore;
+			this.job = job;
+		}
+
+		@Override
+		public void run() {
+			try {
+				semaphore.acquire();
+				logger.info("now saving batch of " + job.getQuery().getRows() + " documents starting at " + job.getQuery().getStart());
+				indexDocuments(job.getDocs());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+			} finally {
+				semaphore.release();
+			}
+		}
+
+		public void setMyThread(Thread myThread) {
+			this.myThread = myThread;
+		}
+
+		public Thread getMyThread() {
+			return myThread;
 		}
 	}
 
@@ -247,6 +307,7 @@ public class SolrClient {
 		private Object[] args;
 		private Semaphore semaphore;
 		private Thread myThread;
+		private SolrDocumentList docs;
 
 		public BatchSolrJob(SolrQuery query, Semaphore semaphore, Tools.CheckedBiConsumer<SolrDocumentList, Object[]> consumer, Object[] args, Tools.CheckedConsumer<SolrDocumentList> postConsumer) {
 			this.query = query;
@@ -260,7 +321,7 @@ public class SolrClient {
 		public void run() {
 			try {
 				semaphore.acquire();
-				SolrDocumentList docs = client.query(collection, query).getResults();
+				docs = client.query(collection, query).getResults();
 				if (docs.size() == 0) {
 					emptyJob = true;
 					logger.info("batch of " + query.getRows() + " documents starting at " + query.getStart() + " is EMPTY!");
@@ -278,6 +339,10 @@ public class SolrClient {
 			}
 		}
 
+		public SolrQuery getQuery() {
+			return query;
+		}
+
 		public boolean isEmptyJob() {
 			return emptyJob;
 		}
@@ -288,6 +353,10 @@ public class SolrClient {
 
 		public void setMyThread(Thread myThread) {
 			this.myThread = myThread;
+		}
+
+		public SolrDocumentList getDocs() {
+			return docs;
 		}
 	}
 
@@ -625,6 +694,14 @@ public class SolrClient {
 		//query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
 		return query;
 	}
+
+	public static Function<SolrQuery, SolrQuery> getAdhocDataQuery(final String queryStr) {
+        Function<SolrQuery, SolrQuery> func = query -> {
+            query.setQuery(queryStr);
+            return query;
+        };
+        return func;
+    }
 
 	public static Function<SolrQuery, SolrQuery> getCategorySpecificDataQuery(final String category) {
 		Function<SolrQuery, SolrQuery> func = query -> {

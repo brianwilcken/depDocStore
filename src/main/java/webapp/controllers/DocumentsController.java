@@ -1008,6 +1008,7 @@ public class DocumentsController {
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
+                logger.info("Now deleting document: " + doc.get("filename").toString());
                 if (doc.containsKey("docStoreId")) {
                     String fileId = doc.get("docStoreId").toString();
                     mongoClient.DeleteFile(fileId);

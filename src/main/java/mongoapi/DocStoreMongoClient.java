@@ -1,6 +1,7 @@
 package mongoapi;
 
 import com.mongodb.Block;
+import com.mongodb.MongoGridFSException;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
@@ -76,7 +77,11 @@ public class DocStoreMongoClient {
 
     public void DeleteFile(String fileIdStr) {
         ObjectId fileId = new ObjectId(fileIdStr);
-        gridFSBucket.delete(fileId);
+        try {
+            gridFSBucket.delete(fileId);
+        } catch (MongoGridFSException e) {
+            //ignore if file not found for deletion
+        }
     }
 
     public GridFSFile GetFileMetadata(String fileIdStr) {

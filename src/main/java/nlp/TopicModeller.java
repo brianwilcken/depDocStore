@@ -46,7 +46,7 @@ public class TopicModeller {
 
     static {
         try {
-            model = new ParallelTopicModel(15);
+            model = new ParallelTopicModel(50);
             instanceList = InstanceList.load(new File(Tools.getProperty("mallet.corpus")));
             pipe = (SerialPipes)instanceList.getPipe();
             model.addInstances(instanceList);
@@ -90,19 +90,19 @@ public class TopicModeller {
         SolrClient client = new SolrClient("http://134.20.2.51:8983/solr");
         TopicModeller topicModeller = new TopicModeller(client);
 
-        //topicModeller.writeTopicVectorRepresentation(20);
+        topicModeller.writeTopicVectorRepresentation(20);
 
-        //SolrDocumentList docs = client.QuerySolrDocuments("id:verdictmedia_66610", 1, 0, null, null);
-        SolrDocumentList docs = client.QuerySolrDocuments("id:7e9d379455ae0113083408fbd5472f1dee082523", 1, 0, null, null);
-        SolrDocument doc = docs.get(0);
-        String parsed = doc.get("parsed").toString();
-        List<String> docCategories = topicModeller.inferCategoriesByTopics(parsed);
-        System.out.println("Overall categories: " + docCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
-
-        List<TextChunkTopic> textChunkTopics = topicModeller.getTextChunkTopics(parsed, 10);
-        for (TextChunkTopic textChunkTopic : textChunkTopics) {
-            System.out.println(textChunkTopic.toString());
-        }
+//        //SolrDocumentList docs = client.QuerySolrDocuments("id:verdictmedia_66610", 1, 0, null, null);
+//        SolrDocumentList docs = client.QuerySolrDocuments("id:dfe996c4c886449964067f5dcbb4e8549e3b8e80", 1, 0, null, null);
+//        SolrDocument doc = docs.get(0);
+//        String parsed = doc.get("parsed").toString();
+//        List<String> docCategories = topicModeller.inferCategoriesByTopics(parsed);
+//        System.out.println("Overall categories: " + docCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
+//
+//        List<TextChunkTopic> textChunkTopics = topicModeller.getTextChunkTopics(parsed, 10);
+//        for (TextChunkTopic textChunkTopic : textChunkTopics) {
+//            System.out.println(textChunkTopic.toString());
+//        }
     }
 
     public TopicModeller(SolrClient client) {
@@ -203,7 +203,7 @@ public class TopicModeller {
         //normalize category weights
         double weightSum = categoryWeights.stream().map(p -> p.catWeight).mapToDouble(Double::doubleValue).sum();
         String category;
-        if (weightSum > 0.25) {
+        if (weightSum > 0.3) {
 //            categoryWeights.stream().forEach(p -> {
 //                p.catWeight = p.catWeight / weightSum;
 //            });
@@ -220,8 +220,8 @@ public class TopicModeller {
             final double stdDev = standardDev.evaluate(weights);
             final double maxWeight = weights[0];
             categoryWeights = categoryWeights.stream()
-                    .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - (2 * stdDev))).collect(Collectors.toList());
-            if (categoryWeights.size() <= 3) {
+                    .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - (0.5 * stdDev))).collect(Collectors.toList());
+            if (categoryWeights.size() <= 3 && maxWeight >= 0.2) {
                 category = categoryWeights.stream().map(p -> p.category + "|" + p.catWeight)
                         .reduce((c, n) -> c + ";" + n).orElse("");
             } else {
