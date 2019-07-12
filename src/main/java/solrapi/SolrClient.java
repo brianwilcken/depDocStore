@@ -25,10 +25,7 @@ import common.FacilityTypes;
 import common.Tools;
 import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.util.StringUtils;
-import nlp.NLPTools;
-import nlp.NamedEntity;
-import nlp.TextChunkTopic;
-import nlp.TopicModeller;
+import nlp.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
@@ -123,8 +120,10 @@ public class SolrClient {
 		//client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/non-sector-topic-modeling.data", client::writeTopicModellingHeader,null, "", client.getAdhocDataQuery("-sector:* AND parsed:*"), client::formatForTopicModeling, new NERThrottle());
 
 		//client.runParsedUpdateJob("docText:* AND -parsed:*");
-		client.runLDACategoryUpdateJob("parsed:* AND -sector:* AND -ldaCategory:*", 0, 70000);
-		//client.runLDACategoryRemovalJob("ldaCategory:*");
+		//client.runLDACategoryUpdateJob("parsed:* AND -sector:* AND -ldaCategory:*", 0, 72000);
+		client.runDoccatCategoryUpdateJob("-sector:* AND parsed:* AND ldaCategory:*", 0, 72000);
+		//client.runFieldRemovalJob("ldaCategory:*", client::removeLDACategoryAttribute);
+		//client.runFieldRemovalJob("doccatCategory:*", client::removeDoccatCategoryAttribute);
 		//client.runFileListingJob("parsed:*", 0, 600000);
 
 //		try {
@@ -162,15 +161,15 @@ public class SolrClient {
 		saveBatchSolrJobDocs(jobs);
 	}
 
-	public void runLDACategoryRemovalJob(String strQuery) {
+	public void runFieldRemovalJob(String strQuery, Tools.CheckedBiConsumer<SolrDocumentList, Object[]> remover) {
 		Semaphore semaphore = new Semaphore(16);
 		int rows = 1000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
-		for (int start = 0; start <= 1000; start += rows) {
+		for (int start = 0; start <= 100000; start += rows) {
 			SolrQuery query = new SolrQuery(strQuery);
 			query.setStart(start);
 			query.setRows(rows);
-			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::removeLDACategoryAttribute, null, null);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, remover, null, null);
 			jobs.add(job);
 			Thread thread = new Thread(job);
 			job.setMyThread(thread);
@@ -198,6 +197,33 @@ public class SolrClient {
 			query.setStart(start);
 			query.setRows(rows);
 			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateLDACategoryAttribute, new Object[] {topicModeller}, null);
+			jobs.add(job);
+			Thread thread = new Thread(job);
+			job.setMyThread(thread);
+			thread.start();
+		}
+
+		while (jobs.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+
+			}
+		}
+
+		saveBatchSolrJobDocs(jobs);
+	}
+
+	public void runDoccatCategoryUpdateJob(String strQuery, int queryStart, int queryEnd) {
+		Semaphore semaphore = new Semaphore(16);
+		DocumentCategorizer doccat = new DocumentCategorizer(this);
+		int rows = 1000;
+		List<BatchSolrJob> jobs = new ArrayList<>();
+		for (int start = queryStart; start <= queryEnd; start += rows) {
+			SolrQuery query = new SolrQuery(strQuery);
+			query.setStart(start);
+			query.setRows(rows);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::updateDoccatCategoryAttribute, new Object[] {doccat}, null);
 			jobs.add(job);
 			Thread thread = new Thread(job);
 			job.setMyThread(thread);
@@ -379,6 +405,15 @@ public class SolrClient {
 		}
 	}
 
+	private void removeDoccatCategoryAttribute(SolrDocumentList docs, Object[] notUsed) {
+		for (SolrDocument doc : docs) {
+			if (doc.containsKey("doccatCategory")) {
+				doc.remove("doccatCategory");
+				logger.info(doc.get("filename").toString() + " DocCat category removed");
+			}
+		}
+	}
+
 	private void updateLDACategoryAttribute(SolrDocumentList docs, Object[] args) {
 		TopicModeller topicModeller = (TopicModeller)args[0];
 		for (SolrDocument doc : docs) {
@@ -391,19 +426,41 @@ public class SolrClient {
 				} else {
 					doc.put("ldaCategory", ldaCategories);
 				}
-				if (doc.containsKey("category")) {
-					doc.replace("category", categories);
-				} else {
-					doc.put("category", categories);
+				if (!doc.containsKey("userCategory")) {
+					if (doc.containsKey("category")) {
+						doc.replace("category", categories);
+					} else {
+						doc.put("category", categories);
+					}
 				}
 				logger.info(doc.get("filename").toString() + " [" + parsed.length() + "] --> " + ldaCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
-//				try {
-//					indexDocument(doc);
-//				} catch (SolrServerException e) {
-//					logger.error(e.getMessage(), e);
-//				}
 			} else {
 				logger.error(doc.get("filename").toString() + " --> ERROR GENERATING CATEGORY!!");
+			}
+		}
+	}
+
+	private void updateDoccatCategoryAttribute(SolrDocumentList docs, Object[] args) {
+		DocumentCategorizer doccat = (DocumentCategorizer)args[0];
+		for (SolrDocument doc : docs) {
+			if (doc.containsKey("parsed")) {
+				String parsed = doc.get("parsed").toString();
+				List<String> doccatCategories = null;
+				try {
+					doccatCategories = doccat.detectBestCategories(parsed, 0);
+				} catch (IOException e) { }
+				if (doccatCategories != null) {
+					if (doc.containsKey("doccatCategory")) {
+						doc.replace("doccatCategory", doccatCategories);
+					} else {
+						doc.put("doccatCategory", doccatCategories);
+					}
+					logger.info(doc.get("filename").toString() + " [" + parsed.length() + "] --> " + doccatCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
+				} else {
+					logger.error(doc.get("filename").toString() + " --> ERROR GENERATING CATEGORY!!");
+				}
+			} else {
+				logger.info("no parsed data!");
 			}
 		}
 	}
@@ -498,7 +555,7 @@ public class SolrClient {
 						}
 					}
 					docs.add(doc);
-					if (docNum % 100 == 0) {
+					if (docNum % 1000 == 0) {
 						indexDocuments(docs);
 						docs.clear();
 						logger.info("Indexed so far: " + docNum + " documents");
@@ -759,7 +816,7 @@ public class SolrClient {
 		String parsed = doc.get("parsed").toString();
 		List<String> categories = (List<String>)doc.get("category");
 		String output = null;
-		if (categories.size() == 1) {
+		if (categories.size() == 1 || doc.containsKey("userCategory")) {
 			String normalized = NLPTools.normalizeText(parsed);
 			if (!Strings.isNullOrEmpty(normalized) && normalized.trim().length() > 0) {
 				output = categories.stream()
@@ -768,14 +825,16 @@ public class SolrClient {
 						.orElse("");
 			}
 		} else {
-			List<TextChunkTopic> chunks = topicModeller.getTextChunkTopics(parsed, 10);
-			chunks.stream().forEach(p -> p.setLdaCategory(NLPTools.removeProbabilitiesFromCategories(p.getLdaCategory())));
-			chunks.stream().forEach(p -> p.setChunkText(NLPTools.normalizeText(p.getChunkText())));
-			output = chunks.stream()
-					.filter(p -> !Strings.isNullOrEmpty(p.getChunkText()) && p.getChunkText().trim().length() > 0)
-					.map(p -> p.getLdaCategory().get(0) + "\t" + p.getChunkText())
-					.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
-					.orElse("");
+			if (topicModeller != null) {
+				List<TextChunkTopic> chunks = topicModeller.getTextChunkTopics(parsed, 50);
+				chunks.stream().forEach(p -> p.setLdaCategory(NLPTools.removeProbabilitiesFromCategories(p.getLdaCategory())));
+				chunks.stream().forEach(p -> p.setChunkText(NLPTools.normalizeText(p.getChunkText())));
+				output = chunks.stream()
+						.filter(p -> !Strings.isNullOrEmpty(p.getChunkText()) && p.getChunkText().trim().length() > 0)
+						.map(p -> p.getLdaCategory().get(0) + "\t" + p.getChunkText())
+						.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
+						.orElse("");
+			}
 		}
 
 		if (!Strings.isNullOrEmpty(output)) {
@@ -962,7 +1021,7 @@ public class SolrClient {
 		TrainingDataThrottle throttle = (TrainingDataThrottle)args[2];
 		String category = (String)args[3];
 		Boolean lastElement = false;
-		Object[] formatterArgs = new Object[] {category, lastElement};
+		Object[] formatterArgs = new Object[] {category, lastElement, throttle};
 		long[] increment = (long[])args[4];
 		long start = increment[0];
 		long end = increment[1];
@@ -1096,73 +1155,6 @@ public class SolrClient {
 			if (currentPosition == numFound) {
 				queue.add(new StopDoc());
 			}
-		}
-	}
-
-	private static abstract class TrainingDataThrottle {
-
-		protected String throttleFor;
-		protected double throttlePercent;
-
-		public TrainingDataThrottle(String throttleFor, double throttlePercent) {
-			this.throttleFor = throttleFor;
-			this.throttlePercent = throttlePercent;
-		}
-
-		public abstract void init(long numDocs);
-
-		public abstract boolean check(SolrDocument doc);
-	}
-
-	public static class DoccatThrottle extends TrainingDataThrottle {
-
-		private long numDocs;
-		private int throttleForCount;
-
-		public DoccatThrottle(double throttlePercent) {
-			super("Not_Applicable", throttlePercent);
-		}
-
-		@Override
-		public void init(long numDocs) {
-			this.numDocs = numDocs;
-		}
-
-		@Override
-		public boolean check(SolrDocument doc) {
-			if (doc.containsKey("category") && ((List)doc.get("category")).contains(throttleFor)) {
-				double currentPercent = (double)throttleForCount / (double)numDocs;
-				if (currentPercent > throttlePercent) {
-					return false;
-				} else {
-					//randomization such that not always given document is added
-					//50% likelihood the document is added
-					double random = Math.random();
-					if (random > 0.5) {
-						throttleForCount++;
-						return true;
-					}
-					return false;
-				}
-			}
-			return true;
-		}
-	}
-
-	public static class NERThrottle extends TrainingDataThrottle {
-
-		public NERThrottle() {
-			super("", 0);
-		}
-
-		@Override
-		public void init(long numDocs) {
-
-		}
-
-		@Override
-		public boolean check(SolrDocument doc) {
-			return true;
 		}
 	}
 

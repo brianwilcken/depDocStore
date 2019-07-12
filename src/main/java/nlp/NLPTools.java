@@ -30,6 +30,7 @@ import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.util.Version;
 import org.apache.solr.common.SolrDocument;
 import org.springframework.core.io.ClassPathResource;
+import sun.awt.Mutex;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
@@ -45,11 +46,13 @@ public class NLPTools {
     private static final String stopwordsText = Tools.getResource(Tools.getProperty("nlp.stopwords"));
     private static final Stemmer stemmer = new PorterStemmer();
     private static TreeSet stopwords;
+    private static Mutex mutex;
 
     static {
         List<String> wordsList = Arrays.asList(stopwordsText.split("\\n"));
         stopwords = new TreeSet<>();
         stopwords.addAll(wordsList);
+        mutex = new Mutex();
     }
 
     public static TrainingParameters getTrainingParameters(int iterations, int cutoff) {
@@ -553,7 +556,12 @@ public class NLPTools {
             for (CoreLabel token : tokens) {
                 String word = token.word().toLowerCase();
                 if (!stopwords.contains(word) && word.length() > 1) {
-                    str.append(stemmer.stem(word) + " ");
+                    try {
+                        mutex.lock();
+                        str.append(stemmer.stem(word) + " ");
+                    } finally {
+                        mutex.unlock();
+                    }
                 }
             }
             String normalized = Tools.removeSpecialCharacters(Tools.removeAllNumbers(str.toString()));

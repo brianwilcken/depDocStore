@@ -492,14 +492,14 @@ public class DocumentsController {
     }
 
     @RequestMapping(value="/trainDoccat", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonResponse> trainDoccatModel(boolean doAsync, int iterations, double percentEntropy) {
+    public ResponseEntity<JsonResponse> trainDoccatModel(boolean doAsync, int iterations) {
         logger.info("In trainDoccatModel method");
         try {
             if (!doAsync) {
-                String report = doccatModelTrainingService.process(this, iterations, percentEntropy);
+                String report = doccatModelTrainingService.process(this, iterations);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(report));
             } else {
-                doccatModelTrainingService.processAsync(this, iterations, percentEntropy);
+                doccatModelTrainingService.processAsync(this, iterations);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
         } catch (Exception e) {
@@ -801,7 +801,12 @@ public class DocumentsController {
 
         List<String> doccatCategories = categorizer.detectBestCategories(parsed, 0);
         List<String> ldaCategories = topicModeller.inferCategoriesByTopics(parsed);
-        List<String> categories = NLPTools.removeProbabilitiesFromCategories(doccatCategories);
+        List<String> categories;
+        if (doc.containsKey("userCategory")) {
+            categories = (List<String>)doc.get("userCategory");
+        } else {
+            categories = NLPTools.removeProbabilitiesFromCategories(doccatCategories);
+        }
         logger.info("categories detected: " + doccatCategories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse(""));
         if (doc.containsKey("category")) {
             doc.replace("category", categories);
@@ -998,8 +1003,8 @@ public class DocumentsController {
         }
     }
 
-    public String initiateDoccatModelTraining(int iterations, double percentEntropy) throws IOException {
-        return categorizer.trainDoccatModel(iterations, percentEntropy);
+    public String initiateDoccatModelTraining(int iterations) throws IOException {
+        return categorizer.trainDoccatModel(iterations);
     }
 
     @RequestMapping(value="/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)

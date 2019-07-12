@@ -22,6 +22,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.core.io.ClassPathResource;
+import solrapi.NERThrottle;
 import solrapi.SolrClient;
 import webapp.models.GeoNameWithFrequencyScore;
 
@@ -204,74 +205,63 @@ public class NamedEntityRecognizer {
         return entities;
     }
 
-    public List<NamedEntity> detectNamedEntities(List<CoreMap> sentences, List<String> categories, double threshold, int... numTries) {
+    public List<NamedEntity> detectNamedEntities(List<CoreMap> sentences, List<String> categories, double threshold) {
         List<NamedEntity> namedEntities = new ArrayList<>();
-        String currentCategory = null;
-        try {
-            for (String category : categories) {
-                String modelFile;
-                if (category.contains(":")) {
-                    String[] categoryAndVersion = category.split(":");
-                    String categoryOnly = categoryAndVersion[0];
-                    String version = categoryAndVersion[1];
-                    modelFile = getModelFilePath(getModelDir(categoryOnly, version));
-                } else {
-                    modelFile = getModelFilePath(getModelDir(category, false));
-                }
-                currentCategory = category;
-                TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
-                NameFinderME nameFinder = new NameFinderME(model);
+        for (String category : categories) {
+            String modelFile;
+            if (category.contains(":")) {
+                String[] categoryAndVersion = category.split(":");
+                String categoryOnly = categoryAndVersion[0];
+                String version = categoryAndVersion[1];
+                modelFile = getModelFilePath(getModelDir(categoryOnly, version));
+            } else {
+                modelFile = getModelFilePath(getModelDir(category, false));
+            }
+            TokenNameFinderModel model;
+            try {
+                model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
+            } catch (IOException e) {
+                logger.warn("No NER model exists for category: " + category);
+                continue;
+            }
+            NameFinderME nameFinder = new NameFinderME(model);
 
-                for (int s = 0; s < sentences.size(); s++) {
-                    String sentence = sentences.get(s).toString();
-                    List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
-                    String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
-                    Span[] nameSpans = nameFinder.find(tokensArr);
-                    double[] probs = nameFinder.probs(nameSpans);
-                    for (int i = 0; i < nameSpans.length; i++) {
-                        double prob = probs[i];
-                        Span span = nameSpans[i];
-                        int start = span.getStart();
-                        int end = span.getEnd();
-                        String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
-                        String entity = String.join(" ", entityParts);
-                        if (prob > threshold) {
-                            NamedEntity namedEntity = new NamedEntity(entity, span, s, category);
-                            //curateNamedEntityType(category, namedEntity);
-                            final int currLine = s;
-                            //resolve duplicate entities that may overlap between different model categories
-                            List<NamedEntity> sameEntities = namedEntities.stream().filter(p -> p.getLine() == currLine &&
-                                    (p.getEntity().contains(entity) || entity.contains(p.getEntity())) &&
-                                    p.getSpan().intersects(span)).collect(Collectors.toList());
-                            if (sameEntities.size() > 0) {
-                                NamedEntity sameEntity = sameEntities.get(0);
-                                if (sameEntity.getSpan().getProb() < namedEntity.getSpan().getProb()) {
-                                    //favor the entity with the higher probability
-                                    namedEntities.remove(sameEntity);
-                                    namedEntities.add(namedEntity);
-                                }
-                            } else {
+            for (int s = 0; s < sentences.size(); s++) {
+                String sentence = sentences.get(s).toString();
+                List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+                String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
+                Span[] nameSpans = nameFinder.find(tokensArr);
+                double[] probs = nameFinder.probs(nameSpans);
+                for (int i = 0; i < nameSpans.length; i++) {
+                    double prob = probs[i];
+                    Span span = nameSpans[i];
+                    int start = span.getStart();
+                    int end = span.getEnd();
+                    String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
+                    String entity = String.join(" ", entityParts);
+                    if (prob > threshold) {
+                        NamedEntity namedEntity = new NamedEntity(entity, span, s, category);
+                        //curateNamedEntityType(category, namedEntity);
+                        final int currLine = s;
+                        //resolve duplicate entities that may overlap between different model categories
+                        List<NamedEntity> sameEntities = namedEntities.stream().filter(p -> p.getLine() == currLine &&
+                                (p.getEntity().contains(entity) || entity.contains(p.getEntity())) &&
+                                p.getSpan().intersects(span)).collect(Collectors.toList());
+                        if (sameEntities.size() > 0) {
+                            NamedEntity sameEntity = sameEntities.get(0);
+                            if (sameEntity.getSpan().getProb() < namedEntity.getSpan().getProb()) {
+                                //favor the entity with the higher probability
+                                namedEntities.remove(sameEntity);
                                 namedEntities.add(namedEntity);
                             }
+                        } else {
+                            namedEntities.add(namedEntity);
                         }
                     }
                 }
             }
-            return namedEntities;
-        } catch (IOException e) {
-            if(numTries.length == 0 && currentCategory != null) {
-                try {
-                    trainNERModel(currentCategory); //model may not yet exist, but maybe there is data to train it...
-                } catch (IOException e1) {
-                    logger.error(e.getMessage(), e1);
-                }
-                return detectNamedEntities(sentences, categories, threshold, 1);
-            } else {
-                //no model training data available...
-                logger.error(e.getMessage(), e);
-                return namedEntities; //this collection will be empty
-            }
         }
+        return namedEntities;
     }
 
 //    public void curateNamedEntityType(String category, NamedEntity namedEntity) {
@@ -309,7 +299,7 @@ public class NamedEntityRecognizer {
 
     public String retrieveCorpusData(String category) throws IOException {
         String trainingFile = getTrainingFilePath(category);
-        client.writeCorpusDataToFile(trainingFile, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERCorpusReview, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFile, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERCorpusReview, new NERThrottle());
         String corpus = FileUtils.readFileToString(new File(trainingFile), Charset.defaultCharset());
 
         return corpus;
@@ -323,7 +313,7 @@ public class NamedEntityRecognizer {
         String modelDir = getModelDir(category, true);
         String modelFile = getModelFilePath(modelDir);
 
-        client.writeCorpusDataToFile(trainingFile, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFile, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new NERThrottle());
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
 
         if (lineStream.read() == null) {
@@ -372,7 +362,7 @@ public class NamedEntityRecognizer {
         try {
             String testFile = getTestFilePath(category);
 
-            client.writeCorpusDataToFile(testFile, null, null, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new SolrClient.NERThrottle());
+            client.writeCorpusDataToFile(testFile, null, null, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new NERThrottle());
             ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(testFile);
 
             if (lineStream.read() == null) {

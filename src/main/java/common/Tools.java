@@ -210,6 +210,16 @@ public class Tools {
 		return ((num1 - rng) < num2) && (num2 < (num1 + rng));
 	}
 
+	public static double harmonicMean(double[] data)
+	{
+		double sum = 0.0;
+
+		for (int i = 0; i < data.length; i++) {
+			sum += 1.0 / data[i];
+		}
+		return data.length / sum;
+	}
+
 	public static String escapeRegex(String regex) {
 		regex = regex.replace("(", "\\(");
 		regex = regex.replace("/", "\\/");

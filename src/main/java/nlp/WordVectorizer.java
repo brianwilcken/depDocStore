@@ -32,6 +32,7 @@ import smile.clustering.HierarchicalClustering;
 import smile.clustering.XMeans;
 import smile.clustering.linkage.CompleteLinkage;
 import smile.math.Math;
+import solrapi.NERThrottle;
 import solrapi.SolrClient;
 
 import java.io.BufferedReader;
@@ -41,7 +42,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class WordVectorizer {
 
@@ -160,7 +160,7 @@ public class WordVectorizer {
         String modelFilePath = getModelFilePath(category);
         String trainingFilePath = getTrainingFilePath(category);
 
-        client.writeCorpusDataToFile(trainingFilePath, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFilePath, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new NERThrottle());
 
         SentenceIterator iter = new LineSentenceIterator(new File(trainingFilePath));
 
@@ -343,7 +343,7 @@ public class WordVectorizer {
         String xmeansClusterFilePath = getXMeansClusterFilePath(category);
         String brownClusterFilePath = getBrownClusterFilePath(category);
         String trainingFilePath = getTrainingFilePath(category);
-        client.writeCorpusDataToFile(trainingFilePath, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new SolrClient.NERThrottle());
+        client.writeCorpusDataToFile(trainingFilePath, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForWord2VecModelTraining, new NERThrottle());
 
         Word2Vec vec;
         try {

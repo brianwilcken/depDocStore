@@ -115,8 +115,9 @@
     <field name="annotatedBy" type="strings"/>
     <field name="assetUUID" type="strings" multiValued="false"/>
     <field name="category" type="string" multiValued="true" indexed="true" required="false" stored="true"/>
-    <field name="ldaCategory" type="string" multiValued="true" indexed="true" required="false" stored="true"/>
-    <field name="doccatCategory" type="string" multiValued="true" indexed="true" required="false" stored="true"/>
+    <field name="userCategory" type="string" multiValued="true" indexed="true" required="false" stored="true"/>
+    <field name="ldaCategory" type="text_en_splitting" termVectors="true" multiValued="true" indexed="true" required="false" stored="true"/>
+    <field name="doccatCategory" type="text_en_splitting" termVectors="true" multiValued="true" indexed="true" required="false" stored="true"/>
     <field name="coref" type="strings" multiValued="false"/>
     <field name="created" type="pdate" indexed="true" required="false" stored="false"/>
     <field name="dependentFacilityUUID" type="strings" multiValued="false"/>
