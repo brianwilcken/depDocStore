@@ -1,6 +1,8 @@
 package solrapi;
 
 import common.Tools;
+import nlp.CategoryWeight;
+import nlp.NLPTools;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -90,13 +92,21 @@ public class DoccatThrottle extends TrainingDataThrottle {
     public boolean check(SolrDocument doc) {
         if (doc.containsKey("category")) {
             List categories = (List)doc.get("category");
-            return check(categories);
+            List<CategoryWeight> catWeights = null;
+            if (doc.containsKey("ldaCategory")) {
+                List<String> ldaCategories = (List<String>)doc.get("ldaCategory");
+                catWeights = NLPTools.separateProbabilitiesFromCategories(ldaCategories);
+            } else if (doc.containsKey("doccatCategory")) {
+                List<String> doccatCategories = (List<String>)doc.get("doccatCategory");
+                catWeights = NLPTools.separateProbabilitiesFromCategories(doccatCategories);
+            }
+
+            return check(categories, catWeights);
         }
         return true;
     }
 
-    @Override
-    public boolean check(List category) {
+    public boolean check(List category, List<CategoryWeight> catWeights) {
         boolean result = false;
         if (throttleTracker != null) {
             List<Map.Entry<String, RandomizationTracker>> workableCategories = throttleTracker.entrySet().stream()
@@ -114,8 +124,14 @@ public class DoccatThrottle extends TrainingDataThrottle {
                 RandomizationTracker randomizationTracker = workableCategory.getValue();
                 double random = Math.random();
                 double randomPercent = randomizationTracker.getRandomPercent();
-                if (random >= (1 - randomPercent)) {
+                String cat = workableCategory.getKey();
+                OptionalDouble weight = catWeights.stream().filter(p -> p.category.equals(cat)).mapToDouble(p -> p.catWeight).findFirst();
+                if (weight.isPresent() && weight.getAsDouble() >= 0.5) { //if the category probability is high enough then automatically accept it
                     result = true;
+                    break;
+                } else if (random >= (1 - randomPercent)) { //if the category probability is low or if the category has no assigned weight then use random chance
+                    result = true;
+                    break;
                 }
             }
 

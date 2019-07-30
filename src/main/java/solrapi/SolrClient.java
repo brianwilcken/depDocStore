@@ -120,10 +120,11 @@ public class SolrClient {
 		//client.writeCorpusDataToFile("/code/aha_nlp/brian_analysis/non-sector-topic-modeling.data", client::writeTopicModellingHeader,null, "", client.getAdhocDataQuery("-sector:* AND parsed:*"), client::formatForTopicModeling, new NERThrottle());
 
 		//client.runParsedUpdateJob("docText:* AND -parsed:*");
-		//client.runLDACategoryUpdateJob("parsed:* AND -sector:* AND -ldaCategory:*", 0, 72000);
-		client.runDoccatCategoryUpdateJob("-sector:* AND parsed:* AND ldaCategory:*", 0, 72000);
-		//client.runFieldRemovalJob("ldaCategory:*", client::removeLDACategoryAttribute);
-		//client.runFieldRemovalJob("doccatCategory:*", client::removeDoccatCategoryAttribute);
+		//client.runLDACategoryUpdateJob("parsed:* AND -sector:* AND -ldaCategory:*", 0, 73000);
+		client.runDoccatCategoryUpdateJob("-sector:* AND parsed:* AND -doccatCategory:*", 0, 73000);
+		//client.runFieldUpdateJob("ldaCategory:*", client::removeLDACategoryAttribute);
+		//client.runFieldUpdateJob("doccatCategory:*", client::removeDoccatCategoryAttribute);
+		//client.runFieldUpdateJob("doccatCategory:* OR ldaCategory:*", client::removeVerticalPipeFromCategory);
 		//client.runFileListingJob("parsed:*", 0, 600000);
 
 //		try {
@@ -161,7 +162,7 @@ public class SolrClient {
 		saveBatchSolrJobDocs(jobs);
 	}
 
-	public void runFieldRemovalJob(String strQuery, Tools.CheckedBiConsumer<SolrDocumentList, Object[]> remover) {
+	public void runFieldUpdateJob(String strQuery, Tools.CheckedBiConsumer<SolrDocumentList, Object[]> updater) {
 		Semaphore semaphore = new Semaphore(16);
 		int rows = 1000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
@@ -169,7 +170,7 @@ public class SolrClient {
 			SolrQuery query = new SolrQuery(strQuery);
 			query.setStart(start);
 			query.setRows(rows);
-			BatchSolrJob job = new BatchSolrJob(query, semaphore, remover, null, null);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, updater, null, null);
 			jobs.add(job);
 			Thread thread = new Thread(job);
 			job.setMyThread(thread);
@@ -189,7 +190,7 @@ public class SolrClient {
 
 	public void runLDACategoryUpdateJob(String strQuery, int queryStart, int queryEnd) {
 		Semaphore semaphore = new Semaphore(16);
-		TopicModeller topicModeller = new TopicModeller(this);
+		TopicModeller topicModeller = new TopicModeller(Tools.getProperty("mallet.general"));
 		int rows = 1000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
 		for (int start = queryStart; start <= queryEnd; start += rows) {
@@ -414,6 +415,26 @@ public class SolrClient {
 		}
 	}
 
+	private void removeVerticalPipeFromCategory(SolrDocumentList docs, Object[] args) {
+		for (SolrDocument doc : docs) {
+			if (doc.containsKey("ldaCategory")) {
+				List<String> ldaCategories = (List<String>)doc.get("ldaCategory");
+				List<String> corrected = ldaCategories.stream()
+						.map(p -> p.replace("|", " "))
+						.collect(Collectors.toList());
+				doc.replace("ldaCategory", corrected);
+			}
+			if (doc.containsKey("doccatCategory")) {
+				List<String> doccatCategories = (List<String>)doc.get("doccatCategory");
+				List<String> corrected = doccatCategories.stream()
+						.map(p -> p.replace("|", " "))
+						.collect(Collectors.toList());
+				doc.replace("doccatCategory", corrected);
+			}
+			logger.info(doc.get("filename").toString() + " categories fixed");
+		}
+	}
+
 	private void updateLDACategoryAttribute(SolrDocumentList docs, Object[] args) {
 		TopicModeller topicModeller = (TopicModeller)args[0];
 		for (SolrDocument doc : docs) {
@@ -450,10 +471,18 @@ public class SolrClient {
 					doccatCategories = doccat.detectBestCategories(parsed, 0);
 				} catch (IOException e) { }
 				if (doccatCategories != null) {
+					List<String> categories = NLPTools.removeProbabilitiesFromCategories(doccatCategories);
 					if (doc.containsKey("doccatCategory")) {
 						doc.replace("doccatCategory", doccatCategories);
 					} else {
 						doc.put("doccatCategory", doccatCategories);
+					}
+					if (!doc.containsKey("userCategory")) {
+						if (doc.containsKey("category")) {
+							doc.replace("category", categories);
+						} else {
+							doc.put("category", categories);
+						}
 					}
 					logger.info(doc.get("filename").toString() + " [" + parsed.length() + "] --> " + doccatCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
 				} else {
@@ -747,7 +776,7 @@ public class SolrClient {
 	}
 
 	public SolrQuery getDoccatDataQuery(SolrQuery query) {
-		query.setQuery("parsed:* AND ldaCategory:*");
+		query.setQuery("parsed:* AND (ldaCategory:* OR userCategory:*)");
 		//query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
 		return query;
 	}
@@ -814,10 +843,10 @@ public class SolrClient {
 
 	public void formatForDoccatModelTraining(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String parsed = doc.get("parsed").toString();
+		String normalized = NLPTools.normalizeText(parsed);
 		List<String> categories = (List<String>)doc.get("category");
 		String output = null;
 		if (categories.size() == 1 || doc.containsKey("userCategory")) {
-			String normalized = NLPTools.normalizeText(parsed);
 			if (!Strings.isNullOrEmpty(normalized) && normalized.trim().length() > 0) {
 				output = categories.stream()
 						.map(category -> category + "\t" + normalized)
@@ -825,16 +854,30 @@ public class SolrClient {
 						.orElse("");
 			}
 		} else {
-			if (topicModeller != null) {
-				List<TextChunkTopic> chunks = topicModeller.getTextChunkTopics(parsed, 50);
-				chunks.stream().forEach(p -> p.setLdaCategory(NLPTools.removeProbabilitiesFromCategories(p.getLdaCategory())));
-				chunks.stream().forEach(p -> p.setChunkText(NLPTools.normalizeText(p.getChunkText())));
-				output = chunks.stream()
-						.filter(p -> !Strings.isNullOrEmpty(p.getChunkText()) && p.getChunkText().trim().length() > 0)
-						.map(p -> p.getLdaCategory().get(0) + "\t" + p.getChunkText())
-						.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
-						.orElse("");
+			List<String> probCategories = null;
+			if (doc.containsKey("ldaCategory")) {
+				probCategories = (List<String>)doc.get("ldaCategory");
+
+			} else if (doc.containsKey("doccatCategory")) {
+				probCategories = (List<String>)doc.get("doccatCategory");
 			}
+			if (probCategories != null) {
+				List<CategoryWeight> catWeights = NLPTools.separateProbabilitiesFromCategories(probCategories);
+				double maxCat = catWeights.stream().mapToDouble(p -> p.catWeight).max().getAsDouble();
+				CategoryWeight categoryWeight = catWeights.stream().filter(p -> p.catWeight == maxCat).collect(Collectors.toList()).get(0);
+				output = categoryWeight.category + "\t" + normalized;
+			}
+
+//				if (topicModeller != null) {
+//					List<TextChunkTopic> chunks = topicModeller.getTextChunkLDACategories(parsed, 50);
+//					chunks.stream().forEach(p -> p.setLdaCategory(NLPTools.removeProbabilitiesFromCategories(p.getLdaCategory())));
+//					chunks.stream().forEach(p -> p.setChunkText(NLPTools.normalizeText(p.getChunkText())));
+//					output = chunks.stream()
+//							.filter(p -> !Strings.isNullOrEmpty(p.getChunkText()) && p.getChunkText().trim().length() > 0)
+//							.map(p -> p.getLdaCategory().get(0) + "\t" + p.getChunkText())
+//							.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
+//							.orElse("");
+//				}
 		}
 
 		if (!Strings.isNullOrEmpty(output)) {

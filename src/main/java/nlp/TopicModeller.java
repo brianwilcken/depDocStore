@@ -4,53 +4,113 @@ import cc.mallet.pipe.CharSequenceLowercase;
 import cc.mallet.pipe.Pipe;
 import cc.mallet.pipe.SerialPipes;
 import cc.mallet.types.*;
-import cc.mallet.pipe.iterator.*;
 import cc.mallet.topics.*;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.google.common.collect.Lists;
 import common.Tools;
 import edu.stanford.nlp.util.CoreMap;
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
-import org.springframework.core.io.ClassPathResource;
 import solrapi.SolrClient;
 import sun.awt.Mutex;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.*;
 import java.io.*;
 import java.util.stream.Collectors;
 
 public class TopicModeller {
-    private SolrClient client;
     private Mutex mutex;
 
     final static Logger logger = LogManager.getLogger(TopicModeller.class);
 
-    private static ParallelTopicModel model;
-    private static InstanceList instanceList;
-    private static SerialPipes pipe;
-    private static TopicInferencer inferencer;
-    private static ArrayList<TreeSet<IDSorter>> topicSortedWords;
-    private static Alphabet dataAlphabet;
-    private static TreeSet<String> multiGrams;
-    private static Map<String,TopicCategoryMapping> topicsToCategories;
+    private ParallelTopicModel model;
+    private InstanceList instanceList;
+    private SerialPipes pipe;
+    private TopicInferencer inferencer;
+    private ArrayList<TreeSet<IDSorter>> topicSortedWords;
+    private Alphabet dataAlphabet;
+    private TreeSet<String> multiGrams;
+    private Map<String,TopicCategoryMapping> topicsToCategories;
+    private String baseDirectory;
+    public static final double MIN_LDA_PROB = 0.3;
 
-    static {
+//    public static void main(String[] args) throws Exception {
+//        SolrClient client = new SolrClient("http://134.20.2.51:8983/solr");
+//        TopicModeller topicModeller = new TopicModeller(Tools.getProperty("mallet.general"));
+//
+//        //topicModeller.writeTopicVectorRepresentation(20);
+//
+////        //SolrDocumentList docs = client.QuerySolrDocuments("id:verdictmedia_66610", 1, 0, null, null);
+//        SolrDocumentList docs = client.QuerySolrDocuments("id:c46de85146397ad4823dec54a62414889c715f74", 1, 0, null, null);
+//        SolrDocument doc = docs.get(0);
+//        String parsed = doc.get("parsed").toString();
+////        int numTrials = 50;
+////        int burnIn = 5;
+////        for (int i = 500; i <= 2000; i += 100) {
+////            logger.info("i = " + i);
+////            TreeMap<Integer, Double[]> results = topicModeller.checkInferenceVariation(parsed, numTrials, i, burnIn);
+////            topicModeller.writeTopicProbabilityDistribution(results, numTrials, i, burnIn);
+////        }
+//
+//        List<String> docCategories = topicModeller.inferCategoriesByTopics(parsed);
+//        System.out.println("Overall categories: " + docCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
+////
+////        List<TextChunkTopic> textChunkTopics = topicModeller.getTextChunkLDACategories(parsed, 10);
+////        for (TextChunkTopic textChunkTopic : textChunkTopics) {
+////            System.out.println(textChunkTopic.toString());
+////        }
+//    }
+
+    public static void main(String[] args) throws Exception {
+        SolrClient client = new SolrClient("http://134.20.2.51:8983/solr");
+        TopicModeller topicModeller = new TopicModeller(Tools.getProperty("mallet.category") + "Coal\\");
+
+        SolrDocumentList docs = client.QuerySolrDocuments("id:cacd1b6dbaa7311d66565d205912343827cfc5c2", 1, 0, null, null);
+        SolrDocument doc = docs.get(0);
+        String parsed = doc.get("parsed").toString();
+
+        List<TextChunkTopic> textChunkTopics = topicModeller.getTextChunkLDACategories(parsed, 10);
+
+        List<CoreMap> sentences = NLPTools.detectSentencesStanford(parsed);
+        List<List<CoreMap>> chunks = Lists.partition(sentences, 10);
+
+        List<TreeMap<Double, String>> chunkTopics = new ArrayList<>();
+        for (List<CoreMap> chunk : chunks) {
+            List<String> chunkSentences = chunk.stream().map(p -> p.toString()).collect(Collectors.toList());
+            String chunkText = StringUtils.join(chunkSentences, "\r\n");
+
+            Instance testInstance = topicModeller.getTestInstance(chunkText);
+            double[] dist = topicModeller.inferencer.getSampledDistribution(testInstance, 600, 1, 5);
+
+            TreeMap<Double, String> orderedTopics = new TreeMap<>();
+            for (int i = 0; i < dist.length; i++) {
+                String topicText = topicModeller.getTopicText(i, 20);
+                orderedTopics.put(dist[i], topicText);
+            }
+            chunkTopics.add(orderedTopics);
+        }
+    }
+
+    public TopicModeller(String baseDirectory) {
+        this.baseDirectory = baseDirectory;
+        initModel(baseDirectory);
+        mutex = new Mutex();
+    }
+
+    private void initModel(String baseDirectory) {
         try {
             model = new ParallelTopicModel(50);
-            instanceList = InstanceList.load(new File(Tools.getProperty("mallet.corpus")));
+            instanceList = InstanceList.load(new File(baseDirectory + Tools.getProperty("mallet.corpus")));
             pipe = (SerialPipes)instanceList.getPipe();
             model.addInstances(instanceList);
-            model.initializeFromState(new File(Tools.getProperty("mallet.state")));
+            model.initializeFromState(new File(baseDirectory + Tools.getProperty("mallet.state")));
             inferencer = model.getInferencer();
             topicSortedWords = model.getSortedWords();
             dataAlphabet = model.getAlphabet();
@@ -72,46 +132,21 @@ public class TopicModeller {
             size = pipeList.size();
             pipeList.add(size - 1, new TokenSequenceNGrams(new int[] {1, 2, 3}, multiGrams));
 
+            //initialize topic-to-category mapping
             MappingIterator<TopicCategoryMapping> topicIter = new CsvMapper()
                     .readerWithTypedSchemaFor(TopicCategoryMapping.class)
-                    .readValues(new File(Tools.getProperty("mallet.topicKeysToCategories")));
+                    .readValues(new File(baseDirectory + Tools.getProperty("mallet.topicKeysToCategories")));
             topicsToCategories = new HashMap<>();
             while(topicIter.hasNext()) {
                 TopicCategoryMapping mapping = topicIter.next();
                 topicsToCategories.put(mapping.topic, mapping);
             }
-
         } catch (IOException e) {
             model = null;
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        SolrClient client = new SolrClient("http://134.20.2.51:8983/solr");
-        TopicModeller topicModeller = new TopicModeller(client);
-
-        topicModeller.writeTopicVectorRepresentation(20);
-
-//        //SolrDocumentList docs = client.QuerySolrDocuments("id:verdictmedia_66610", 1, 0, null, null);
-//        SolrDocumentList docs = client.QuerySolrDocuments("id:dfe996c4c886449964067f5dcbb4e8549e3b8e80", 1, 0, null, null);
-//        SolrDocument doc = docs.get(0);
-//        String parsed = doc.get("parsed").toString();
-//        List<String> docCategories = topicModeller.inferCategoriesByTopics(parsed);
-//        System.out.println("Overall categories: " + docCategories.stream().reduce((c, n) -> c + ", " + n).orElse(""));
-//
-//        List<TextChunkTopic> textChunkTopics = topicModeller.getTextChunkTopics(parsed, 10);
-//        for (TextChunkTopic textChunkTopic : textChunkTopics) {
-//            System.out.println(textChunkTopic.toString());
-//        }
-    }
-
-    public TopicModeller(SolrClient client) {
-        this.client = client;
-        client.setTopicModeller(this);
-        mutex = new Mutex();
-    }
-
-    public List<TextChunkTopic> getTextChunkTopics(String text, int chunkSize) {
+    public List<TextChunkTopic> getTextChunkLDACategories(String text, int chunkSize) {
         List<CoreMap> sentences = NLPTools.detectSentencesStanford(text);
         List<List<CoreMap>> chunks = Lists.partition(sentences, chunkSize);
 
@@ -131,24 +166,45 @@ public class TopicModeller {
         return textChunkTopics;
     }
 
+    private TreeMap<Integer, Double[]> checkInferenceVariation(String text, int numTrials, int iterations, int burnIn) {
+        Instance testInstance = getTestInstance(text);
+        TreeMap<Integer, Double[]> trials = new TreeMap<>();
+        for (int i = 0; i < numTrials; i++) {
+            double[] topicDistribution = inferencer.getSampledDistribution(testInstance, iterations, 1, burnIn);
+            trials.put(i, ArrayUtils.toObject(topicDistribution));
+        }
+
+        return trials;
+    }
+
     public List<String> inferCategoriesByTopics(String text) {
         try {
-            mutex.lock();
-            Instance testInstance;
-            try {
-                testInstance = pipe.instanceFrom(new Instance(text, null, "test instance", null));
-            } finally {
-                mutex.unlock();
+            Instance testInstance = getTestInstance(text);
+            double[] topicDistribution = inferencer.getSampledDistribution(testInstance, 600, 1, 5);
+
+            String category;
+            if (baseDirectory.equals(Tools.getProperty("mallet.general"))) {
+                category = resolveCategoryByGeneralTopics(topicDistribution);
+            } else {
+                category = resolveCategoryBySpecificTopics(topicDistribution);
             }
-
-            double[] topicDistribution = inferencer.getSampledDistribution(testInstance, 10, 1, 5);
-
-            String category = resolveCategoryByTopics(topicDistribution);
             List<String> categories = Lists.newArrayList(category.split(";"));
             return categories;
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private Instance getTestInstance(String text) {
+        mutex.lock();
+        Instance testInstance;
+        try {
+            testInstance = pipe.instanceFrom(new Instance(text, null, "test instance", null));
+        } finally {
+            mutex.unlock();
+        }
+
+        return testInstance;
     }
 
     private String getTopicText(int topic, int maxRank) {
@@ -161,6 +217,24 @@ public class TopicModeller {
             rank++;
         }
         return topicOut.toString().trim();
+    }
+
+    private void writeTopicProbabilityDistribution(TreeMap<Integer, Double[]> distributions, int numTrials, int iterations, int burnIn) {
+        File output = new File("./topicProbabilityDistributions_" + numTrials + "_" + iterations + "_" + burnIn + ".csv");
+        try (FileOutputStream fos = new FileOutputStream(output);
+             OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)){
+
+            for (int trial : distributions.keySet()) {
+                Double[] distribution = distributions.get(trial);
+                String line = Arrays.stream(distribution).map(p -> String.format("%.7f", p)).reduce((c, n) -> c + "," + n).orElse("");
+                writer.write(line);
+                writer.write(System.lineSeparator());
+            }
+            writer.flush();
+            writer.close();
+        } catch (Exception e) {
+
+        }
     }
 
     private void writeTopicVectorRepresentation(int maxRank) {
@@ -192,7 +266,7 @@ public class TopicModeller {
         }
     }
 
-    private String resolveCategoryByTopics(double[] topicDistribution) {
+    private List<CategoryWeight> resolveCategoryWeights(double[] topicDistribution) {
         List<CategoryWeight> categoryWeights = new ArrayList<>();
         for (int i = 0; i < topicDistribution.length; i++) {
             String topicText = getTopicText(i, 20);
@@ -200,10 +274,38 @@ public class TopicModeller {
             double probability = topicDistribution[i];
             mapping.updateCategoryWeight(categoryWeights, probability);
         }
-        //normalize category weights
+
+        return categoryWeights;
+    }
+
+    private String resolveCategoryBySpecificTopics(double[] topicDistribution) {
+        List<CategoryWeight> categoryWeights = resolveCategoryWeights(topicDistribution);
+        categoryWeights.sort(new Comparator<CategoryWeight>() {
+            @Override
+            public int compare(CategoryWeight c1, CategoryWeight c2) {
+                return Double.compare(c2.catWeight, c1.catWeight); //descending sort
+            }
+        });
+        double[] weights = categoryWeights.stream().map(p -> p.catWeight).mapToDouble(Double::doubleValue).toArray();
+        StandardDeviation standardDev = new StandardDeviation();
+        final double stdDev = standardDev.evaluate(weights);
+        final double maxWeight = weights[0];
+        List<CategoryWeight> significatCategoryWeights = categoryWeights.stream()
+                .filter(p -> p.catWeight >= (maxWeight - (2 * stdDev)))
+                .collect(Collectors.toList());
+        String category = significatCategoryWeights.stream().map(p -> p.category + " " + p.catWeight)
+                .reduce((c, n) -> c + ";" + n).orElse("");
+
+        return category;
+    }
+
+    private String resolveCategoryByGeneralTopics(double[] topicDistribution) {
+        List<CategoryWeight> categoryWeights = resolveCategoryWeights(topicDistribution);
+        //sum category weights to determine if there is sufficient overall weight to justify further inspection
         double weightSum = categoryWeights.stream().map(p -> p.catWeight).mapToDouble(Double::doubleValue).sum();
         String category;
-        if (weightSum > 0.3) {
+        if (weightSum > MIN_LDA_PROB) {
+            //normalize category weights
 //            categoryWeights.stream().forEach(p -> {
 //                p.catWeight = p.catWeight / weightSum;
 //            });
@@ -219,23 +321,23 @@ public class TopicModeller {
             StandardDeviation standardDev = new StandardDeviation();
             final double stdDev = standardDev.evaluate(weights);
             final double maxWeight = weights[0];
-            categoryWeights = categoryWeights.stream()
+            List<CategoryWeight> significatCategoryWeights = categoryWeights.stream()
                     .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - (0.5 * stdDev))).collect(Collectors.toList());
-            if (categoryWeights.size() <= 3 && maxWeight >= 0.2) {
-                category = categoryWeights.stream().map(p -> p.category + "|" + p.catWeight)
+            if (significatCategoryWeights.size() <= 3 && maxWeight >= 0.2) {
+                category = significatCategoryWeights.stream().map(p -> p.category + " " + p.catWeight)
                         .reduce((c, n) -> c + ";" + n).orElse("");
             } else {
-                category = "Not_Applicable|" + (1 - weightSum);
+                category = "Not_Applicable " + (1 - weightSum);
             }
         } else {
-            category = "Not_Applicable|" + (1 - weightSum);
+            category = "Not_Applicable " + (1 - weightSum);
         }
 
         return category;
     }
 
 //    //old version
-//    private String resolveCategoryByTopics(double[] topicDistribution) {
+//    private String resolveCategoryByGeneralTopics(double[] topicDistribution) {
 //        List<CategoryWeight> categoryWeights = new ArrayList<>();
 //        for (int i = 0; i < topicDistribution.length; i++) {
 //            String topicText = getTopicText(i, 20);
@@ -267,15 +369,15 @@ public class TopicModeller {
 //            if (secondBest >= (maxWeight - closeEnough)) {
 //                category = categoryWeights.stream()
 //                        .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - closeEnough))
-//                        .map(p -> p.category + "|" + p.catWeight)
+//                        .map(p -> p.category + " " + p.catWeight)
 //                        .reduce((c, n) -> c + ";" + n).orElse("");
 //            } else {
-//                category = categoryWeights.get(0).category + "|" + categoryWeights.get(0).catWeight;
+//                category = categoryWeights.get(0).category + " " + categoryWeights.get(0).catWeight;
 //            }
 //        } else {
 //            category = categoryWeights.stream()
 //                    .filter(p -> !p.category.equals("Not_Applicable") && p.catWeight >= (maxWeight - (2 * stdDev)))
-//                    .map(p -> p.category + "|" + p.catWeight)
+//                    .map(p -> p.category + " " + p.catWeight)
 //                    .reduce((c, n) -> c + ";" + n).orElse("");
 //
 //        }
@@ -313,7 +415,7 @@ public class TopicModeller {
 //            String topicText2 = getTopicText(topicSortedWords, dataAlphabet, orderedTopics[1], 5);
 //            double prob3 = topicDistribution[orderedTopics[2]];
 //            String topicText3 = getTopicText(topicSortedWords, dataAlphabet, orderedTopics[2], 5);
-//            String category = resolveCategoryByTopics(topicSortedWords, dataAlphabet, topicDistribution);
+//            String category = resolveCategoryByGeneralTopics(topicSortedWords, dataAlphabet, topicDistribution);
 //            out.format("%s,%s,%s,%.3f,%s,%.3f,%s,%.3f,%s\r\n", id, docName, category, prob1, topicText1, prob2, topicText2, prob3, topicText3);
 //        }
 //

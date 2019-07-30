@@ -40,6 +40,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class NLPTools {
     final static Logger logger = LogManager.getLogger(NLPTools.class);
@@ -47,6 +48,10 @@ public class NLPTools {
     private static final Stemmer stemmer = new PorterStemmer();
     private static TreeSet stopwords;
     private static Mutex mutex;
+
+    //used for setting a backup category for the case of a Not_Applicable doccat or LDA category
+    private static final double MIN_LDA_PROB = 0.35;
+    private static final double MIN_DOCCAT_PROB = 0.15;
 
     static {
         List<String> wordsList = Arrays.asList(stopwordsText.split("\\n"));
@@ -424,13 +429,60 @@ public class NLPTools {
     public static List<String> removeProbabilitiesFromCategories(List<String> categories) {
         List<String> categoriesNoProb = new ArrayList<>();
         for (String category : categories) {
-            if (category.contains("|")) {
-                String[] catProb = category.split("\\|");
+            if (category.contains(" ")) {
+                String[] catProb = category.split(" ");
                 category = catProb[0];
             }
             categoriesNoProb.add(category);
         }
         return categoriesNoProb;
+    }
+
+    public static List<CategoryWeight> separateProbabilitiesFromCategories(List<String> categories) {
+        List<CategoryWeight> categoriesWithProb = new ArrayList<>();
+        for (String category : categories) {
+            CategoryWeight catWeight = new CategoryWeight();
+            if (category.contains(" ")) {
+                String[] catProb = category.split(" ");
+                catWeight.category = catProb[0];
+                catWeight.catWeight = Double.parseDouble(catProb[1]);
+                categoriesWithProb.add(catWeight);
+            }
+        }
+        return categoriesWithProb;
+    }
+
+    public static List<String> resolveCategoriesBetweenLDAandDoccat(List<String> doccatCategories, List<String> ldaCategories) {
+        List<CategoryWeight> ldaCats = separateProbabilitiesFromCategories(ldaCategories);
+        List<CategoryWeight> doccatCats = separateProbabilitiesFromCategories(doccatCategories);
+        List<String> ldaCatNames = ldaCats.stream().map(p -> p.category).collect(Collectors.toList());
+        List<String> doccatCatNames = doccatCats.stream().map(p -> p.category).collect(Collectors.toList());
+
+        List<String> finalizedCategories;
+        if (doccatCatNames.contains("Not_Applicable") && !ldaCatNames.contains("Not_Applicable")) {
+            finalizedCategories = ldaCats.stream()
+                    .filter(p -> p.catWeight >= MIN_LDA_PROB)
+                    .map(p -> p.category)
+                    .collect(Collectors.toList());
+        } else if (!doccatCatNames.contains("Not_Applicable") && ldaCatNames.contains("Not_Applicable")) {
+            finalizedCategories = doccatCats.stream()
+                    .filter(p -> p.catWeight >= MIN_DOCCAT_PROB)
+                    .map(p -> p.category)
+                    .collect(Collectors.toList());
+        } else {
+            //merge LDA and Doccat together
+            finalizedCategories = Stream.concat(ldaCats.stream(), doccatCats.stream())
+                    .map(p -> p.category)
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+
+        if (finalizedCategories.size() == 0) {
+            //prefer doccat in case all categories were eliminated during previous steps
+            finalizedCategories = doccatCats.stream().map(p -> p.category).collect(Collectors.toList());
+        }
+
+        return finalizedCategories;
     }
 
     public static String deepCleanText(String document) {

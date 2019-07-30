@@ -160,7 +160,7 @@ public class DocumentCategorizer {
             double minAllowableProb = (1.02 / (double)numCats);
             if (stdDev < 0.001 || maxProb < minAllowableProb) { //this is an excessively flat probability distribution
                 categories.addAll(outcomes.entrySet().stream().filter(p -> p.getValue().contains("Not_Applicable"))
-                        .map(p -> p.getValue().toArray(new String[1])[0] + "|" + p.getKey())
+                        .map(p -> p.getValue().toArray(new String[1])[0] + " " + p.getKey())
                         .collect(Collectors.toList()));
             } else if (outcomes.get(maxProb).contains("Not_Applicable")) {
                 final double closeEnough = stdDev * 0.05; // 1/20th standard deviation from the max
@@ -168,15 +168,15 @@ public class DocumentCategorizer {
                 if (secondBest >= (maxProb - closeEnough)) {
                     categories.addAll(outcomes.entrySet().stream()
                             .filter(p -> !p.getValue().contains("Not_Applicable") && p.getKey() >= (maxProb - closeEnough))
-                            .map(p -> p.getValue().toArray(new String[1])[0] + "|" + p.getKey())
+                            .map(p -> p.getValue().toArray(new String[1])[0] + " " + p.getKey())
                             .collect(Collectors.toList()));
                 } else {
-                    categories.add(outcomes.get(maxProb).toArray(new String[1])[0] + "|" + maxProb);
+                    categories.add(outcomes.get(maxProb).toArray(new String[1])[0] + " " + maxProb);
                 }
             } else {
                 categories.addAll(outcomes.entrySet().stream()
                         .filter(p -> !p.getValue().contains("Not_Applicable") && p.getKey() >= (maxProb - (0.125 * stdDev)))
-                        .map(p -> p.getValue().toArray(new String[1])[0] + "|" + p.getKey())
+                        .map(p -> p.getValue().toArray(new String[1])[0] + " " + p.getKey())
                         .collect(Collectors.toList()));
             }
 

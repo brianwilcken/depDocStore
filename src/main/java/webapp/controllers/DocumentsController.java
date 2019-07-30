@@ -67,6 +67,7 @@ public class DocumentsController {
     private Neo4jClient neo4jClient;
     private DocumentCategorizer categorizer;
     private TopicModeller topicModeller;
+    private Map<String, TopicModeller> categoryTopicModellers;
     private NamedEntityRecognizer recognizer;
     private WordVectorizer vectorizer;
     private final LocationResolver locationResolver;
@@ -106,7 +107,9 @@ public class DocumentsController {
         mongoClient = new DocStoreMongoClient(Tools.getProperty("mongodb.url"));
         neo4jClient = new Neo4jClient();
         categorizer = new DocumentCategorizer(solrClient);
-        topicModeller = new TopicModeller(solrClient);
+        topicModeller = new TopicModeller(Tools.getProperty("mallet.general"));
+        categoryTopicModellers = new HashMap<>();
+        solrClient.setTopicModeller(topicModeller);
         recognizer = new NamedEntityRecognizer(solrClient);
         vectorizer = new WordVectorizer(solrClient);
         locationResolver = new LocationResolver();
@@ -126,6 +129,64 @@ public class DocumentsController {
             logger.error(e);
             Tools.getExceptions().add(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null, params.getQueryTimeStamp()));
+        }
+    }
+
+    private TopicModeller getCategoryTopicModeller(String category) {
+        TopicModeller catTopicModeller;
+        if (!categoryTopicModellers.containsKey(category)) {
+            catTopicModeller = new TopicModeller(Tools.getProperty("mallet.category") + category + "\\");
+            categoryTopicModellers.put(category, catTopicModeller);
+        } else {
+            catTopicModeller = categoryTopicModellers.get(category);
+        }
+        return catTopicModeller;
+    }
+
+    @RequestMapping(value="/topics/{id}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> getDocumentTopics(@PathVariable(name="id") String id, int paragraphSize) {
+        logger.info("In getDocumentTopics method");
+        try {
+            SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
+            List<TextChunkTopic> docTopics = new ArrayList<>();
+            if (!docs.isEmpty()) {
+                SolrDocument doc = docs.get(0);
+                String parsed = null;
+                if (doc.containsKey("parsed")) {
+                    parsed = doc.get("parsed").toString();
+                }
+                if (parsed != null && doc.containsKey("category")) {
+                    List<String> categories = (List<String>)doc.get("category");
+                    for (String category : categories) {
+                        TopicModeller catTopicModeller = getCategoryTopicModeller(category);
+                        List<TextChunkTopic> categoryDocTopics = catTopicModeller.getTextChunkLDACategories(parsed, paragraphSize);
+                        if (categories.size() > 1) {
+                            for (TextChunkTopic textChunkTopic : categoryDocTopics) {
+                                textChunkTopic.getLdaCategory().add(0, "--- " + category + " ---");
+                            }
+                        }
+                        if (docTopics.isEmpty()) {
+                            docTopics = categoryDocTopics;
+                        } else { //merge
+                            for (TextChunkTopic textChunkTopic : categoryDocTopics) {
+                                for (TextChunkTopic docTextChunkTopic : docTopics) {
+                                    if (textChunkTopic.getStartLine() == docTextChunkTopic.getStartLine()) {
+                                        docTextChunkTopic.getLdaCategory().addAll(textChunkTopic.getLdaCategory());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            JsonResponse response = Tools.formJsonResponse(docTopics);
+            logger.info("Returning document topics");
+            return ResponseEntity.ok().body(response);
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
         }
     }
 
@@ -805,7 +866,7 @@ public class DocumentsController {
         if (doc.containsKey("userCategory")) {
             categories = (List<String>)doc.get("userCategory");
         } else {
-            categories = NLPTools.removeProbabilitiesFromCategories(doccatCategories);
+            categories = NLPTools.resolveCategoriesBetweenLDAandDoccat(doccatCategories, ldaCategories);
         }
         logger.info("categories detected: " + doccatCategories.stream().reduce((p1, p2) -> p1 + ", " + p2).orElse(""));
         if (doc.containsKey("category")) {

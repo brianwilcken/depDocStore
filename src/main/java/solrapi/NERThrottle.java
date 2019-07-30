@@ -18,9 +18,4 @@ public class NERThrottle extends TrainingDataThrottle {
     public boolean check(SolrDocument doc) {
         return true;
     }
-
-    @Override
-    public boolean check(List category) {
-        return true;
-    }
 }
