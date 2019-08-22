@@ -53,6 +53,8 @@ public class NLPTools {
     private static final double MIN_LDA_PROB = 0.35;
     private static final double MIN_DOCCAT_PROB = 0.15;
 
+    public static final String NER_TRAINING_DATA_TYPE_DELIMITER = "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
+
     static {
         List<String> wordsList = Arrays.asList(stopwordsText.split("\\n"));
         stopwords = new TreeSet<>();

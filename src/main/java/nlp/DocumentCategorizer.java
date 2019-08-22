@@ -252,13 +252,13 @@ public class DocumentCategorizer {
         String evalReport;
         DoccatModel model;
         //Write training data to file
-        String optimalTrainingFile = Tools.getProperty("nlp.doccatTrainingFile");
-        solrClient.writeCorpusDataToFile(optimalTrainingFile, null, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
+        String trainingDataFile = Tools.getProperty("nlp.doccatTrainingFile");
+        solrClient.writeCorpusDataToFile(trainingDataFile, null, null, "", solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining,
                 new DoccatThrottle(solrClient, solrClient::getDoccatDataQuery));
 
         //Use optimized iterations/cutoff to train model
-        ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(optimalTrainingFile);
-        TrainTestSplitter splitter = new TrainTestSplitter(42, optimalTrainingFile);
+        ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(trainingDataFile);
+        TrainTestSplitter splitter = new TrainTestSplitter(42, trainingDataFile);
         splitter.trainTestSplit(0.8, lineStream);
         try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
             model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(iterations, 2), new DoccatFactory(getFeatureGenerators()));
@@ -274,6 +274,34 @@ public class DocumentCategorizer {
         modelMgr.toggleRefreshNeeded();
         logger.info(evalReport);
         return evalReport;
+    }
+
+    public String testDoccatModel() throws IOException {
+        StringBuilder evalReport = new StringBuilder();
+        DoccatModel model = modelMgr.getModel();
+        //Write testing data to file
+        String testingDataFile = Tools.getProperty("nlp.doccatTestingFile");
+        DoccatThrottle throttle = new DoccatThrottle(solrClient, solrClient::getDoccatDataQuery);
+        solrClient.writeCorpusDataToFile(testingDataFile, null, null, "",
+                solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining, throttle);
+
+        ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(testingDataFile);
+        for (int i = 1; i <= 5; i++) {
+            TrainTestSplitter splitter = new TrainTestSplitter(System.nanoTime(), testingDataFile);
+            lineStream.reset();
+            splitter.trainTestSplit(0.8, lineStream);
+            try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTest())) {
+                evalReport.append("Evaluation Attempt #" + i);
+                evalReport.append(System.lineSeparator());
+                evalReport.append(evaluateDoccatModel(sampleStream, model));
+                evalReport.append(System.lineSeparator());
+                evalReport.append(System.lineSeparator());
+            }
+        }
+
+        String results = evalReport.toString();
+        logger.info(results);
+        return results;
     }
 
     private FeatureGenerator[] getFeatureGenerators() {

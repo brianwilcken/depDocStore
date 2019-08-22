@@ -12,6 +12,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Strings;
 import com.google.common.graph.*;
 import edu.stanford.nlp.ling.CoreLabel;
 import net.sourceforge.lept4j.*;
@@ -116,6 +117,32 @@ public class Tools {
 			logger.info("failure writing file to disk");
 		}
 		return file;
+	}
+
+	public static void mergeFiles(List<File> files, OutputStreamWriter writer) throws IOException {
+		for (File file : files) {
+			List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
+			if (lines.size() > 0) {
+				String line = lines.get(0);
+				try {
+					writer.write(line);
+				} catch (IOException e) {
+					logger.error(e.getMessage(), e);
+				}
+				for (int i = 1; i < lines.size(); i++) {
+					line = lines.get(i);
+					if (!Strings.isNullOrEmpty(line)) {
+						try {
+							writer.write(System.lineSeparator() + line);
+						} catch (IOException e) {
+							logger.error(e.getMessage(), e);
+						}
+					}
+				}
+			}
+
+			java.nio.file.Files.delete(file.toPath());
+		}
 	}
 	
 	public static String GetQueryString(Object obj) {

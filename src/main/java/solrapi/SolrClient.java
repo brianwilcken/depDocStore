@@ -8,7 +8,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -121,10 +120,13 @@ public class SolrClient {
 
 		//client.runParsedUpdateJob("docText:* AND -parsed:*");
 		//client.runLDACategoryUpdateJob("parsed:* AND -sector:* AND -ldaCategory:*", 0, 73000);
-		client.runDoccatCategoryUpdateJob("-sector:* AND parsed:* AND -doccatCategory:*", 0, 73000);
+		//client.runDoccatCategoryUpdateJob("-sector:* AND parsed:* AND -doccatCategory:*", 0, 73000);
 		//client.runFieldUpdateJob("ldaCategory:*", client::removeLDACategoryAttribute);
 		//client.runFieldUpdateJob("doccatCategory:*", client::removeDoccatCategoryAttribute);
 		//client.runFieldUpdateJob("doccatCategory:* OR ldaCategory:*", client::removeVerticalPipeFromCategory);
+		//client.runFieldUpdateJob("percentAnnotated:[0 TO 100]", client::removeDocumentAnnotations);
+		client.runEntityDetectionJob("parsed:* AND category:Water AND -includeInNERTesting:* AND -includeInNERTraining:*", 0, 52000, "Water", 0.45);
+		//client.runEntityDetectionJob("id:ac2e3289278ac66ed1f91fd2fce589a837de2cfc", 0, 10, "Water", 0.4);
 		//client.runFileListingJob("parsed:*", 0, 600000);
 
 //		try {
@@ -166,7 +168,7 @@ public class SolrClient {
 		Semaphore semaphore = new Semaphore(16);
 		int rows = 1000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
-		for (int start = 0; start <= 100000; start += rows) {
+		for (int start = 0; start <= 20000; start += rows) {
 			SolrQuery query = new SolrQuery(strQuery);
 			query.setStart(start);
 			query.setRows(rows);
@@ -326,6 +328,46 @@ public class SolrClient {
 		}
 	}
 
+	public void runEntityDetectionJob(String strQuery, int queryStart, int queryEnd, String category, double threshold) {
+		File fileEntities = new File("data/file_entities.txt");
+		fileEntities.getParentFile().mkdirs();
+		Semaphore semaphore = new Semaphore(12);
+		NamedEntityRecognizer recognizer = new NamedEntityRecognizer(this);
+		int rows = 1000;
+		List<BatchSolrJob> jobs = new ArrayList<>();
+		List<File> files = new ArrayList<>();
+		long[] increment = new long[3];
+		for (int start = queryStart; start <= queryEnd; start += rows) {
+			File batchFile = new File(fileEntities.getPath() + "_" + start);
+			files.add(batchFile);
+			Object[] args = new Object[] {batchFile, (Tools.CheckedTriConsumer<Object[], SolrDocument, OutputStreamWriter>)this::formatForNamedEntitiesReport, new NERThrottle(), category, increment, new Object[] {recognizer, threshold}};
+			SolrQuery query = new SolrQuery(strQuery);
+			query.setStart(start);
+			query.setRows(rows);
+			BatchSolrJob job = new BatchSolrJob(query, semaphore, this::writeCorpusDocsToFile, args, null);
+			jobs.add(job);
+			Thread thread = new Thread(job);
+			job.setMyThread(thread);
+			thread.start();
+		}
+
+		while (jobs.stream().anyMatch(p -> p.getMyThread().isAlive())) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+
+			}
+		}
+
+		try (FileOutputStream fos = new FileOutputStream(fileEntities);
+			 OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)){
+			Tools.mergeFiles(files, writer);
+			writer.close();
+		} catch (IOException e) {
+			logger.error(e.getMessage(), e);
+		}
+	}
+
 	private class BatchSolrJob implements Runnable {
 		private SolrQuery query;
 		private boolean emptyJob;
@@ -412,6 +454,24 @@ public class SolrClient {
 				doc.remove("doccatCategory");
 				logger.info(doc.get("filename").toString() + " DocCat category removed");
 			}
+		}
+	}
+
+	private void removeDocumentAnnotations(SolrDocumentList docs, Object[] notUsed) {
+		for (SolrDocument doc : docs) {
+			if (doc.containsKey("annotated")) {
+				doc.remove("annotated");
+			}
+			if (doc.containsKey("includeInNERTraining")) {
+				doc.remove("includeInNERTraining");
+			}
+			if (doc.containsKey("includeInNERTesting")) {
+				doc.remove("includeInNERTesting");
+			}
+			if (doc.containsKey("percentAnnotated")) {
+				doc.remove("percentAnnotated");
+			}
+			logger.info(doc.get("filename").toString() + " annotations removed");
 		}
 	}
 
@@ -813,6 +873,25 @@ public class SolrClient {
 		return func;
 	}
 
+	public void formatForNamedEntitiesReport(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
+		List<String> category = new ArrayList<String>();
+		category.add(args[0].toString());
+		Object[] otherArgs = (Object[])args[3];
+		NamedEntityRecognizer recognizer = (NamedEntityRecognizer)otherArgs[0];
+		double threshold = (double)otherArgs[1];
+		if (doc.containsKey("parsed") && doc.containsKey("category")) {
+			String parsed = doc.get("parsed").toString();
+			List<CoreMap> sentences = NLPTools.detectSentencesStanford(parsed);
+			List<NamedEntity> entities = recognizer.detectNamedEntities(sentences, category, threshold);
+			int count = entities.size();
+			String filename = doc.get("filename").toString();
+			writer.write(count + "\t" + filename);
+			writer.write(System.lineSeparator());
+			writer.flush();
+			logger.info("Found " + count + " entities for " + filename);
+		}
+	}
+
 	public void formatForFilenameListing(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String filename = doc.get("filename").toString();
 		writer.write(filename);
@@ -900,51 +979,52 @@ public class SolrClient {
 
 	public void formatForNERModelTraining(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String category = (String)args[0];
+		//get the facility types that are valid for the given category
 		final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
 		String annotated = doc.get("annotated").toString();
+		boolean testing = Boolean.parseBoolean(doc.get("includeInNERTesting").toString());
 		List<NamedEntity> entities = NLPTools.extractNamedEntities(annotated);
-		Map<Integer, List<NamedEntity>> lineEntities = entities.stream()
-				.collect(Collectors.groupingBy(p -> p.getLine()));
+
+		Map<String, List<NamedEntity>> typeEntities = entities.stream()
+				.collect(Collectors.groupingBy(p -> p.getSpan().getType()));
 
 		List<CoreMap> sentencesList = NLPTools.detectSentencesStanford(annotated);
 		String[] sentences = sentencesList.stream().map(p -> p.toString()).toArray(String[]::new);
 
 		List<String> annotatedLinesForCategory = new ArrayList<>();
 
-		for (int s = 0; s < sentences.length; s++) {
-			if (lineEntities.containsKey(s)) {
-				for (NamedEntity entity : lineEntities.get(s)) {
-					if (facilityTypes.contains(entity.getSpan().getType())) {
-						//the current sentence contains a valid entity annotation based on the model training category
-						String sentence = sentences[s];
-						//first remove all annotations to ensure that only category-specific annotations are included in the training data
-						//sentence = sentence.replaceAll(" ?<START:.+?> ", "").replaceAll(" <END> ", "");
-						sentence = sentence.replaceAll("(?<=\\S\\s)<START:.+?> ", "")
-								.replaceAll("\\s?<START:.+?> ", "")
-								.replaceAll(" <END>  ?(\\b|\\B)", " ")
-								.replaceAll(" <END> ", "");
-						List<NamedEntity> validLineEntities = lineEntities.get(s).stream()
-								.filter(p -> facilityTypes.contains(p.getSpan().getType()))
-								.collect(Collectors.toList());
-						String annotatedLine = NLPTools.autoAnnotateSentence(sentence, validLineEntities);
+		for (String facilityType : facilityTypes) {
+			if (typeEntities.containsKey(facilityType)) {
+				Map<Integer, List<NamedEntity>> lineEntities = typeEntities.get(facilityType).stream()
+						.collect(Collectors.groupingBy(p -> p.getLine()));
+
+				annotatedLinesForCategory.add(NLPTools.NER_TRAINING_DATA_TYPE_DELIMITER);
+				for (int s = 0; s < sentences.length; s++) {
+					String sentence = sentences[s];
+					//first remove all annotations to ensure that only category/type-specific annotations are included in this segment of the training data
+					sentence = sentence.replaceAll("(?<=\\S\\s)<START:.+?> ", "")
+							.replaceAll("\\s?<START:.+?> ", "")
+							.replaceAll(" <END>  ?(\\b|\\B)", " ")
+							.replaceAll(" <END> ", "");
+					if (lineEntities.containsKey(s)) {
+						String annotatedLine = NLPTools.autoAnnotateSentence(sentence, lineEntities.get(s));
 						String formattedLine = NLPTools.fixFormattingForModelTraining(annotatedLine);
 
 						annotatedLinesForCategory.add(formattedLine);
-						break;
-					}
-				}
-			} else {
-				int size = annotatedLinesForCategory.size();
-				if (size > 0) {
-					String lastEntry = annotatedLinesForCategory.get(size - 1);
-					if (!lastEntry.equals(System.lineSeparator())) {
-						annotatedLinesForCategory.add(System.lineSeparator());
+					} else if (testing) {
+						annotatedLinesForCategory.add(sentence);
 					}
 				}
 			}
 		}
 
-		//List<String> annotatedLines = Arrays.stream(sentences).filter(p -> p.contains("<START:")).collect(Collectors.toList());
+		int size = annotatedLinesForCategory.size();
+		if (size > 0) {
+			String lastEntry = annotatedLinesForCategory.get(size - 1);
+			if (!lastEntry.equals(System.lineSeparator())) {
+				annotatedLinesForCategory.add(System.lineSeparator());
+			}
+		}
 
 		if (annotatedLinesForCategory.size() > 0) {
 			String onlyAnnotated = String.join("\r\n", annotatedLinesForCategory);
@@ -1064,11 +1144,15 @@ public class SolrClient {
 		TrainingDataThrottle throttle = (TrainingDataThrottle)args[2];
 		String category = (String)args[3];
 		Boolean lastElement = false;
-		Object[] formatterArgs = new Object[] {category, lastElement, throttle};
 		long[] increment = (long[])args[4];
 		long start = increment[0];
 		long end = increment[1];
 		long span = increment[2];
+		Object[] otherArgs = null;
+		if (args.length > 5) {
+			otherArgs = (Object[])args[5];
+		}
+		Object[] formatterArgs = new Object[] {category, lastElement, throttle, otherArgs};
 		try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)){
 			for (int i = 0; i < docs.size(); i++) {
 				SolrDocument doc = docs.get(i);
@@ -1088,6 +1172,14 @@ public class SolrClient {
 
 	}
 
+	public long getNumDocsFound(Function<SolrQuery, SolrQuery> queryGetter) throws SolrServerException, IOException {
+		SolrQuery initQuery = queryGetter.apply(new SolrQuery());
+		initQuery.setRows(0);
+		SolrDocumentList results = client.query(collection, initQuery).getResults();
+		long numFound = results.getNumFound();
+		return numFound;
+	}
+
 	public void writeCorpusDataToFile(String outputPath, Tools.CheckedConsumer<OutputStreamWriter> header, Tools.CheckedConsumer<OutputStreamWriter> footer, String category, Function<SolrQuery, SolrQuery> queryGetter,
 											  Tools.CheckedTriConsumer<Object[], SolrDocument, OutputStreamWriter> dataFormatter, TrainingDataThrottle throttle) {
 		int rows = 10000;
@@ -1100,10 +1192,7 @@ public class SolrClient {
 				header.apply(writer);
 			}
 
-			SolrQuery initQuery = queryGetter.apply(new SolrQuery());
-			initQuery.setRows(0);
-			SolrDocumentList results = client.query(collection, initQuery).getResults();
-			long numFound = results.getNumFound();
+			long numFound = getNumDocsFound(queryGetter);
 			throttle.init(numFound);
 
 			Semaphore semaphore = new Semaphore(4);
@@ -1133,30 +1222,7 @@ public class SolrClient {
 				}
 			}
 
-			for (File batchFile : files) {
-				List<String> lines = Files.readAllLines(batchFile.toPath());
-				if (lines.size() > 0) {
-					String line = lines.get(0);
-					try {
-						writer.write(line);
-					} catch (IOException e) {
-						logger.error(e.getMessage(), e);
-					}
-					for (int i = 1; i < lines.size(); i++) {
-						line = lines.get(i);
-						if (!Strings.isNullOrEmpty(line)) {
-							try {
-								writer.write(System.lineSeparator() + line);
-							} catch (IOException e) {
-								logger.error(e.getMessage(), e);
-							}
-						}
-					}
-				}
-
-				Files.delete(batchFile.toPath());
-			}
-
+			Tools.mergeFiles(files, writer);
 			if (footer != null) {
 				footer.apply(writer);
 			}

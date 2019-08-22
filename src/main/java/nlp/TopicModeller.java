@@ -146,6 +146,10 @@ public class TopicModeller {
         }
     }
 
+    public void refreshModel() {
+        initModel(baseDirectory);
+    }
+
     public List<TextChunkTopic> getTextChunkLDACategories(String text, int chunkSize) {
         List<CoreMap> sentences = NLPTools.detectSentencesStanford(text);
         List<List<CoreMap>> chunks = Lists.partition(sentences, chunkSize);

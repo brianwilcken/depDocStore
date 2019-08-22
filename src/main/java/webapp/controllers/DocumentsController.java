@@ -115,6 +115,20 @@ public class DocumentsController {
         locationResolver = new LocationResolver();
     }
 
+    public static void main(String[] args) {
+        DocumentsController ctrl = new DocumentsController();
+
+        String ids = Tools.GetFileString("data/doc_update_ids.txt");
+        List<String> idList = Arrays.asList(ids.split("\\r\\n"));
+        Map<String, Object> metadata = new HashMap<>();
+        String newCategory = "Not_Applicable";
+        metadata.put("category", newCategory);
+        metadata.put("userCategory", newCategory);
+        for (String id : idList) {
+            ctrl.updateDocument(id, metadata);
+        }
+    }
+
     @RequestMapping(method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> getDocuments(IndexedDocumentsQueryParams params) {
         logger.info("In getDocuments method");
@@ -183,6 +197,21 @@ public class DocumentsController {
             JsonResponse response = Tools.formJsonResponse(docTopics);
             logger.info("Returning document topics");
             return ResponseEntity.ok().body(response);
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/topics/refresh/{category}", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> refreshDocumentTopicsModel(@PathVariable(name="category") String category) {
+        logger.info("In refreshDocumentTopicsModel method");
+        try {
+            TopicModeller catTopicModeller = getCategoryTopicModeller(category);
+            catTopicModeller.refreshModel();
+
+            return ResponseEntity.ok().body(Tools.formJsonResponse("Model refresh complete for category: " + category));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
@@ -510,8 +539,14 @@ public class DocumentsController {
         try {
             Map<String, String> reports = new HashMap<>();
             for (String cat : category) {
-                NERModelEvaluation report = recognizer.evaluateNERModel(cat);
-                reports.put(cat, report.getStats());
+                Map<String, NERModelEvaluation> reportMap = recognizer.evaluateNERModel(cat);
+                StringBuilder reportBldr = new StringBuilder();
+                for (String facilityType : reportMap.keySet()) {
+                    NERModelEvaluation report = reportMap.get(facilityType);
+                    reportBldr.append(report.getStats());
+                    reportBldr.append(System.lineSeparator());
+                }
+                reports.put(cat, reportBldr.toString());
             }
 
             return ResponseEntity.ok().body(Tools.formJsonResponse(reports));
@@ -543,8 +578,8 @@ public class DocumentsController {
     public ResponseEntity<JsonResponse> getNERModelPredictions(String category, String version) {
         logger.info("In getNERModelPredictions method");
         try {
-            NERModelEvaluation eval = recognizer.getModelEvaluation(category, version);
-            return ResponseEntity.ok().body(Tools.formJsonResponse(eval));
+            Map<String, NERModelEvaluation> evalMap = recognizer.getModelEvaluation(category, version);
+            return ResponseEntity.ok().body(Tools.formJsonResponse(evalMap));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
@@ -563,6 +598,19 @@ public class DocumentsController {
                 doccatModelTrainingService.processAsync(this, iterations);
                 return ResponseEntity.ok().body(Tools.formJsonResponse(null));
             }
+        } catch (Exception e) {
+            logger.error(e);
+            Tools.getExceptions().add(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Tools.formJsonResponse(null));
+        }
+    }
+
+    @RequestMapping(value="/testDoccat", method=RequestMethod.GET, produces=MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<JsonResponse> testDoccatModel() {
+        logger.info("In testDoccatModel method");
+        try {
+            String report = doccatModelTrainingService.processForTesting(this);
+            return ResponseEntity.ok().body(Tools.formJsonResponse(report));
         } catch (Exception e) {
             logger.error(e);
             Tools.getExceptions().add(e);
@@ -951,6 +999,7 @@ public class DocumentsController {
     @RequestMapping(value="/metadata/{id}", method=RequestMethod.PUT, consumes=MediaType.MULTIPART_FORM_DATA_VALUE, produces=MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JsonResponse> updateDocument(@PathVariable(name="id") String id, @RequestPart("metadata") Map<String, Object> metadata) {
         try {
+            logger.info("updating document: " + id);
             SolrDocumentList docs = solrClient.QuerySolrDocuments("id:" + id, 1000, 0, null, null);
             if (!docs.isEmpty()) {
                 SolrDocument doc = docs.get(0);
@@ -1066,6 +1115,10 @@ public class DocumentsController {
 
     public String initiateDoccatModelTraining(int iterations) throws IOException {
         return categorizer.trainDoccatModel(iterations);
+    }
+
+    public String initiateDoccatModelTesting() throws IOException {
+        return categorizer.testDoccatModel();
     }
 
     @RequestMapping(value="/{id}", method=RequestMethod.DELETE, produces=MediaType.APPLICATION_JSON_VALUE)

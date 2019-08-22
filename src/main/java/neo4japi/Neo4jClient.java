@@ -95,19 +95,21 @@ public class Neo4jClient {
     }
 
     public Map<String, List<Facility>> getFacilitiesInArea(List<GeoNameWithFrequencyScore> geoNames, String category) {
-        Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
-        Map<String, List<DataModelNode>> facilityTypes = getFacilityTypes(category);
-        GeoNameWithFrequencyScore optimalGeoLocation = LocationResolver.getOptimalGeoLocation(geoNames);
+        Map<String, List<Facility>> areaFacilities = new HashMap<>();
+        if (geoNames.size() > 0) {
+            Session session = Neo4jSessionFactory.getInstance().getNeo4jSession();
+            Map<String, List<DataModelNode>> facilityTypes = getFacilityTypes(category);
+            GeoNameWithFrequencyScore optimalGeoLocation = LocationResolver.getOptimalGeoLocation(geoNames);
 //        GeoName cityGeoName = optimalGeoLocation.getCity(optimalGeoLocation.getGeoName());
 //        GeoName countyGeoName = optimalGeoLocation.getCounty(optimalGeoLocation.getGeoName());
 //        GeoName stateGeoName = optimalGeoLocation.getState(optimalGeoLocation.getGeoName());
 
-        double maxLat = optimalGeoLocation.getGeoName().getLatitude() + 0.5;
-        double minLat = optimalGeoLocation.getGeoName().getLatitude() - 0.5;
-        double maxLon = optimalGeoLocation.getGeoName().getLongitude() + 0.5;
-        double minLon = optimalGeoLocation.getGeoName().getLongitude() - 0.5;
+            double maxLat = optimalGeoLocation.getGeoName().getLatitude() + 0.5;
+            double minLat = optimalGeoLocation.getGeoName().getLatitude() - 0.5;
+            double maxLon = optimalGeoLocation.getGeoName().getLongitude() + 0.5;
+            double minLon = optimalGeoLocation.getGeoName().getLongitude() - 0.5;
 
-        String locQuery = "WHERE f.latitude > " + minLat + " AND f.latitude < " + maxLat + " AND f.longitude > " + minLon + " AND f.longitude < " + maxLon;
+            String locQuery = "WHERE f.latitude > " + minLat + " AND f.latitude < " + maxLat + " AND f.longitude > " + minLon + " AND f.longitude < " + maxLon;
 
 //        String locQuery = null;
 //        if (cityGeoName != null) {
@@ -118,16 +120,17 @@ public class Neo4jClient {
 //            locQuery = "state:\"" + stateGeoName.getName() + "\"";
 //        }
 
-        Map<String, List<Facility>> areaFacilities = new HashMap<>();
-        //if (locQuery != null) {
-        for (String facilityType : facilityTypes.keySet()) {
-            if (!areaFacilities.containsKey(facilityType)) {
-                areaFacilities.put(facilityType, new ArrayList<>());
+
+            //if (locQuery != null) {
+            for (String facilityType : facilityTypes.keySet()) {
+                if (!areaFacilities.containsKey(facilityType)) {
+                    areaFacilities.put(facilityType, new ArrayList<>());
+                }
+                //areaFacilities.get(facilityType).addAll(Lists.newArrayList(session.query(Facility.class, "MATCH (f:Facility {" + locQuery + "})-[m:IsDataModelNode]->(n:DataModelNode {name:\"" + facilityType + "\"}) RETURN f", Collections.EMPTY_MAP)));
+                areaFacilities.get(facilityType).addAll(Lists.newArrayList(session.query(Facility.class, "MATCH (f:Facility)-[m:IsDataModelNode]->(n:DataModelNode {name:\"" + facilityType + "\"}) " + locQuery + " RETURN f", Collections.EMPTY_MAP)));
             }
-            //areaFacilities.get(facilityType).addAll(Lists.newArrayList(session.query(Facility.class, "MATCH (f:Facility {" + locQuery + "})-[m:IsDataModelNode]->(n:DataModelNode {name:\"" + facilityType + "\"}) RETURN f", Collections.EMPTY_MAP)));
-            areaFacilities.get(facilityType).addAll(Lists.newArrayList(session.query(Facility.class, "MATCH (f:Facility)-[m:IsDataModelNode]->(n:DataModelNode {name:\"" + facilityType + "\"}) " + locQuery + " RETURN f", Collections.EMPTY_MAP)));
+            //}
         }
-        //}
 
         return areaFacilities;
     }

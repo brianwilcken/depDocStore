@@ -1,29 +1,32 @@
 package nlp;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
+import common.FacilityTypes;
 import common.Tools;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.math3.stat.descriptive.moment.Mean;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.Instant;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class NERModelData  {
     private String modelVersion;
     private String modelDate;
-    private String numModelSentences;
-    private String numSentences;
-    private String minSentenceSize;
-    private String maxSentenceSize;
-    private String avgSentenceSize;
-    private String tagCount;
-    private String entityAccuracy;
-    private String entityFMeasure;
-    private String detailedAccuracy;
-    private String confusionMatrix;
-    private String testReport;
+    private int numModelSent;
+    private int numSent;
+    private int minSentSize;
+    private int maxSentSize;
+    private Mean avgSentSize = new Mean();
+    private int tagCnt;
+    private Mean entityAcc = new Mean();
+    private Mean entityFM = new Mean();
+    private StringBuilder detailedAccuracy = new StringBuilder();
+    private StringBuilder confusionMatrix = new StringBuilder();
+    private StringBuilder testReport = new StringBuilder();
 
     private Pattern numPattern = Pattern.compile("\\d*\\.?\\d+%?");
 
@@ -31,22 +34,31 @@ public class NERModelData  {
 
     public static void main(String[] args) {
         try {
-            File modelFolder = new File("E:\\apache-tomcat-9.0.6\\bin\\data\\ner\\Water\\1");
-            NERModelData data = new NERModelData(modelFolder);
+            File modelFolder = new File("E:\\apache-tomcat-9.0.6\\bin\\data\\ner\\Water\\74");
+            NERModelData data = new NERModelData(modelFolder, "Water");
+            data.toString();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public NERModelData(File modelFolder) throws IOException {
+    public NERModelData(File modelFolder, String category) throws IOException {
+        final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
         this.modelVersion = modelFolder.getName();
-        String rprtFilePath = modelFolder.getPath() + "/report.txt";
-        File rprtFile = new File(rprtFilePath);
-        long lastModified = rprtFile.lastModified();
-        modelDate = Tools.getFormattedDateTimeString(Instant.ofEpochMilli(lastModified));
-        String rprt = Files.toString(rprtFile, Charsets.UTF_8);
-        testReport = rprt;
-        consumeReport(rprt);
+        for (String facilityType : facilityTypes) {
+            String rprtFilePath = modelFolder.getPath() + "/" + facilityType + "_report.txt";
+            if (new File(rprtFilePath).exists()) {
+                File rprtFile = new File(rprtFilePath);
+                long lastModified = rprtFile.lastModified();
+                modelDate = Tools.getFormattedDateTimeString(Instant.ofEpochMilli(lastModified));
+                String rprt = FileUtils.readFileToString(rprtFile, Charset.defaultCharset());
+                testReport.append(rprt);
+                testReport.append(System.lineSeparator());
+                testReport.append(System.lineSeparator());
+                testReport.append(System.lineSeparator());
+                consumeReport(rprt);
+            }
+        }
     }
 
     private void consumeReport(String rprt) {
@@ -57,19 +69,19 @@ public class NERModelData  {
             String line = rprtLines[lineNum];
 
             if (line.contains("Number of sentences")) {
-                numSentences = getNumberFromLine(line);
+                numSent += getNumberFromLine(line);
             } else if (line.contains("Min sentence size")) {
-                minSentenceSize = getNumberFromLine(line);
+                minSentSize = Math.min(getNumberFromLine(line).intValue(), minSentSize);
             } else if (line.contains("Max sentence size")) {
-                maxSentenceSize = getNumberFromLine(line);
+                maxSentSize = Math.max(getNumberFromLine(line).intValue(), maxSentSize);
             } else if (line.contains("Average sentence size")) {
-                avgSentenceSize = getNumberFromLine(line);
+                avgSentSize.increment(getNumberFromLine(line));
             } else if (line.contains("Tags count")) {
-                tagCount = getNumberFromLine(line);
+                tagCnt += getNumberFromLine(line).intValue();
             } else if (line.contains("Entity Accuracy")) {
-                entityAccuracy = getNumberFromLine(line);
+                entityAcc.increment(getNumberFromLine(line));
             } else if (line.contains("Entity F-Measure")) {
-                entityFMeasure = getNumberFromLine(line);
+                entityFM.increment(getNumberFromLine(line));
             }
 
             if (line.contains(SECTION_TERMINATOR)) {
@@ -84,7 +96,8 @@ public class NERModelData  {
                 detailedAccuracyBldr.append(line + System.lineSeparator());
                 line = rprtLines[++lineNum];
             } while (!line.contains(SECTION_TERMINATOR));
-            detailedAccuracy = detailedAccuracyBldr.toString();
+            detailedAccuracy.append(detailedAccuracyBldr.toString());
+            detailedAccuracy.append(System.lineSeparator());
 
             StringBuilder confusionMatrixBldr = new StringBuilder();
             line = rprtLines[++lineNum];
@@ -92,12 +105,13 @@ public class NERModelData  {
                 confusionMatrixBldr.append(line + System.lineSeparator());
                 line = rprtLines[++lineNum];
             } while (!line.contains(SECTION_TERMINATOR));
-            confusionMatrix = confusionMatrixBldr.toString();
+            confusionMatrix.append(confusionMatrixBldr.toString());
+            confusionMatrix.append(System.lineSeparator());
 
             do {
                 line = rprtLines[lineNum++];
                 if (line.contains("Number of model sentences:")) {
-                    numModelSentences = getNumberFromLine(line);
+                    numModelSent += getNumberFromLine(line).intValue();
                 }
             } while (lineNum < rprtLines.length);
         } catch (Exception e) {
@@ -105,12 +119,14 @@ public class NERModelData  {
         }
     }
 
-    private String getNumberFromLine(String line) {
+    private Double getNumberFromLine(String line) {
         Matcher numMatcher = numPattern.matcher(line);
         if (numMatcher.find()) {
-            return line.substring(numMatcher.start(), numMatcher.end());
+            Double val = Double.parseDouble(line.substring(numMatcher.start(), numMatcher.end()).replace("%", ""));
+            val = line.contains(" -") ? 0.0 : val;
+            return val;
         } else {
-            return null;
+            return 0.0;
         }
     }
 
@@ -123,46 +139,46 @@ public class NERModelData  {
     }
 
     public String getNumModelSentences() {
-        return numModelSentences;
+        return Integer.toString(numModelSent);
     }
 
     public String getNumSentences() {
-        return numSentences;
+        return Integer.toString(numSent);
     }
 
     public String getMinSentenceSize() {
-        return minSentenceSize;
+        return Integer.toString(minSentSize);
     }
 
     public String getMaxSentenceSize() {
-        return maxSentenceSize;
+        return Integer.toString(maxSentSize);
     }
 
     public String getAvgSentenceSize() {
-        return avgSentenceSize;
+        return Double.toString(avgSentSize.getResult());
     }
 
     public String getTagCount() {
-        return tagCount;
+        return Integer.toString(tagCnt);
     }
 
     public String getEntityAccuracy() {
-        return entityAccuracy;
+        return Double.toString(entityAcc.getResult());
     }
 
     public String getEntityFMeasure() {
-        return entityFMeasure;
+        return Double.toString(entityFM.getResult());
     }
 
     public String getDetailedAccuracy() {
-        return detailedAccuracy;
+        return detailedAccuracy.toString();
     }
 
     public String getConfusionMatrix() {
-        return confusionMatrix;
+        return confusionMatrix.toString();
     }
 
     public String getTestReport() {
-        return testReport;
+        return testReport.toString();
     }
 }

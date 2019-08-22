@@ -16,6 +16,7 @@ public class DoccatModelTrainingService {
     final static Logger logger = LogManager.getLogger(DoccatModelTrainingService.class);
 
     private static boolean trainingInProgress = false;
+    private static boolean testingInProgress = false;
 
     @Async("processExecutor")
     public Future<String> processAsync(DocumentsController documentsController, int iterations) {
@@ -40,6 +41,23 @@ public class DoccatModelTrainingService {
                 trainingInProgress = false;
             }
             logger.info("Model training complete.");
+
+            return report;
+        }
+        return "";
+    }
+
+    public String processForTesting(DocumentsController documentsController) throws IOException {
+        if (!testingInProgress) {
+            testingInProgress = true;
+            logger.info("Begin model testing.");
+            String report;
+            try {
+                report = documentsController.initiateDoccatModelTesting();
+            } finally {
+                testingInProgress = false;
+            }
+            logger.info("Model testing complete.");
 
             return report;
         }

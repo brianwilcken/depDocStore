@@ -3,6 +3,7 @@ package nlp;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.common.io.Files;
+import common.FacilityTypes;
 import common.Tools;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
@@ -21,6 +22,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.springframework.core.io.ClassPathResource;
 import solrapi.NERThrottle;
 import solrapi.SolrClient;
@@ -38,16 +40,16 @@ public class NamedEntityRecognizer {
 
     final static Logger logger = LogManager.getLogger(NamedEntityRecognizer.class);
 
-//    public static void main(String[] args) {
-//        SolrClient client = new SolrClient("http://localhost:8983/solr");
-//        NamedEntityRecognizer namedEntityRecognizer = new NamedEntityRecognizer(client);
-//
-////        try {
-////            namedEntityRecognizer.trainNERModel("Electricity");
-////        } catch (InsufficientTrainingDataException e) {
-////            e.printStackTrace();
-////        }
-//    }
+    public static void main(String[] args) {
+        SolrClient client = new SolrClient("http://134.20.2.51:8983/solr");
+        NamedEntityRecognizer namedEntityRecognizer = new NamedEntityRecognizer(client);
+
+        try {
+            namedEntityRecognizer.trainNERModel("Water");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 //    private static void autoAnnotateAllForCategory(SolrClient client, NamedEntityRecognizer namedEntityRecognizer, List<String> categories) {
 //        try {
@@ -184,7 +186,7 @@ public class NamedEntityRecognizer {
                             if (pattern.matcher(entity).matches()) {
                                 int spanStart = spanTokens.get(0).get(CoreAnnotations.TokenEndAnnotation.class) - 1;
                                 int spanEnd = spanTokens.get(spanTokens.size() - 1).get(CoreAnnotations.TokenEndAnnotation.class);
-                                Span span = new Span(spanStart, spanEnd, facilityType);
+                                Span span = new Span(spanStart, spanEnd, facilityType.replace(" ", "_"));
                                 NamedEntity namedEntity = new NamedEntity(entity, span, s, "AHA");
                                 boolean storeEntity = true;
                                 for (NamedEntity storedEntity : entities) {
@@ -208,54 +210,60 @@ public class NamedEntityRecognizer {
     public List<NamedEntity> detectNamedEntities(List<CoreMap> sentences, List<String> categories, double threshold) {
         List<NamedEntity> namedEntities = new ArrayList<>();
         for (String category : categories) {
-            String modelFile;
-            if (category.contains(":")) {
-                String[] categoryAndVersion = category.split(":");
-                String categoryOnly = categoryAndVersion[0];
-                String version = categoryAndVersion[1];
-                modelFile = getModelFilePath(getModelDir(categoryOnly, version));
-            } else {
-                modelFile = getModelFilePath(getModelDir(category, false));
-            }
-            TokenNameFinderModel model;
-            try {
-                model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
-            } catch (IOException e) {
-                logger.warn("No NER model exists for category: " + category);
-                continue;
-            }
-            NameFinderME nameFinder = new NameFinderME(model);
+            List<String> facilityTypes = FacilityTypes.dictionary.get(category);
+            for (String facilityType : facilityTypes) {
+                String modelFile;
+                if (category.contains(":")) {
+                    String[] categoryAndVersion = category.split(":");
+                    String categoryOnly = categoryAndVersion[0];
+                    String version = categoryAndVersion[1];
+                    modelFile = getModelFilePath(getModelDir(categoryOnly, version), facilityType);
+                } else {
+                    modelFile = getModelFilePath(getModelDir(category, false), facilityType);
+                }
+                if (!new File(modelFile).exists()) {
+                    continue;
+                }
+                TokenNameFinderModel model;
+                try {
+                    model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
+                } catch (IOException e) {
+                    logger.warn("No NER model exists for category: " + category + " facility type: " + facilityType);
+                    continue;
+                }
+                NameFinderME nameFinder = new NameFinderME(model);
 
-            for (int s = 0; s < sentences.size(); s++) {
-                String sentence = sentences.get(s).toString();
-                List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
-                String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
-                Span[] nameSpans = nameFinder.find(tokensArr);
-                double[] probs = nameFinder.probs(nameSpans);
-                for (int i = 0; i < nameSpans.length; i++) {
-                    double prob = probs[i];
-                    Span span = nameSpans[i];
-                    int start = span.getStart();
-                    int end = span.getEnd();
-                    String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
-                    String entity = String.join(" ", entityParts);
-                    if (prob > threshold) {
-                        NamedEntity namedEntity = new NamedEntity(entity, span, s, category);
-                        //curateNamedEntityType(category, namedEntity);
-                        final int currLine = s;
-                        //resolve duplicate entities that may overlap between different model categories
-                        List<NamedEntity> sameEntities = namedEntities.stream().filter(p -> p.getLine() == currLine &&
-                                (p.getEntity().contains(entity) || entity.contains(p.getEntity())) &&
-                                p.getSpan().intersects(span)).collect(Collectors.toList());
-                        if (sameEntities.size() > 0) {
-                            NamedEntity sameEntity = sameEntities.get(0);
-                            if (sameEntity.getSpan().getProb() < namedEntity.getSpan().getProb()) {
-                                //favor the entity with the higher probability
-                                namedEntities.remove(sameEntity);
+                for (int s = 0; s < sentences.size(); s++) {
+                    String sentence = sentences.get(s).toString();
+                    List<CoreLabel> tokens = NLPTools.detectTokensStanford(sentence);
+                    String[] tokensArr = tokens.stream().map(p -> p.toString()).toArray(String[]::new);
+                    Span[] nameSpans = nameFinder.find(tokensArr);
+                    double[] probs = nameFinder.probs(nameSpans);
+                    for (int i = 0; i < nameSpans.length; i++) {
+                        double prob = probs[i];
+                        Span span = nameSpans[i];
+                        int start = span.getStart();
+                        int end = span.getEnd();
+                        String[] entityParts = Arrays.copyOfRange(tokensArr, start, end);
+                        String entity = String.join(" ", entityParts);
+                        if (prob > threshold) {
+                            NamedEntity namedEntity = new NamedEntity(entity, span, s, category);
+                            //curateNamedEntityType(category, namedEntity);
+                            final int currLine = s;
+                            //resolve duplicate entities that may overlap between different model categories
+                            List<NamedEntity> sameEntities = namedEntities.stream().filter(p -> p.getLine() == currLine &&
+                                    (p.getEntity().contains(entity) || entity.contains(p.getEntity())) &&
+                                    p.getSpan().intersects(span)).collect(Collectors.toList());
+                            if (sameEntities.size() > 0) {
+                                NamedEntity sameEntity = sameEntities.get(0);
+                                if (sameEntity.getSpan().getProb() < namedEntity.getSpan().getProb()) {
+                                    //favor the entity with the higher probability
+                                    namedEntities.remove(sameEntity);
+                                    namedEntities.add(namedEntity);
+                                }
+                            } else {
                                 namedEntities.add(namedEntity);
                             }
-                        } else {
-                            namedEntities.add(namedEntity);
                         }
                     }
                 }
@@ -306,88 +314,136 @@ public class NamedEntityRecognizer {
     }
 
     public void trainNERModel(String category) throws IOException {
+        final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
         if (category.contains(":")) {
             category = category.split(":")[0];
         }
         String trainingFile = getTrainingFilePath(category);
         String modelDir = getModelDir(category, true);
-        String modelFile = getModelFilePath(modelDir);
 
         client.writeCorpusDataToFile(trainingFile, null, null, category, client.getCategorySpecificNERModelTrainingDataQuery(category), client::formatForNERModelTraining, new NERThrottle());
-        ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(trainingFile);
+        splitCorpusFileByType(trainingFile, category, true);
 
-        if (lineStream.read() == null) {
-            return;
-        }
-        lineStream.reset();
+        Map<String, Integer> lineNums = new TreeMap<>();
+        for (String facilityType : facilityTypes) {
+            String facilityTypeFilePath = getTypeSpecificCorpusFilePath(facilityType, true);
+            if (new File(facilityTypeFilePath).exists()) {
+                ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(facilityTypeFilePath);
 
-        TokenNameFinderModel model;
+                if (lineStream.read() == null) {
+                    continue;
+                }
+                lineStream.reset();
 
-        TrainingParameters params = new TrainingParameters();
-        params.put(TrainingParameters.ITERATIONS_PARAM, 300);
-        params.put(TrainingParameters.CUTOFF_PARAM, 1);
+                TokenNameFinderModel model;
 
-        Map<String, Object> resources = new HashMap<>();
-        resources.put("ner-dict", getTrainingDictionary(category));
-        resources.put("word2vec.cluster", getWordClusterDictionary(category, 1));
-        resources.put("brownCluster", getBrownClusterDictionary(category, 1));
-        resources.put("clark.cluster", getClarkClusterDictionary(category, 1));
+                TrainingParameters params = new TrainingParameters();
+                params.put(TrainingParameters.ITERATIONS_PARAM, 300);
+                params.put(TrainingParameters.CUTOFF_PARAM, 1);
 
-        int lineNum = 0;
-        try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
-            while(sampleStream.read() != null) {
-                ++lineNum;
+                Map<String, Object> resources = new HashMap<>();
+                resources.put("ner-dict", getTrainingDictionary(category));
+//                resources.put("word2vec.cluster", getWordClusterDictionary(category, 1));
+//                resources.put("brownCluster", getBrownClusterDictionary(category, 1));
+//                resources.put("clark.cluster", getClarkClusterDictionary(category, 1));
+
+                int lineNum = 0;
+                try (ObjectStream<NameSample> sampleStream = new NameSampleDataStream(lineStream)) {
+                    while(sampleStream.read() != null) {
+                        ++lineNum;
+                    }
+                    lineNums.put(facilityType, lineNum);
+                    sampleStream.reset();
+                    model = NameFinderME.train("en", null, sampleStream, params,
+                            TokenNameFinderFactory.create(null, getFeatureGeneratorBytes(), resources, new BioCodec()));
+                }
+
+                String modelFile = getModelFilePath(modelDir, facilityType);
+                try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(modelFile))) {
+                    model.serialize(modelOut);
+                }
             }
-            sampleStream.reset();
-            model = NameFinderME.train("en", null, sampleStream, params,
-                    TokenNameFinderFactory.create(null, getFeatureGeneratorBytes(), resources, new BioCodec()));
         }
 
-        try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(modelFile))) {
-            model.serialize(modelOut);
+        //Report Model Performance
+        Map<String, NERModelEvaluation> evaluationReportMap = evaluateNERModel(category);
+        if (evaluationReportMap != null) {
+            for (String facilityType : evaluationReportMap.keySet()) {
+                NERModelEvaluation evaluationReport = evaluationReportMap.get(facilityType);
+                if (evaluationReport != null) {
+                    String stats = evaluationReport.getStats();
+                    stats += System.lineSeparator() + "Number of model sentences: " + lineNums.get(facilityType);
+                    String reportFile = getReportFilePath(modelDir, facilityType);
+                    String refsFile = getReferencesFilePath(modelDir, facilityType);
+                    String predsFile = getPredictionsFilePath(modelDir, facilityType);
+                    FileUtils.writeStringToFile(new File(reportFile), stats, Charset.defaultCharset());
+                    FileUtils.writeStringToFile(new File(refsFile), evaluationReport.getRefLines(), Charset.defaultCharset());
+                    FileUtils.writeStringToFile(new File(predsFile), evaluationReport.getPredLines(), Charset.defaultCharset());
+                }
+            }
         }
-
-        NERModelEvaluation evaluationReport = evaluateNERModel(category);
-        String stats = evaluationReport.getStats();
-        stats += System.lineSeparator() + "Number of model sentences: " + lineNum;
-        String reportFile = getReportFilePath(modelDir);
-        String refsFile = getReferencesFilePath(modelDir);
-        String predsFile = getPredictionsFilePath(modelDir);
-        FileUtils.writeStringToFile(new File(reportFile), stats, Charset.defaultCharset());
-        FileUtils.writeStringToFile(new File(refsFile), evaluationReport.getRefLines(), Charset.defaultCharset());
-        FileUtils.writeStringToFile(new File(predsFile), evaluationReport.getPredLines(), Charset.defaultCharset());
     }
 
-    public NERModelEvaluation evaluateNERModel(String category) {
+    private void splitCorpusFileByType(String corpusFile, String category, boolean isTraining) throws IOException {
+        final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
+
+        String corpus = FileUtils.readFileToString(new File(corpusFile), Charset.defaultCharset());
+        String[] segments = corpus.split(NLPTools.NER_TRAINING_DATA_TYPE_DELIMITER);
+
+        for (final String facilityType : facilityTypes) {
+            StringBuilder typeCorpus = new StringBuilder();
+            for (String segment : segments) {
+                if (segment.contains("<START:" + facilityType)) {
+                    typeCorpus.append(segment);
+                }
+            }
+            if (typeCorpus.length() > 0) {
+                String filePath = getTypeSpecificCorpusFilePath(facilityType, isTraining);
+                FileUtils.writeStringToFile(new File(filePath), typeCorpus.toString().trim(), Charset.defaultCharset());
+            }
+        }
+    }
+
+    public Map<String, NERModelEvaluation> evaluateNERModel(String category) {
+        final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
         try {
             String testFile = getTestFilePath(category);
 
             client.writeCorpusDataToFile(testFile, null, null, category, client.getCategorySpecificNERModelTestingDataQuery(category), client::formatForNERModelTraining, new NERThrottle());
-            ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(testFile);
+            splitCorpusFileByType(testFile, category, false);
 
-            if (lineStream.read() == null) {
-                return null;
+            Map<String, NERModelEvaluation> evaluationMap = new TreeMap<>();
+            for (String facilityType : facilityTypes) {
+                String facilityTypeFilePath = getTypeSpecificCorpusFilePath(facilityType, false);
+                if (new File(facilityTypeFilePath).exists()) {
+                    ObjectStream<String> lineStream = NLPTools.getLineStreamFromMarkableFile(facilityTypeFilePath);
+
+                    if (lineStream.read() == null) {
+                        continue;
+                    }
+                    lineStream.reset();
+
+                    String modelFile = getModelFilePath(getModelDir(category, false), facilityType);
+                    TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
+                    NameFinderME nameFinder = new NameFinderME(model);
+
+                    ByteArrayOutputStream reportStream = new ByteArrayOutputStream();
+                    TokenNameFinderFineGrainedReportListener reportListener = new TokenNameFinderFineGrainedReportListener(new BioCodec(), reportStream);
+                    TokenNameFinderEvaluator evaluator = new TokenNameFinderEvaluator(nameFinder, reportListener);
+
+                    try (ObjectStream<NameSample> samples = new NameSampleDataStream(lineStream)) {
+                        evaluator.evaluate(samples);
+                    }
+
+                    reportListener.writeReport();
+                    String report = reportStream.toString();
+
+                    NERModelEvaluation nerModelEvaluation = new NERModelEvaluation(report, reportListener.getReferenceLines(), reportListener.getPredictionLines());
+                    evaluationMap.put(facilityType, nerModelEvaluation);
+                }
             }
-            lineStream.reset();
 
-            String modelFile = getModelFilePath(getModelDir(category, false));
-            TokenNameFinderModel model = NLPTools.getModel(TokenNameFinderModel.class, modelFile);
-            NameFinderME nameFinder = new NameFinderME(model);
-
-            ByteArrayOutputStream reportStream = new ByteArrayOutputStream();
-            TokenNameFinderFineGrainedReportListener reportListener = new TokenNameFinderFineGrainedReportListener(new BioCodec(), reportStream);
-            TokenNameFinderEvaluator evaluator = new TokenNameFinderEvaluator(nameFinder, reportListener);
-
-            try (ObjectStream<NameSample> samples = new NameSampleDataStream(lineStream)) {
-                evaluator.evaluate(samples);
-            }
-
-            reportListener.writeReport();
-            String report = reportStream.toString();
-
-            NERModelEvaluation nerModelEvaluation = new NERModelEvaluation(report, reportListener.getReferenceLines(), reportListener.getPredictionLines());
-
-            return nerModelEvaluation;
+            return evaluationMap;
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
             return null;
@@ -403,7 +459,7 @@ public class NamedEntityRecognizer {
         for (File dir : dirs) {
             if (dir.isDirectory()) {
                 try {
-                    NERModelData data = new NERModelData(dir);
+                    NERModelData data = new NERModelData(dir, category);
                     modelListing.add(data);
                 } catch (IOException e) {
                     continue;
@@ -413,52 +469,59 @@ public class NamedEntityRecognizer {
         return modelListing;
     }
 
-    public NERModelEvaluation getModelEvaluation(String category, String version) {
-        String modelDir = getModelDir(category, version);
-        String refsPath = getReferencesFilePath(modelDir);
-        String predsPath = getPredictionsFilePath(modelDir);
-        File refsFile = new File(refsPath);
-        File predsFile = new File(predsPath);
-        try {
-            String refs = refsFile.exists() ? Files.toString(refsFile, Charsets.UTF_8) : "";
-            String preds = predsFile.exists() ? Files.toString(predsFile, Charsets.UTF_8) : "";
-            NERModelEvaluation eval = new NERModelEvaluation("", refs, preds);
-            return eval;
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-            return null;
+    public Map<String, NERModelEvaluation> getModelEvaluation(String category, String version) {
+        final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
+        Map<String, NERModelEvaluation> evaluationMap = new TreeMap<>();
+        for (String facilityType : facilityTypes) {
+            String modelDir = getModelDir(category, version);
+            String refsPath = getReferencesFilePath(modelDir, facilityType);
+            String predsPath = getPredictionsFilePath(modelDir, facilityType);
+            File refsFile = new File(refsPath);
+            File predsFile = new File(predsPath);
+            try {
+                String refs = refsFile.exists() ? Files.toString(refsFile, Charsets.UTF_8) : "";
+                String preds = predsFile.exists() ? Files.toString(predsFile, Charsets.UTF_8) : "";
+                NERModelEvaluation eval = new NERModelEvaluation("", refs, preds);
+                evaluationMap.put(facilityType, eval);
+            } catch (IOException e) {
+                logger.error(e.getMessage(), e);
+            }
         }
+        return evaluationMap;
     }
 
-    private String getModelFilePath(String modelDir) {
-        String modelFile = modelDir + "/model.bin";
+    private String getModelFilePath(String modelDir, String facilityType) {
+        String modelFile = modelDir + "/" + facilityType + "_model.bin";
         return modelFile;
     }
 
-    private String getReportFilePath(String modelDir) {
-        String modelFile = modelDir + "/report.txt";
+    private String getReportFilePath(String modelDir, String facilityType) {
+        String modelFile = modelDir + "/" + facilityType + "_report.txt";
         return modelFile;
     }
 
-    private String getReferencesFilePath(String modelDir) {
-        String modelFile = modelDir + "/refs.txt";
+    private String getReferencesFilePath(String modelDir, String facilityType) {
+        String modelFile = modelDir + "/" + facilityType + "_refs.txt";
         return modelFile;
     }
 
-    private String getPredictionsFilePath(String modelDir) {
-        String modelFile = modelDir + "/preds.txt";
+    private String getPredictionsFilePath(String modelDir, String facilityType) {
+        String modelFile = modelDir + "/" + facilityType + "_preds.txt";
         return modelFile;
     }
 
     private String getModelDir(String category, boolean increment) {
         Integer maxDirNum = getCurrentMaximumModelDir(category);
+        File modelDir = new File("data/ner/" + category + "/" + maxDirNum);
 
-        if (increment) {
+        if (modelDir.exists() && modelDir.listFiles().length != 0 && increment) {
             maxDirNum++;
+            modelDir = new File("data/ner/" + category + "/" + maxDirNum);
+            modelDir.mkdirs();
+        } else if (!modelDir.exists()) {
+            modelDir.mkdirs();
         }
 
-        File modelDir = new File("data/ner/" + category + "/" + maxDirNum);
-        modelDir.mkdirs();
         return modelDir.getPath();
     }
 
@@ -482,6 +545,12 @@ public class NamedEntityRecognizer {
     private String getTrainingFilePath(String category) {
         String trainingFile = "data/" + category + ".train";
         return trainingFile;
+    }
+
+    private String getTypeSpecificCorpusFilePath(String facilityType, boolean isTraining) {
+        String ext = isTraining ? ".train" : ".test";
+        String corpusFile = "data/" + facilityType + ext;
+        return corpusFile;
     }
 
     private String getTestFilePath(String category) {

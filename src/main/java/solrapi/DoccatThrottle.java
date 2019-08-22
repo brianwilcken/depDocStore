@@ -58,8 +58,6 @@ public class DoccatThrottle extends TrainingDataThrottle {
 
             throttleTracker = categoryMap.entrySet().stream().collect(Collectors.toMap(p -> p.getKey(), p -> new RandomizationTracker (0, p.getValue())));
 
-
-
         } catch (SolrServerException e) {
             logger.error(e.getMessage(), e);
         }
