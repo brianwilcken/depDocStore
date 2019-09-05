@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import com.google.common.base.Strings;
 import common.Tools;
 import opennlp.tools.cmdline.ModelLoader;
-import opennlp.tools.cmdline.doccat.DoccatEvaluationErrorListener;
 import opennlp.tools.doccat.*;
 import opennlp.tools.util.*;
 import org.apache.commons.lang3.ArrayUtils;
@@ -48,6 +47,13 @@ public class DocumentCategorizer {
     public static void main(String[] args) {
         SolrClient solrClient = new SolrClient("http://134.20.2.51:8983/solr");
         DocumentCategorizer cat = new DocumentCategorizer(solrClient);
+
+        try {
+            cat.trainDoccatModel(25);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 //        //TopicModeller topicModeller = new TopicModeller(solrClient);
 //        solrClient.setTopicModeller(null);
 //
@@ -249,7 +255,7 @@ public class DocumentCategorizer {
     }
 
     public String trainDoccatModel(int iterations) throws IOException {
-        String evalReport;
+        DoccatEvaluation evalReport;
         DoccatModel model;
         //Write training data to file
         String trainingDataFile = Tools.getProperty("nlp.doccatTrainingFile");
@@ -260,12 +266,12 @@ public class DocumentCategorizer {
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(trainingDataFile);
         TrainTestSplitter splitter = new TrainTestSplitter(42, trainingDataFile);
         splitter.trainTestSplit(0.8, lineStream);
-        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTrain())) {
+        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStreamWithFilenames(splitter.getTrain())) {
             model = DocumentCategorizerME.train("en", sampleStream, NLPTools.getTrainingParameters(iterations, 2), new DoccatFactory(getFeatureGenerators()));
         }
 
-        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTest())) {
-            evalReport = evaluateDoccatModel(sampleStream, model);
+        try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStreamWithFilenames(splitter.getTest())) {
+            evalReport = evaluateDoccatModelWithErrors(sampleStream, model);
         }
 
         try (OutputStream modelOut = new BufferedOutputStream(new FileOutputStream(Tools.getProperty("nlp.doccatModel")))) {
@@ -273,7 +279,7 @@ public class DocumentCategorizer {
         }
         modelMgr.toggleRefreshNeeded();
         logger.info(evalReport);
-        return evalReport;
+        return evalReport.toString();
     }
 
     public String testDoccatModel() throws IOException {
@@ -286,20 +292,37 @@ public class DocumentCategorizer {
                 solrClient::getDoccatDataQuery, solrClient::formatForDoccatModelTraining, throttle);
 
         ObjectStream<String> lineStream = NLPTools.getLineStreamFromFile(testingDataFile);
-        for (int i = 1; i <= 5; i++) {
+        List<DoccatEvaluation> evals = new ArrayList<>();
+        int numReps = 5;
+        for (int i = 1; i <= numReps; i++) {
             TrainTestSplitter splitter = new TrainTestSplitter(System.nanoTime(), testingDataFile);
             lineStream.reset();
             splitter.trainTestSplit(0.8, lineStream);
-            try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStream(splitter.getTest())) {
+            try (ObjectStream<DocumentSample> sampleStream = new DocumentSampleStreamWithFilenames(splitter.getTest())) {
+                DoccatEvaluation eval = evaluateDoccatModelWithErrors(sampleStream, model);
+                evals.add(eval);
+
                 evalReport.append("Evaluation Attempt #" + i);
-                evalReport.append(System.lineSeparator());
-                evalReport.append(evaluateDoccatModel(sampleStream, model));
+                evalReport.append(eval.getOverallReport());
                 evalReport.append(System.lineSeparator());
                 evalReport.append(System.lineSeparator());
             }
         }
 
-        String results = evalReport.toString();
+        StringBuilder errorReport = new StringBuilder();
+        errorReport.append("{");
+        for (int i = 1; i <= numReps; i++) {
+            DoccatEvaluation eval = evals.get(i - 1);
+            String report = eval.getErrorReport(Integer.toString(i));
+            errorReport.append(report);
+            if (i < numReps) {
+                errorReport.append(",");
+                errorReport.append(System.lineSeparator());
+            }
+        }
+        errorReport.append("}");
+
+        String results = evalReport.toString() + errorReport.toString();
         logger.info(results);
         return results;
     }
@@ -395,7 +418,56 @@ public class DocumentCategorizer {
         }
     }
 
+    private class DoccatEvaluation {
+        private String overallReport;
+        private String errorReport;
 
+        public DoccatEvaluation(String overallReport, String errorReport) {
+            this.overallReport = overallReport;
+            this.errorReport = errorReport;
+        }
+
+        public String getOverallReport() {
+            return overallReport;
+        }
+
+        public String getErrorReport(String prefix) {
+            String commaRemoved = errorReport.substring(0, errorReport.lastIndexOf(','));
+            return "\"errors" + prefix + "\": {" + commaRemoved + "}";
+        }
+
+        @Override
+        public String toString() {
+            String output = overallReport + System.lineSeparator() + System.lineSeparator() + "{" + errorReport + "}";
+            return output;
+        }
+    }
+
+    private DoccatEvaluation evaluateDoccatModelWithErrors(ObjectStream<DocumentSample> samples, DoccatModel model) {
+        try {
+            model.getFactory().setFeatureGenerators(getFeatureGenerators());
+            DocumentCategorizerME categorizer = new DocumentCategorizerME(model);
+
+            ByteArrayOutputStream reportStream = new ByteArrayOutputStream();
+            ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
+            DoccatFineGrainedReportListener reportListener = new DoccatFineGrainedReportListener(reportStream);
+            DoccatEvaluationErrorListener errorListener = new DoccatEvaluationErrorListener(errorStream);
+            DoccatEvaluationMonitor[] listeners = { reportListener, errorListener };
+
+            DocumentCategorizerEvaluator evaluator = new DocumentCategorizerEvaluator(categorizer, listeners);
+
+            samples.reset();
+            evaluator.evaluate(samples);
+            reportListener.writeReport();
+            String errors = errorStream.toString();
+            String report = reportStream.toString();
+            DoccatEvaluation evaluation = new DoccatEvaluation(report, errors);
+            return evaluation;
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            return null;
+        }
+    }
 
     private String evaluateDoccatModel(ObjectStream<DocumentSample> samples, DoccatModel model) {
         try {
@@ -403,9 +475,7 @@ public class DocumentCategorizer {
             DocumentCategorizerME categorizer = new DocumentCategorizerME(model);
 
             ByteArrayOutputStream reportStream = new ByteArrayOutputStream();
-            //ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
             DoccatFineGrainedReportListener reportListener = new DoccatFineGrainedReportListener(reportStream);
-            //DoccatEvaluationErrorListener errorListener = new DoccatEvaluationErrorListener(errorStream);
             DoccatEvaluationMonitor[] listeners = { reportListener/*, errorListener */ };
 
             DocumentCategorizerEvaluator evaluator = new DocumentCategorizerEvaluator(categorizer, listeners);
@@ -413,7 +483,6 @@ public class DocumentCategorizer {
             samples.reset();
             evaluator.evaluate(samples);
             reportListener.writeReport();
-            //String errors = errorStream.toString();
             String report = reportStream.toString();
             return report;
         } catch (IOException e) {

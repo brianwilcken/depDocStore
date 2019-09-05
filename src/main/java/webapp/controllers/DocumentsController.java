@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.mongodb.client.gridfs.model.GridFSFile;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.springframework.core.io.ClassPathResource;
@@ -56,6 +57,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 
 @CrossOrigin
@@ -120,12 +122,46 @@ public class DocumentsController {
 
         String ids = Tools.GetFileString("data/doc_update_ids.txt");
         List<String> idList = Arrays.asList(ids.split("\\r\\n"));
+
         Map<String, Object> metadata = new HashMap<>();
-        String newCategory = "Not_Applicable";
+        //String newCategory = "Not_Applicable";
+        String newCategory = "Wastewater_System";
+        //String newCategory = "Electricity";
         metadata.put("category", newCategory);
         metadata.put("userCategory", newCategory);
-        for (String id : idList) {
-            ctrl.updateDocument(id, metadata);
+//        for (String id : idList) {
+//            ctrl.updateDocument(id, metadata);
+//        }
+
+        List<List<String>> chunks = Lists.partition(idList, 100);
+        List<Thread> workers = new ArrayList<>();
+        Semaphore semaphore = new Semaphore(8);
+        for (List<String> chunk : chunks) {
+            Thread worker = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (String id : chunk) {
+                        try {
+                            semaphore.acquire(1);
+                            //ctrl.deleteDocument(id);
+                            ctrl.updateDocument(id, metadata);
+                        } catch (InterruptedException e) {
+
+                        } finally {
+                            semaphore.release();
+                        }
+                    }
+                }
+            });
+            worker.start();
+            workers.add(worker);
+        }
+        while(workers.stream().anyMatch(p -> p.isAlive())) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -1149,27 +1185,30 @@ public class DocumentsController {
         logger.info("In downloadDocument method");
 
         GridFSFile fsFile = mongoClient.GetFileMetadata(fileId);
-        logger.info("downloading file: " + fsFile.getFilename());
-        logger.info("file size: " + fsFile.getLength());
-        FileInputStream stream = mongoClient.DownloadFileToStream(fsFile);
+        if (fsFile != null) {
+            logger.info("downloading file: " + fsFile.getFilename());
+            logger.info("file size: " + fsFile.getLength());
+            FileInputStream stream = mongoClient.DownloadFileToStream(fsFile);
 
-        if (stream != null) {
-            HttpHeaders respHeaders = new HttpHeaders();
-            if (fsFile.getMetadata().containsKey("type")) {
-                MediaType type = MediaType.parseMediaType((String)fsFile.getMetadata().get("type"));
-                respHeaders.setContentType(type);
-            } else {
-                respHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            if (stream != null) {
+                HttpHeaders respHeaders = new HttpHeaders();
+                if (fsFile.getMetadata().containsKey("type")) {
+                    MediaType type = MediaType.parseMediaType((String)fsFile.getMetadata().get("type"));
+                    respHeaders.setContentType(type);
+                } else {
+                    respHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+                }
+                respHeaders.setContentLength(fsFile.getLength());
+                respHeaders.setContentDispositionFormData("attachment", fsFile.getFilename());
+
+                InputStreamResource isr = new InputStreamResource(stream);
+                cleanupService.process(fsFile.getFilename(), 1);
+                return new ResponseEntity<>(isr, respHeaders, HttpStatus.OK);
             }
-            respHeaders.setContentLength(fsFile.getLength());
-            respHeaders.setContentDispositionFormData("attachment", fsFile.getFilename());
-
-            InputStreamResource isr = new InputStreamResource(stream);
-            cleanupService.process(fsFile.getFilename(), 1);
-            return new ResponseEntity<>(isr, respHeaders, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(null, null, HttpStatus.NOT_FOUND);
+            logger.info("file not found: " + fileId);
         }
+        return new ResponseEntity<>(null, null, HttpStatus.NOT_FOUND);
     }
 
     @RequestMapping(value="/reprocess/{id}", method=RequestMethod.PUT, produces=MediaType.APPLICATION_JSON_VALUE)

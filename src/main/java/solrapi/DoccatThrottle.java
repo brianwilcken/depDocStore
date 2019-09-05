@@ -91,7 +91,10 @@ public class DoccatThrottle extends TrainingDataThrottle {
         if (doc.containsKey("category")) {
             List categories = (List)doc.get("category");
             List<CategoryWeight> catWeights = null;
-            if (doc.containsKey("ldaCategory")) {
+            if (doc.containsKey("userCategory")) {
+                List<String> userCategories = (List<String>)doc.get("userCategory");
+                catWeights = NLPTools.separateProbabilitiesFromCategories(userCategories);
+            } else if (doc.containsKey("ldaCategory")) {
                 List<String> ldaCategories = (List<String>)doc.get("ldaCategory");
                 catWeights = NLPTools.separateProbabilitiesFromCategories(ldaCategories);
             } else if (doc.containsKey("doccatCategory")) {
@@ -99,7 +102,11 @@ public class DoccatThrottle extends TrainingDataThrottle {
                 catWeights = NLPTools.separateProbabilitiesFromCategories(doccatCategories);
             }
 
-            return check(categories, catWeights);
+            if (catWeights != null) {
+                return check(categories, catWeights);
+            } else {
+                return false;
+            }
         }
         return true;
     }
@@ -123,8 +130,13 @@ public class DoccatThrottle extends TrainingDataThrottle {
                 double random = Math.random();
                 double randomPercent = randomizationTracker.getRandomPercent();
                 String cat = workableCategory.getKey();
-                OptionalDouble weight = catWeights.stream().filter(p -> p.category.equals(cat)).mapToDouble(p -> p.catWeight).findFirst();
-                if (weight.isPresent() && weight.getAsDouble() >= 0.5) { //if the category probability is high enough then automatically accept it
+                OptionalDouble weight = null;
+                try {
+                    weight = catWeights.stream().filter(p -> p.category != null && p.category.equals(cat)).mapToDouble(p -> p.catWeight).findFirst();
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                }
+                if (weight != null && weight.isPresent() && weight.getAsDouble() >= 0.5) { //if the category probability is high enough then automatically accept it
                     result = true;
                     break;
                 } else if (random >= (1 - randomPercent)) { //if the category probability is low or if the category has no assigned weight then use random chance

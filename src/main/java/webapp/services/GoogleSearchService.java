@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -27,6 +28,7 @@ public class GoogleSearchService {
     private static String USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36";
     private final ArticleExtractor articleExtractor;
     private static final int REQUEST_DELAY = 10000;
+    private static final boolean ENABLE_GOOGLE_WEB_CRAWLING = Boolean.parseBoolean(Tools.getProperty("googleSearch.enableWebCrawling"));
 
     @Autowired
     private WebCrawlerService webCrawlerService;
@@ -61,7 +63,7 @@ public class GoogleSearchService {
                             metadata.putAll(searchData);
                             resourceURLLookupService.process(url, metadata);
                             logger.info("File download and processing complete: " + filename);
-                        } else {
+                        } else if (ENABLE_GOOGLE_WEB_CRAWLING) {
                             logger.info("Crawling this address: " + href);
                             webCrawlerService.setMaxCrawlDepth(2);
                             webCrawlerService.process(href, searchData);
@@ -89,7 +91,8 @@ public class GoogleSearchService {
         Document doc;
         try {
             if (!queryTerm.startsWith("#")) {
-                doc = Jsoup.connect("https://www.google.com/search?q=" + queryTerm + "&cr=countryUS&lr=lang_en&start=" + start)
+                String encoded = URLEncoder.encode(queryTerm, "UTF-8");
+                doc = Jsoup.connect("https://www.google.com/search?q=" + encoded + "&cr=countryUS&lr=lang_en&start=" + start)
                         .userAgent(USER_AGENT)
                         .get();
             } else {

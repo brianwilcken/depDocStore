@@ -125,7 +125,8 @@ public class SolrClient {
 		//client.runFieldUpdateJob("doccatCategory:*", client::removeDoccatCategoryAttribute);
 		//client.runFieldUpdateJob("doccatCategory:* OR ldaCategory:*", client::removeVerticalPipeFromCategory);
 		//client.runFieldUpdateJob("percentAnnotated:[0 TO 100]", client::removeDocumentAnnotations);
-		client.runEntityDetectionJob("parsed:* AND category:Water AND -includeInNERTesting:* AND -includeInNERTraining:*", 0, 52000, "Water", 0.45);
+		client.runFieldUpdateJob("parsed:* AND -sector:* AND category:* AND created:[2019-08-29T00:12:56.132Z TO NOW]", client::removeDocumentApplicability);
+		//client.runEntityDetectionJob("parsed:* AND category:Water AND -includeInNERTesting:* AND -includeInNERTraining:*", 0, 52000, "Water", 0.45);
 		//client.runEntityDetectionJob("id:ac2e3289278ac66ed1f91fd2fce589a837de2cfc", 0, 10, "Water", 0.4);
 		//client.runFileListingJob("parsed:*", 0, 600000);
 
@@ -168,7 +169,7 @@ public class SolrClient {
 		Semaphore semaphore = new Semaphore(16);
 		int rows = 1000;
 		List<BatchSolrJob> jobs = new ArrayList<>();
-		for (int start = 0; start <= 20000; start += rows) {
+		for (int start = 0; start <= 6000; start += rows) {
 			SolrQuery query = new SolrQuery(strQuery);
 			query.setStart(start);
 			query.setRows(rows);
@@ -454,6 +455,15 @@ public class SolrClient {
 				doc.remove("doccatCategory");
 				logger.info(doc.get("filename").toString() + " DocCat category removed");
 			}
+		}
+	}
+
+	private void removeDocumentApplicability(SolrDocumentList docs, Object[] notUsed) {
+		for (SolrDocument doc : docs) {
+			if (doc.containsKey("category")) {
+				doc.replace("category", "Not_Applicable");
+			}
+			logger.info(doc.get("filename").toString() + " -> Not_Applicable");
 		}
 	}
 
@@ -836,7 +846,7 @@ public class SolrClient {
 	}
 
 	public SolrQuery getDoccatDataQuery(SolrQuery query) {
-		query.setQuery("parsed:* AND (ldaCategory:* OR userCategory:*)");
+		query.setQuery("parsed:* AND -sector:* AND category:*");
 		//query.setFilterQueries("{!frange l=1}ms(lastUpdated,created) ");
 		return query;
 	}
@@ -923,12 +933,13 @@ public class SolrClient {
 	public void formatForDoccatModelTraining(Object[] args, SolrDocument doc, OutputStreamWriter writer) throws IOException {
 		String parsed = doc.get("parsed").toString();
 		String normalized = NLPTools.normalizeText(parsed);
+		String filenameDelimited = NLPTools.CORPUS_DATA_DELIMITER + doc.get("filename").toString() + NLPTools.CORPUS_DATA_DELIMITER;
 		List<String> categories = (List<String>)doc.get("category");
 		String output = null;
 		if (categories.size() == 1 || doc.containsKey("userCategory")) {
 			if (!Strings.isNullOrEmpty(normalized) && normalized.trim().length() > 0) {
 				output = categories.stream()
-						.map(category -> category + "\t" + normalized)
+						.map(category -> category + "\t" + filenameDelimited + normalized)
 						.reduce((p1, p2) -> p1 + System.lineSeparator() + p2)
 						.orElse("");
 			}
@@ -944,7 +955,7 @@ public class SolrClient {
 				List<CategoryWeight> catWeights = NLPTools.separateProbabilitiesFromCategories(probCategories);
 				double maxCat = catWeights.stream().mapToDouble(p -> p.catWeight).max().getAsDouble();
 				CategoryWeight categoryWeight = catWeights.stream().filter(p -> p.catWeight == maxCat).collect(Collectors.toList()).get(0);
-				output = categoryWeight.category + "\t" + normalized;
+				output = categoryWeight.category + "\t" + filenameDelimited + normalized;
 			}
 
 //				if (topicModeller != null) {
@@ -998,7 +1009,7 @@ public class SolrClient {
 				Map<Integer, List<NamedEntity>> lineEntities = typeEntities.get(facilityType).stream()
 						.collect(Collectors.groupingBy(p -> p.getLine()));
 
-				annotatedLinesForCategory.add(NLPTools.NER_TRAINING_DATA_TYPE_DELIMITER);
+				annotatedLinesForCategory.add(NLPTools.CORPUS_DATA_DELIMITER);
 				for (int s = 0; s < sentences.length; s++) {
 					String sentence = sentences[s];
 					//first remove all annotations to ensure that only category/type-specific annotations are included in this segment of the training data
@@ -1182,7 +1193,7 @@ public class SolrClient {
 
 	public void writeCorpusDataToFile(String outputPath, Tools.CheckedConsumer<OutputStreamWriter> header, Tools.CheckedConsumer<OutputStreamWriter> footer, String category, Function<SolrQuery, SolrQuery> queryGetter,
 											  Tools.CheckedTriConsumer<Object[], SolrDocument, OutputStreamWriter> dataFormatter, TrainingDataThrottle throttle) {
-		int rows = 10000;
+		int rows = 1000;
 		File file = new File(outputPath);
 		file.getParentFile().mkdirs();
 
@@ -1195,7 +1206,7 @@ public class SolrClient {
 			long numFound = getNumDocsFound(queryGetter);
 			throttle.init(numFound);
 
-			Semaphore semaphore = new Semaphore(4);
+			Semaphore semaphore = new Semaphore(8);
 			List<BatchSolrJob> jobs = new ArrayList<>();
 			List<File> files = new ArrayList<>();
 			for (int start = 0; start < numFound; start += rows) {

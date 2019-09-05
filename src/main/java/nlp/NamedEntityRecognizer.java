@@ -22,7 +22,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.client.solrj.SolrServerException;
 import org.springframework.core.io.ClassPathResource;
 import solrapi.NERThrottle;
 import solrapi.SolrClient;
@@ -388,7 +387,7 @@ public class NamedEntityRecognizer {
         final List<String> facilityTypes = FacilityTypes.dictionary.get(category);
 
         String corpus = FileUtils.readFileToString(new File(corpusFile), Charset.defaultCharset());
-        String[] segments = corpus.split(NLPTools.NER_TRAINING_DATA_TYPE_DELIMITER);
+        String[] segments = corpus.split(NLPTools.CORPUS_DATA_DELIMITER);
 
         for (final String facilityType : facilityTypes) {
             StringBuilder typeCorpus = new StringBuilder();
