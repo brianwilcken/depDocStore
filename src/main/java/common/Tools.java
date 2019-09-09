@@ -2,6 +2,7 @@ package common;
 
 import java.awt.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -121,25 +122,43 @@ public class Tools {
 
 	public static void mergeFiles(List<File> files, OutputStreamWriter writer) throws IOException {
 		for (File file : files) {
-			List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
-			if (lines.size() > 0) {
-				String line = lines.get(0);
-				try {
-					writer.write(line);
-				} catch (IOException e) {
-					logger.error(e.getMessage(), e);
-				}
-				for (int i = 1; i < lines.size(); i++) {
-					line = lines.get(i);
-					if (!Strings.isNullOrEmpty(line)) {
-						try {
-							writer.write(System.lineSeparator() + line);
-						} catch (IOException e) {
-							logger.error(e.getMessage(), e);
-						}
+
+			try (InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)){
+				int len = 20971520; //20MB buffer
+				int offset = 0;
+				char[] buffer = new char[len];
+				int numRead = reader.read(buffer, offset, len);
+				while (numRead != -1) {
+					try {
+						writer.write(buffer, 0, numRead);
+						writer.flush();
+					} catch (IOException e) {
+						logger.error(e.getMessage(), e);
 					}
+					numRead = reader.read(buffer, offset, len);
 				}
 			}
+
+//			List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
+//			if (lines.size() > 0) {
+//				String line = lines.get(0);
+//				try {
+//					writer.write(line);
+//				} catch (IOException e) {
+//					logger.error(e.getMessage(), e);
+//				}
+//				for (int i = 1; i < lines.size(); i++) {
+//					line = lines.get(i);
+//					if (!Strings.isNullOrEmpty(line)) {
+//						try {
+//							writer.write(System.lineSeparator() + line);
+//							writer.flush();
+//						} catch (IOException e) {
+//							logger.error(e.getMessage(), e);
+//						}
+//					}
+//				}
+//			}
 
 			java.nio.file.Files.delete(file.toPath());
 		}

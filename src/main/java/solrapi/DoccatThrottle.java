@@ -3,6 +3,7 @@ package solrapi;
 import common.Tools;
 import nlp.CategoryWeight;
 import nlp.NLPTools;
+import org.apache.commons.math3.stat.descriptive.moment.GeometricMean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -72,6 +73,8 @@ public class DoccatThrottle extends TrainingDataThrottle {
                 .mapToDouble(p -> p.doubleValue())
                 .toArray();
 
+        //GeometricMean gm = new GeometricMean();
+        //double geometricMean = gm.evaluate(counts);
         double harmonicMean = Tools.harmonicMean(counts);
         //double sum = DoubleStream.of(counts).sum();
         double min = DoubleStream.of(counts).min().getAsDouble();

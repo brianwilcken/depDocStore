@@ -125,15 +125,15 @@ public class DocumentsController {
 
         Map<String, Object> metadata = new HashMap<>();
         //String newCategory = "Not_Applicable";
-        String newCategory = "Wastewater_System";
-        //String newCategory = "Electricity";
+        //String newCategory = "Wastewater_System";
+        String newCategory = "Petroleum";
         metadata.put("category", newCategory);
         metadata.put("userCategory", newCategory);
 //        for (String id : idList) {
 //            ctrl.updateDocument(id, metadata);
 //        }
 
-        List<List<String>> chunks = Lists.partition(idList, 100);
+        List<List<String>> chunks = Lists.partition(idList, 10);
         List<Thread> workers = new ArrayList<>();
         Semaphore semaphore = new Semaphore(8);
         for (List<String> chunk : chunks) {
